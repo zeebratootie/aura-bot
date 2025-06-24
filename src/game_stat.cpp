@@ -143,7 +143,7 @@ string GameStat::GetMapClientFileName() const
 }
 
 template <typename Container>
-static GameStat GameStat::Parse(const Container& statString) {
+GameStat GameStat::Parse(const Container& statString) {
   std::vector<uint8_t> decoded = DecodeStatString(statString);
   return GameStat(decoded.data(), decoded.size());
 }
