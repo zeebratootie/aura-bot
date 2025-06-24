@@ -518,6 +518,7 @@ string ByteArrayToDecString(const array<uint8_t, SIZE>& b)
   return result;
 }
 
+template string ByteArrayToDecString(const array<uint8_t, 2>& b);
 template string ByteArrayToDecString(const array<uint8_t, 4>& b);
 template string ByteArrayToDecString(const array<uint8_t, 20>& b);
 
@@ -1432,32 +1433,33 @@ string JoinStrings(const Container& list, const bool trailingComma)
   return JoinStrings(list, ", ", trailingComma);
 }
 
-#define INSTANTIATE_JOIN_STRINGS_IMPL(T)\
-template string JoinStrings(const T& list, const string connector, const bool trailingConnector);\
-template string JoinStrings(const T& list, const bool trailingComma);
+#define INSTANTIATE_JOIN_STRINGLIKE(T)\
+template string JoinStrings(const vector<T>& list, const string connector, const bool trailingConnector);\
+template string JoinStrings(const vector<T>& list, const bool trailingComma);\
+template string JoinStrings(const set<T>& list, const string connector, const bool trailingConnector);\
+template string JoinStrings(const set<T>& list, const bool trailingComma);
 
-#define INSTANTIATE_JOIN_STRINGS(...) INSTANTIATE_JOIN_STRINGS_IMPL(__VA_ARGS__)
+#define INSTANTIATE_JOIN_STRINGS_ARRAY(SIZE)\
+template string JoinStrings(const array<string, SIZE>& list, const string connector, const bool trailingConnector);\
+template string JoinStrings(const array<string, SIZE>& list, const bool trailingComma);
 
-INSTANTIATE_JOIN_STRINGS(vector<string>)
-INSTANTIATE_JOIN_STRINGS(set<string>)
-INSTANTIATE_JOIN_STRINGS(vector<uint16_t>)
-INSTANTIATE_JOIN_STRINGS(set<uint16_t>)
-INSTANTIATE_JOIN_STRINGS(vector<uint32_t>)
-INSTANTIATE_JOIN_STRINGS(set<uint32_t>)
-INSTANTIATE_JOIN_STRINGS(array<string, 2>)
-INSTANTIATE_JOIN_STRINGS(array<string, 3>)
-INSTANTIATE_JOIN_STRINGS(array<string, 4>)
-INSTANTIATE_JOIN_STRINGS(array<string, 5>)
-INSTANTIATE_JOIN_STRINGS(array<string, 6>)
-INSTANTIATE_JOIN_STRINGS(array<string, 7>)
-INSTANTIATE_JOIN_STRINGS(array<string, 8>)
-INSTANTIATE_JOIN_STRINGS(array<string, 9>)
-INSTANTIATE_JOIN_STRINGS(array<string, 10>)
-INSTANTIATE_JOIN_STRINGS(array<string, 11>)
-INSTANTIATE_JOIN_STRINGS(array<string, 12>)
+INSTANTIATE_JOIN_STRINGLIKE(string)
+INSTANTIATE_JOIN_STRINGLIKE(uint16_t)
+INSTANTIATE_JOIN_STRINGLIKE(uint32_t)
+INSTANTIATE_JOIN_STRINGS_ARRAY(2)
+INSTANTIATE_JOIN_STRINGS_ARRAY(3)
+INSTANTIATE_JOIN_STRINGS_ARRAY(4)
+INSTANTIATE_JOIN_STRINGS_ARRAY(5)
+INSTANTIATE_JOIN_STRINGS_ARRAY(6)
+INSTANTIATE_JOIN_STRINGS_ARRAY(7)
+INSTANTIATE_JOIN_STRINGS_ARRAY(8)
+INSTANTIATE_JOIN_STRINGS_ARRAY(9)
+INSTANTIATE_JOIN_STRINGS_ARRAY(10)
+INSTANTIATE_JOIN_STRINGS_ARRAY(11)
+INSTANTIATE_JOIN_STRINGS_ARRAY(12)
 
-#undef INSTANTIATE_JOIN_STRINGS_IMPL
-#undef INSTANTIATE_JOIN_STRINGS
+#undef INSTANTIATE_JOIN_STRINGLIKE
+#undef INSTANTIATE_JOIN_STRINGS_ARRAY
 
 string IPv4ToString(const array<uint8_t, 4> ip)
 {
