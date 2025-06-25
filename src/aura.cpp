@@ -1715,6 +1715,7 @@ bool CAura::LoadAllConfigs(CConfig& CFG)
   CNetConfig NetConfig = CNetConfig(CFG);
   CIRCConfig IRCConfig = CIRCConfig(CFG);
   CDiscordConfig DiscordConfig = CDiscordConfig(CFG);
+  // CDataBaseConfig excluded because it's not actually reloaded
 
   if (!CFG.GetSuccess()) {
     return false;

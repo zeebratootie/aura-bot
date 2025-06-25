@@ -114,8 +114,15 @@ public:
   [[nodiscard]] inline bool GetErrorLast() const { return m_ErrorLast; };
   [[nodiscard]] inline bool GetSuccess() const { return !m_CriticalError; };
   [[nodiscard]] inline bool GetStrictMode() const { return m_StrictMode; };
-  inline void FailIfErrorLast() {
+  inline bool FailIfErrorLast() {
     if (m_ErrorLast) m_CriticalError = true;
+    return !m_ErrorLast;
+  };
+  inline bool FailIfErrorLast(bool* validFlag) {
+    if (!FailIfErrorLast()) {
+      *validFlag = false;
+    }
+    return !m_ErrorLast;
   };
   inline void SetFailed() { m_CriticalError = true; };
   inline void SetStrictMode(const bool nStrictMode) { m_StrictMode = nStrictMode; }

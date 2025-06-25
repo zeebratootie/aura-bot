@@ -125,9 +125,14 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CNetConfig* NetConfig)
   m_IsHostMulti            = !CFG.GetBool(m_CFGKeyPrefix + "game_host.unique", true);
 
   m_EnableCustomAddress    = CFG.GetBool(m_CFGKeyPrefix + "custom_ip_address.enabled", false);
-  m_PublicHostAddress      = CFG.GetAddressIPv4(m_CFGKeyPrefix + "custom_ip_address.value", "0.0.0.0");
+
+  memset(&m_PublicHostAddress, 0, sizeof(sockaddr_storage));
+  optional<sockaddr_storage> maybeCustomAddress = CFG.GetMaybeAddressIPv4(m_CFGKeyPrefix + "custom_ip_address.value");
   if (m_EnableCustomAddress)
     CFG.FailIfErrorLast();
+  if (maybeCustomAddress.has_value()) {
+    memcpy(&m_PublicHostAddress, &(maybeCustomAddress.value()), sizeof(sockaddr_storage));
+  }
 
   m_EnableCustomPort       = CFG.GetBool(m_CFGKeyPrefix + "custom_port.enabled", false);
   m_PublicHostPort         = CFG.GetUint16(m_CFGKeyPrefix + "custom_port.value", 6112);
@@ -328,7 +333,7 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CRealmConfig* nRootConfig, uint8_t nSer
 
   if (CFG.Exists(m_CFGKeyPrefix + "type")) {
     m_Type = CFG.GetStringIndex(m_CFGKeyPrefix + "type", {"pvpgn", "classic.battle.net"}, REALM_TYPE_PVPGN);
-    CFG.FailIfErrorLast();
+    CFG.FailIfErrorLast(&m_Valid);
   }
   
   m_UniqueName             = CFG.GetString(m_CFGKeyPrefix + "unique_name", m_HostName);
@@ -387,10 +392,12 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CRealmConfig* nRootConfig, uint8_t nSer
 
   m_PrivateCmdToken        = CFG.GetString(m_CFGKeyPrefix + "commands.trigger", m_PrivateCmdToken);
   if (!m_PrivateCmdToken.empty() && m_PrivateCmdToken[0] == '/') {
+    Print("[CONFIG] Error - invalid value provided for <" + m_CFGKeyPrefix + "commands.trigger - slash (/) is not allowed");
     m_Valid = false;
   }
   m_BroadcastCmdToken      = CFG.GetString(m_CFGKeyPrefix + "commands.broadcast.trigger", m_BroadcastCmdToken);
   if (!m_BroadcastCmdToken.empty() && m_BroadcastCmdToken[0] == '/') {
+    Print("[CONFIG] Error - invalid value provided for <" + m_CFGKeyPrefix + "commands.broadcast.trigger - slash (/) is not allowed");
     m_Valid = false;
   }
   m_EnableBroadcast        = CFG.GetBool(m_CFGKeyPrefix + "commands.broadcast.enabled", m_EnableBroadcast);
@@ -410,15 +417,18 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CRealmConfig* nRootConfig, uint8_t nSer
   m_EnableCustomAddress    = CFG.GetBool(m_CFGKeyPrefix + "custom_ip_address.enabled", m_EnableCustomAddress);
   optional<sockaddr_storage> maybeAddress = CFG.GetMaybeAddressIPv4(m_CFGKeyPrefix + "custom_ip_address.value");
   if (m_EnableCustomAddress)
-    CFG.FailIfErrorLast();
+    CFG.FailIfErrorLast(&m_Valid);
   if (maybeAddress.has_value()) {
     m_PublicHostAddress    = maybeAddress.value();
+  }
+  if (m_PublicHostAddress.ss_family != AF_INET) {
+    m_EnableCustomAddress = false;
   }
 
   m_EnableCustomPort       = CFG.GetBool(m_CFGKeyPrefix + "custom_port.enabled", m_EnableCustomPort);
   m_PublicHostPort         = CFG.GetUint16(m_CFGKeyPrefix + "custom_port.value", m_PublicHostPort);
   if (m_EnableCustomPort)
-    CFG.FailIfErrorLast();
+    CFG.FailIfErrorLast(&m_Valid);
 
   m_AutoRegister           = CFG.GetBool(m_CFGKeyPrefix + "auto_register", m_AutoRegister);
   m_UserNameCaseSensitive  = CFG.GetBool(m_CFGKeyPrefix + "username.case_sensitive", m_UserNameCaseSensitive);
@@ -436,7 +446,7 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CRealmConfig* nRootConfig, uint8_t nSer
 
   if (CFG.Exists(m_CFGKeyPrefix + "login.hash_type")) {
     m_LoginHashType = CFG.GetStringIndex(m_CFGKeyPrefix + "login.hash_type", {"pvpgn", "classic.battle.net"}, REALM_AUTH_PVPGN);
-    CFG.FailIfErrorLast();
+    CFG.FailIfErrorLast(&m_Valid);
   } else if (!m_LoginHashType.has_value()) {
     static_assert(REALM_TYPE_PVPGN == REALM_AUTH_PVPGN);
     static_assert(REALM_TYPE_BATTLENET_CLASSIC == REALM_AUTH_BATTLENET);
@@ -445,7 +455,7 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CRealmConfig* nRootConfig, uint8_t nSer
 
   if (CFG.Exists(m_CFGKeyPrefix + "expansion")) {
     m_GameIsExpansion   = static_cast<bool>(CFG.GetStringIndex(m_CFGKeyPrefix + "expansion", {"roc", "tft"}, SELECT_EXPANSION_TFT));
-    CFG.FailIfErrorLast();
+    CFG.FailIfErrorLast(&m_Valid);
   }
 
   optional<Version> war3Version = CFG.GetMaybeVersion(m_CFGKeyPrefix + "game_version");
@@ -457,9 +467,9 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CRealmConfig* nRootConfig, uint8_t nSer
 
   // These are optional, since they can be figured out with bncsutil.
   optional<vector<uint8_t>> authExeVersion = CFG.GetMaybeUint8Vector(m_CFGKeyPrefix + "exe_auth.version_details", 4);
-  if (m_ExeAuthUseCustomVersionData) CFG.FailIfErrorLast();
+  if (m_ExeAuthUseCustomVersionData) CFG.FailIfErrorLast(&m_Valid);
   optional<vector<uint8_t>> authExeVersionHash = CFG.GetMaybeUint8Vector(m_CFGKeyPrefix + "exe_auth.version_hash", 4);
-  if (m_ExeAuthUseCustomVersionData) CFG.FailIfErrorLast();
+  if (m_ExeAuthUseCustomVersionData) CFG.FailIfErrorLast(&m_Valid);
   string authExeInfo = CFG.GetString(m_CFGKeyPrefix + "exe_auth.info");
 
   if (m_ExeAuthUseCustomVersionData) {
