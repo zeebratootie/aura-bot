@@ -28,6 +28,7 @@
 #include "../command.h"
 #include "../util.h"
 #include "../protocol/bnet_protocol.h"
+#include "../optional.h"
 
 #include <utility>
 
@@ -48,6 +49,9 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CNetConfig* NetConfig)
     m_Valid(true),
     m_LocaleShort({83, 69, 115, 101}), // esES, reversed
     m_Locale(PvPGNLocale::kESES),
+
+    m_PublicHostPort(0),
+
     m_AutoRegister(false),
     m_UserNameCaseSensitive(false),
     m_PassWordCaseSensitive(false),
@@ -130,14 +134,14 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CNetConfig* NetConfig)
   optional<sockaddr_storage> maybeCustomAddress = CFG.GetMaybeAddressIPv4(m_CFGKeyPrefix + "custom_ip_address.value");
   if (m_EnableCustomAddress)
     CFG.FailIfErrorLast();
-  if (maybeCustomAddress.has_value()) {
-    memcpy(&m_PublicHostAddress, &(maybeCustomAddress.value()), sizeof(sockaddr_storage));
-  }
+  ReadOpt(maybeCustomAddress) >> m_PublicHostAddress;
 
   m_EnableCustomPort       = CFG.GetBool(m_CFGKeyPrefix + "custom_port.enabled", false);
-  m_PublicHostPort         = CFG.GetUint16(m_CFGKeyPrefix + "custom_port.value", 6112);
+
+  optional<uint16_t> maybePublicHostPort = CFG.GetMaybeNonZeroPort(m_CFGKeyPrefix + "custom_port.value");
   if (m_EnableCustomPort)
     CFG.FailIfErrorLast();
+  ReadOpt(maybePublicHostPort) >> m_PublicHostPort;
 
   m_HostName               = CFG.GetString(m_CFGKeyPrefix + "host_name");
   m_ServerPort             = CFG.GetUint16(m_CFGKeyPrefix + "server_port", 6112);
@@ -418,17 +422,21 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CRealmConfig* nRootConfig, uint8_t nSer
   optional<sockaddr_storage> maybeAddress = CFG.GetMaybeAddressIPv4(m_CFGKeyPrefix + "custom_ip_address.value");
   if (m_EnableCustomAddress)
     CFG.FailIfErrorLast(&m_Valid);
-  if (maybeAddress.has_value()) {
-    m_PublicHostAddress    = maybeAddress.value();
-  }
+  ReadOpt(maybeAddress) >> m_PublicHostAddress;
   if (m_PublicHostAddress.ss_family != AF_INET) {
     m_EnableCustomAddress = false;
   }
 
   m_EnableCustomPort       = CFG.GetBool(m_CFGKeyPrefix + "custom_port.enabled", m_EnableCustomPort);
-  m_PublicHostPort         = CFG.GetUint16(m_CFGKeyPrefix + "custom_port.value", m_PublicHostPort);
+
+  optional<uint16_t> maybePublicHostPort = CFG.GetMaybeNonZeroPort(m_CFGKeyPrefix + "custom_port.value");
   if (m_EnableCustomPort)
     CFG.FailIfErrorLast(&m_Valid);
+
+  ReadOpt(maybePublicHostPort) >> m_PublicHostPort;
+  if (m_PublicHostPort == 0) { // default inherited from root CRealmConfig
+    m_EnableCustomPort = false;
+  }
 
   m_AutoRegister           = CFG.GetBool(m_CFGKeyPrefix + "auto_register", m_AutoRegister);
   m_UserNameCaseSensitive  = CFG.GetBool(m_CFGKeyPrefix + "username.case_sensitive", m_UserNameCaseSensitive);
@@ -459,7 +467,7 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CRealmConfig* nRootConfig, uint8_t nSer
   }
 
   optional<Version> war3Version = CFG.GetMaybeVersion(m_CFGKeyPrefix + "game_version");
-  if (war3Version.has_value()) m_GameVersion = war3Version.value();
+  ReadOpt(war3Version) >> m_GameVersion;
 
   optional<Version> authWar3Version = CFG.GetMaybeVersion(m_CFGKeyPrefix + "exe_auth.version");
   if (authWar3Version.has_value()) m_ExeAuthVersion = authWar3Version.value();
@@ -473,8 +481,8 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CRealmConfig* nRootConfig, uint8_t nSer
   string authExeInfo = CFG.GetString(m_CFGKeyPrefix + "exe_auth.info");
 
   if (m_ExeAuthUseCustomVersionData) {
-    if (authExeVersion.has_value()) m_ExeAuthVersionDetails = authExeVersion.value();
-    if (authExeVersionHash.has_value()) m_ExeAuthVersionHash = authExeVersionHash.value();
+    ReadOpt(authExeVersion) >> m_ExeAuthVersionDetails;
+    ReadOpt(authExeVersionHash) >> m_ExeAuthVersionHash;
     if (!authExeInfo.empty()) m_ExeAuthInfo = authExeInfo;
   } else {
     m_ExeAuthVersionDetails.reset();
@@ -588,8 +596,7 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CRealmConfig* nRootConfig, uint8_t nSer
   m_Enabled                       = CFG.GetBool(m_CFGKeyPrefix + "enabled", m_Enabled);
 
   optional<sockaddr_storage> customBindAddress = CFG.GetMaybeAddress(m_CFGKeyPrefix + "bind_address");
-  if (customBindAddress.has_value())
-    m_BindAddress            = customBindAddress.value();
+  ReadOpt(customBindAddress) >> m_BindAddress;
 }
 
 void CRealmConfig::Reset()

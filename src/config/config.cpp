@@ -414,6 +414,16 @@ int64_t CConfig::GetInt64(const string& key, int64_t defaultValue)
   SUCCESS(maybeResult.value())
 }
 
+uint16_t CConfig::GetNonZeroPort(const string& key, uint16_t defaultValue)
+{
+  GET_KEY(key, value, defaultValue)
+  optional<uint16_t> maybeResult = ParseUInt16(value);
+  if (!maybeResult.has_value() || maybeResult.value() == 0) {
+    CONFIG_ERROR(key, defaultValue)
+  }
+  SUCCESS(maybeResult.value())
+}
+
 uint8_t CConfig::GetSlot(const string& key, uint8_t defaultValue)
 {
   return GetSlot(key, MAX_SLOTS_MODERN, defaultValue);
@@ -869,6 +879,17 @@ optional<Version> CConfig::GetMaybeVersion(const string& key)
   }
 
   result.swap(userValue);
+  SUCCESS(result)
+}
+
+optional<uint16_t> CConfig::GetMaybeNonZeroPort(const string& key)
+{
+  optional<uint16_t> result;
+  GET_KEY(key, value, result);
+  result = ParseUint16(value);
+  if (!result.has_value() || result.value() == 0) {
+    CONFIG_ERROR(key, result)
+  }
   SUCCESS(result)
 }
 

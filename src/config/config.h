@@ -147,6 +147,7 @@ public:
   [[nodiscard]] uint32_t GetUint32(const std::string& key, uint32_t x);
   [[nodiscard]] uint16_t GetUint16(const std::string& key, uint16_t x);
   [[nodiscard]] uint8_t GetUint8(const std::string& key, uint8_t x);
+  [[nodiscard]] uint16_t GetNonZeroPort(const std::string& key, uint16_t defaultValue);
   [[nodiscard]] uint8_t GetSlot(const std::string& key, uint8_t x);
   [[nodiscard]] uint8_t GetSlot(const std::string& key, uint8_t maxSlots, uint8_t x);
   [[nodiscard]] uint8_t GetPlayerCount(const std::string& key, uint8_t x);
@@ -232,6 +233,7 @@ public:
   [[nodiscard]] std::optional<int64_t> GetMaybeInt64(const std::string& key);
   [[nodiscard]] std::optional<uint64_t> GetMaybeUint64(const std::string& key);
   [[nodiscard]] std::optional<Version> GetMaybeVersion(const std::string& key);
+  [[nodiscard]] std::optional<uint16_t> GetMaybeNonZeroPort(const std::string& key);
   [[nodiscard]] std::optional<sockaddr_storage> GetMaybeAddressOfType(const std::string& key, const uint8_t acceptMode);
   [[nodiscard]] std::optional<sockaddr_storage> GetMaybeAddressIPv4(const std::string& key);
   [[nodiscard]] std::optional<sockaddr_storage> GetMaybeAddressIPv6(const std::string& key);
