@@ -233,7 +233,7 @@ public:
   bool LoadDefaultConfigs(CConfig& CFG, CNetConfig* netConfig);
   bool LoadAllConfigs(CConfig& CFG);
   void OnLoadConfigs();
-  bool LoadBNETs(CConfig& CFG, std::bitset<120>& definedConfigs);
+  bool LoadBNETs(CConfig& CFG, std::bitset<120>& definedConfigs, bool strict = false);
 
   uint8_t ExtractScripts();
   bool CopyScripts();

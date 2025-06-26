@@ -573,7 +573,7 @@ CAura::CAura(CConfig& CFG, const CCLI& nCLI)
   }
   bitset<120> definedRealms;
   if (m_Config.m_EnableBNET.value_or(true)) {
-    LoadBNETs(CFG, definedRealms);
+    LoadBNETs(CFG, definedRealms, false);
   }
 
   try {
@@ -656,10 +656,11 @@ CAura::CAura(CConfig& CFG, const CCLI& nCLI)
   UpdateMetaData();
 }
 
-bool CAura::LoadBNETs(CConfig& CFG, bitset<120>& definedRealms)
+bool CAura::LoadBNETs(CConfig& CFG, bitset<120>& definedRealms, bool strict)
 {
   // load the battle.net connections
-  // we're just loading the config data and creating the CRealm classes here, the connections are established later (in the Update function)
+  // we're just loading the config data and creating the CRealm classes here,
+  // the connections are established later (in the CRealm::Update function)
 
   bool isInvalidConfig = false;
   map<string, uint8_t> uniqueInputIds;
@@ -670,32 +671,36 @@ bool CAura::LoadBNETs(CConfig& CFG, bitset<120>& definedRealms)
     if (!hasGlobalHostName && !CFG.Exists("realm_" + to_string(i) + ".host_name")) {
       continue;
     }
-    CRealmConfig* ThisConfig = new CRealmConfig(CFG, m_RealmDefaultConfig, i);
+    CRealmConfig* thisConfig = new CRealmConfig(CFG, m_RealmDefaultConfig, i);
     if (m_Config.m_EnableBNET.has_value()) {
-      ThisConfig->m_Enabled = m_Config.m_EnableBNET.value();
+      thisConfig->m_Enabled = m_Config.m_EnableBNET.value();
     }
-    if (ThisConfig->m_UserName.empty() || ThisConfig->m_PassWord.empty()) {
-      ThisConfig->m_Enabled = false;
+    if (thisConfig->m_UserName.empty() || thisConfig->m_PassWord.empty()) {
+      thisConfig->m_Enabled = false;
     }
-    if (!ThisConfig->m_Enabled || !ThisConfig->m_Valid) {
-      delete ThisConfig;
-    } else if (uniqueNames.find(ThisConfig->m_UniqueName) != uniqueNames.end()) {
-      Print("[CONFIG] <realm_" + to_string(uniqueNames.at(ThisConfig->m_UniqueName) + 1) + ".unique_name> must be different from <realm_" + to_string(i) + ".unique_name>");
+    if (!thisConfig->m_Enabled) {
+      delete thisConfig;
+    } else if (!thisConfig->m_Valid) {
+      Print("[CONFIG] <realm_" + ToDecString(i) + "> - critical errors found");
       isInvalidConfig = true;
-      delete ThisConfig;
-    } else if (uniqueInputIds.find(ThisConfig->m_InputID) != uniqueInputIds.end()) {
-      Print("[CONFIG] <realm_" + to_string(uniqueNames.at(ThisConfig->m_UniqueName) + 1) + ".input_id> must be different from <realm_" + to_string(i) + ".input_id>");
+      delete thisConfig;
+    } else if (uniqueNames.find(thisConfig->m_UniqueName) != uniqueNames.end()) {
+      Print("[CONFIG] <realm_" + to_string(uniqueNames.at(thisConfig->m_UniqueName) + 1) + ".unique_name> must be different from <realm_" + ToDecString(i) + ".unique_name>");
       isInvalidConfig = true;
-      delete ThisConfig;
+      delete thisConfig;
+    } else if (uniqueInputIds.find(thisConfig->m_InputID) != uniqueInputIds.end()) {
+      Print("[CONFIG] <realm_" + to_string(uniqueNames.at(thisConfig->m_UniqueName) + 1) + ".input_id> must be different from <realm_" + ToDecString(i) + ".input_id>");
+      isInvalidConfig = true;
+      delete thisConfig;
     } else {
-      uniqueNames[ThisConfig->m_UniqueName] = i - 1;
-      uniqueInputIds[ThisConfig->m_InputID] = i - 1;
-      realmConfigs[i - 1] = ThisConfig;
+      uniqueNames[thisConfig->m_UniqueName] = i - 1;
+      uniqueInputIds[thisConfig->m_InputID] = i - 1;
+      realmConfigs[i - 1] = thisConfig;
       definedRealms.set(i - 1);
     }
   }
 
-  if (isInvalidConfig) {
+  if (strict && isInvalidConfig) {
     for (auto& realmConfig : realmConfigs) {
       delete realmConfig;
     }
@@ -1605,7 +1610,7 @@ bool CAura::ReloadConfigs()
   }
   OnLoadConfigs();
   bitset<120> definedRealms;
-  if (!LoadBNETs(CFG, definedRealms)) {
+  if (!LoadBNETs(CFG, definedRealms, true)) {
     Print("[CONFIG] error - realms misconfigured: not reloaded");
     success = false;
   }
