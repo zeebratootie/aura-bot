@@ -67,9 +67,10 @@ Using this exclusive feature, Aura may provide servers with a public address. Tr
 address is expected to be tunneled to your own machine, thus bypassing NAT issues.
 
 # How to
-You can use [Packetriot][1] to obtain a public address. Sign up and download their client application, 
-which requires running from the command line. Note that, as of February, 2024, the free tier is 
-rate-limited to 1 GB / month.
+You can use any of a number of services to obtain a public address, including [ngrok][1], [Pinggy][2], 
+[Packetriot][3], or [LocaltoNet][4]. Some may require a subscription before using their TCP tunneling service. 
+
+Note that, as of June 2025, Packetriot's free tier no longer provides this service.
 
 ## Packetriot
 
@@ -89,7 +90,9 @@ pktriot tunnel tcp allocate
 pktriot info
 ```
 
-Edit your ``config.ini`` accordingly to the displayed IPv4 address and port:
+Edit your ``config.ini`` accordingly to the displayed IPv4 address and port.
+Note that the address cannot be a domain, webpage or URL. If you are provided a domain, 
+you must use a DNS lookup tool to convert it to a bare IPv4 address.
 
 ```
 global_realm.custom_ip_address.enabled = yes
@@ -126,12 +129,12 @@ IPv6 TCP tunneling
 # Why?
 IPv4 is an outdated internet protocol. But, unfortunately, it's still the one many old software 
 (and even some newer one) require. That, of course, includes Warcraft III. Yet, as of February, 
-2024, [more than 40%][2] of the global Internet traffic goes through the newer IPv6 protocol, 
+2024, [more than 40%][5] of the global Internet traffic goes through the newer IPv6 protocol, 
 and the adoption rate keeps increasing as ISPs catch up with the times. Around 340 undecillion 
 IPv6 addresses exist, which means that everyone gets their own (and more than one) publicly 
 reachable address.
 
-Aura is the only host bot that can host games at [your globally routable IPv6 address][3], allowing 
+Aura is the only host bot that can host games at [your globally routable IPv6 address][6], allowing 
 people to connect to it, without worries about pervasive NAT configurations.
 
 # How to
@@ -174,12 +177,15 @@ Broadcast addresses for some VPN providers include:
 
 # Pros and cons:
 **Pro**: After installation, connectivity with you and your peers will be easier.
-**Pro**: Many VPN software alternatives exist. Search the web for [providers][4].
+**Pro**: Many VPN software alternatives exist. Search the web for [providers][7].
 **Con**: Some VPN providers may not allow you to send UDP broadcasts (invisible games problem.)
 **Con**: Requires everyone to perform installs with Administrative privileges.
 **Con**: Some VPNs are safer (or, conversely, unsafer) than others.
 
-[1]: https://packetriot.com/
-[2]: https://www.google.com/intl/en/ipv6/statistics.html#tab=ipv6-adoption
-[3]: https://api6.ipify.org/
-[4]: https://www.saasworthy.com/list/vpn-software
+[1]: https://ngrok.com/docs/universal-gateway/tcp/
+[2]: https://pinggy.io/docs/tcp_tunnels/
+[3]: https://packetriot.com/
+[4]: https://localtonet.com/documents/udp-tcp
+[5]: https://www.google.com/intl/en/ipv6/statistics.html#tab=ipv6-adoption
+[6]: https://api6.ipify.org/
+[7]: https://www.saasworthy.com/list/vpn-software
