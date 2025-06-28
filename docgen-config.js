@@ -7,8 +7,9 @@ const path = require('path');
 
 const OUTPUT_PATH = `CONFIG.md`;
 const FILE_LIST = [
-  'src/aura.cpp', 'src/auradb.cpp', 'src/net.cpp',
+  'src/aura.cpp',
   'src/config/config_bot.cpp',
+  'src/config/config_db.cpp',
   'src/config/config_discord.cpp',
   'src/config/config_game.cpp',
   'src/config/config_irc.cpp',
@@ -18,7 +19,7 @@ const FILE_LIST = [
 ];
 const configMaybeKeyRegexp = /CFG(?:\.|\-\>)(GetMaybe[a-zA-Z0-9]+)\("([^"]+)\"/;
 const configKeyRegexp = /CFG(?:\.|\-\>)(Get[a-zA-Z0-9]+)\("([^"]+)\", ([^\)]+)\)/;
-const configEnumRegexp = /CFG(?:\.|\-\>)(GetEnum\<[a-zA-Z0-9]+\>)\("([^"]+)\", (?:[a-zA-Z0-9_]+|TO_ARRAY\([^\)]+\)), ([^\)]+)\)/;
+const configEnumRegexp = /CFG(?:\.|\-\>)(GetEnum\<[a-zA-Z0-9]+\>)\("([^"]+)\", ([a-zA-Z0-9_]+|TO_ARRAY\([^\)]+\)), ([^\)]+)\)/;
 
 const ReloadModes = {NONE: 0, INSTANT: 1, NEXT: 2};
 
@@ -66,7 +67,8 @@ function getDefaultValue(rest, keyName) {
   return rest.replace(/^"/, '').replace(/"$/, '');
 }
 
-function getValueConstraints(fnName, keyName, rest) {
+function getValueConstraints(fnName, keyName, alternatives, rest) {
+  if (alternatives && alternatives.length) return [alternatives.join(`, `)];
   let parts = rest.split(',').map(x => x.trim());
   if (fnName === 'GetString') {
     if (parts.length >= 3) {
@@ -74,6 +76,12 @@ function getValueConstraints(fnName, keyName, rest) {
     }
   }
   return [];
+}
+
+function parseEnumAlternatives(alternatives) {
+  let startMarker = `TO_ARRAY(`;
+  if (!alternatives.startsWith(startMarker)) return [];
+  return JSON.parse(`[${alternatives.slice(startMarker.length, -1)}]`);
 }
 
 async function main() {
@@ -123,9 +131,9 @@ async function main() {
       }
       let enumMatch = configEnumRegexp.exec(trimmed);
       if (enumMatch) {
-        const [, fnName, keyName, restArgs] = enumMatch;
+        const [, fnName, keyName, alternatives, restArgs] = enumMatch;
         lastConfigName = keyName;
-        configOptions.push({keyName, fnName, restArgs});
+        configOptions.push({keyName, fnName, alternatives: parseEnumAlternatives(alternatives), restArgs});
         if (!optionsMeta.has(lastConfigName)) optionsMeta.set(lastConfigName, {});
         continue;
       }
@@ -154,7 +162,7 @@ async function main() {
     outContents.push('## \\`' + configEntry.keyName + '\\`');
     outContents.push(`- Type: ${getKeyType(configEntry.fnName)}`);
     if (configEntry.restArgs) {
-      let constraints = getValueConstraints(configEntry.fnName, configEntry.keyName,configEntry.restArgs);
+      let constraints = getValueConstraints(configEntry.fnName, configEntry.keyName, configEntry.alternatives, configEntry.restArgs);
       if (constraints.length) {
         outContents.push(`- Constraints: ${constraints.join('. ')}.`);
       }

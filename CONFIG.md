@@ -32,6 +32,7 @@ Config
 
 ## \`bot.load_maps.cache.revalidation.algorithm\`
 - Type: enum\<cacherevalidationmethod\>
+- Constraints: never, always, modified.
 - Default value: CacheRevalidationMethod::kModified
 - Error handling: Use default value
 
@@ -47,11 +48,13 @@ Config
 
 ## \`bot.log_level\`
 - Type: enum\<loglevel\>
+- Constraints: emergency, alert, critical, error, warning, notice, info, debug, trace, trace2, trace3.
 - Default value: LogLevel::kInfo
 - Error handling: Use default value
 
 ## \`bot.log_level\`
 - Type: enum\<loglevel\>
+- Constraints: emergency, alert, critical, error, warning, notice, info, debug.
 - Default value: LogLevel::kInfo
 - Error handling: Use default value
 
@@ -96,7 +99,8 @@ Config
 
 ## \`db.journal_mode\`
 - Type: enum\<journalmode\>
-- Default value: JournalMode::DEL
+- Constraints: delete, truncate, persist, memory, wal, off.
+- Default value: JournalMode::kDel
 - Error handling: Use default value
 
 ## \`db.storage_file\`
@@ -106,12 +110,13 @@ Config
 
 ## \`db.synchronous\`
 - Type: enum\<synchronousmode\>
-- Default value: SynchronousMode::FULL
+- Constraints: off, normal, full, extra.
+- Default value: SynchronousMode::kFull
 - Error handling: Use default value
 
 ## \`db.wal_autocheckpoint\`
 - Type: uint16
-- Default value: 1000
+- Default value: 100
 - Error handling: Use default value
 
 ## \`discord.commands.admin.permissions\`
@@ -379,7 +384,6 @@ Config
 
 ## \`global_realm.custom_ip_address.value\`
 - Type: addressipv4
-- Default value: 0.0.0.0
 - Error handling: Abort operation
 
 ## \`global_realm.custom_ip_address.value\`
@@ -397,13 +401,11 @@ Config
 - Error handling: Use default value
 
 ## \`global_realm.custom_port.value\`
-- Type: uint16
-- Default value: 6112
+- Type: nonzeroport
 - Error handling: Abort operation
 
 ## \`global_realm.custom_port.value\`
-- Type: uint16
-- Default value: Empty
+- Type: nonzeroport
 - Error handling: Abort operation
 
 ## \`global_realm.db_id\`
@@ -507,7 +509,7 @@ Config
 
 ## \`global_realm.flood.max_size\`
 - Type: uint16
-- Default value: 200
+- Default value: 160
 - Error handling: Use default value
 
 ## \`global_realm.flood.max_size\`
@@ -557,11 +559,13 @@ Config
 
 ## \`global_realm.game_list.lobby.display.priority\`
 - Type: enum\<realmbroadcastdisplaypriority\>
+- Constraints: none, low, high.
 - Default value: Empty
 - Error handling: Use default value
 
 ## \`global_realm.game_list.lobby.display.priority\`
 - Type: enum\<realmbroadcastdisplaypriority\>
+- Constraints: none, low, high.
 - Default value: Empty
 - Error handling: Use default value
 
@@ -587,11 +591,13 @@ Config
 
 ## \`global_realm.game_list.watchable.display.priority\`
 - Type: enum\<realmbroadcastdisplaypriority\>
+- Constraints: none, low, high.
 - Default value: Empty
 - Error handling: Use default value
 
 ## \`global_realm.game_list.watchable.display.priority\`
 - Type: enum\<realmbroadcastdisplaypriority\>
+- Constraints: none, low, high.
 - Default value: Empty
 - Error handling: Use default value
 
@@ -768,12 +774,12 @@ Config
 ## \`global_realm.type\`
 - Type: enum
 - Default value: REALM_TYPE_PVPGN
-- Error handling: Abort operation
+- Error handling: Use default value
 
 ## \`global_realm.type\`
 - Type: enum
 - Default value: REALM_TYPE_PVPGN
-- Error handling: Abort operation
+- Error handling: Use default value
 
 ## \`global_realm.unique_name\`
 - Type: string
@@ -905,6 +911,7 @@ Config
 
 ## \`hosting.desync.handler\`
 - Type: enum\<ondesynchandler\>
+- Constraints: none, notify, drop.
 - Default value: OnDesyncHandler::kNotify
 - Error handling: Use default value
 
@@ -920,6 +927,7 @@ Config
 
 ## \`hosting.expiry.loading.mode\`
 - Type: enum\<gameloadingtimeoutmode\>
+- Constraints: never, strict.
 - Default value: GameLoadingTimeoutMode::kStrict
 - Error handling: Use default value
 
@@ -930,6 +938,7 @@ Config
 
 ## \`hosting.expiry.lobby.mode\`
 - Type: enum\<lobbytimeoutmode\>
+- Constraints: never, empty, ownerless, strict.
 - Default value: LobbyTimeoutMode::kOwnerMissing
 - Error handling: Use default value
 
@@ -945,6 +954,7 @@ Config
 
 ## \`hosting.expiry.owner.mode\`
 - Type: enum\<lobbyownertimeoutmode\>
+- Constraints: never, absent, strict.
 - Default value: LobbyOwnerTimeoutMode::kAbsent
 - Error handling: Use default value
 
@@ -955,6 +965,7 @@ Config
 
 ## \`hosting.expiry.playing.mode\`
 - Type: enum\<gameplayingtimeoutmode\>
+- Constraints: never, dry, strict.
 - Default value: GamePlayingTimeoutMode::kStrict
 - Error handling: Use default value
 
@@ -985,6 +996,7 @@ Config
 
 ## \`hosting.fake_users.share_units.mode\`
 - Type: enum\<fakeusersshareunitsmode\>
+- Constraints: never, auto, team, all.
 - Default value: FakeUsersShareUnitsMode::kAuto
 - Error handling: Use default value
 
@@ -1005,16 +1017,19 @@ Config
 
 ## \`hosting.game_protocol.leaver_handler\`
 - Type: enum\<onplayerleavehandler\>
+- Constraints: none, native, share.
 - Default value: OnPlayerLeaveHandler::kNative
 - Error handling: Use default value
 
 ## \`hosting.game_protocol.share_handler\`
 - Type: enum\<onshareunitshandler\>
+- Constraints: native, kick, restrict.
 - Default value: OnShareUnitsHandler::kNative
 - Error handling: Use default value
 
 ## \`hosting.game_ready.mode\`
 - Type: enum\<playersreadymode\>
+- Constraints: fast, race, explicit.
 - Default value: PlayersReadyMode::kExpectRace
 - Error handling: Use default value
 
@@ -1035,6 +1050,7 @@ Config
 
 ## \`hosting.game_versions.crossplay.mode\`
 - Type: enum\<crossplaymode\>
+- Constraints: none, conservative, optimistic, force.
 - Default value: CrossPlayMode::kConservative
 - Error handling: Use default value
 
@@ -1105,6 +1121,7 @@ Config
 
 ## \`hosting.ip_filter.flood_handler\`
 - Type: enum\<onipfloodhandler\>
+- Constraints: none, notify, deny.
 - Default value: OnIPFloodHandler::kDeny
 - Error handling: Use default value
 
@@ -1250,6 +1267,7 @@ Config
 
 ## \`hosting.name_filter.unsafe_handler\`
 - Type: enum\<onunsafenamehandler\>
+- Constraints: none, censor, deny.
 - Default value: OnUnsafeNameHandler::kDeny
 - Error handling: Use default value
 
@@ -1260,6 +1278,7 @@ Config
 
 ## \`hosting.nicknames.hide_in_game\`
 - Type: enum\<hideignmode\>
+- Constraints: never, host, always, auto.
 - Default value: HideIGNMode::kAuto
 - Error handling: Use default value
 
@@ -1270,6 +1289,7 @@ Config
 
 ## \`hosting.realm_broadcast.error_handler\`
 - Type: enum\<onrealmbroadcasterrorhandler\>
+- Constraints: ignore, exit_main_error, exit_empty_main_error, exit_any_error, exit_empty_any_error, exit_max_errors.
 - Default value: OnRealmBroadcastErrorHandler::kExitOnMaxErrors
 - Error handling: Use default value
 

@@ -229,22 +229,22 @@ Map
 - Error handling: Use default value
 
 ## \`map.game_result.resolution.conflict_handler\`
-- Type: enum
+- Type: enum\<gameresultconflicthandler\>
 - Default value: Empty
 - Error handling: Abort operation
 
 ## \`map.game_result.resolution.undecided_handler.computer\`
-- Type: enum
+- Type: enum\<gameresultcomputerundecidedhandler\>
 - Default value: Empty
 - Error handling: Use default value
 
 ## \`map.game_result.resolution.undecided_handler.user\`
-- Type: enum
+- Type: enum\<gameresultuserundecidedhandler\>
 - Default value: Empty
 - Error handling: Use default value
 
 ## \`map.game_result.resolution.undecided_handler.virtual\`
-- Type: enum
+- Type: enum\<gameresultvirtualundecidedhandler\>
 - Default value: Empty
 - Error handling: Use default value
 

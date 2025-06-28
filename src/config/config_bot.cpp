@@ -176,7 +176,7 @@ CBotConfig::CBotConfig(CConfig& CFG)
 
   m_SudoKeyWord                  = CFG.GetString("bot.keywords.sudo", "sudo");
 
-  CFG.Accept("db.storage_file");
+  CFG.Accept("bot.home_path.allow_mismatch");
 }
 
 void CBotConfig::Reset()
