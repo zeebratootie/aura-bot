@@ -628,10 +628,10 @@ bool CGameUser::Update(fd_set* fd, int64_t timeout)
                 // we also discard pong values when we're downloading because they're almost certainly inaccurate
                 // this statement also gives the player a 8 second grace period after downloading the map to allow queued (i.e. delayed) ping packets to be ignored
                 if (!m_MapTransfer.GetStarted() || (m_MapTransfer.GetFinished() && GetTicks() - m_MapTransfer.GetFinishedTicks() >= 8000)) {
-                  m_RTTValues.push_back(useLiteralRTT ? (static_cast<uint32_t>(GetTicks()) - Pong) : ((static_cast<uint32_t>(GetTicks()) - Pong) / 2));
-                  if (m_RTTValues.size() > MAXIMUM_PINGS_COUNT) {
+                  if (m_RTTValues.size() == MAXIMUM_PINGS_COUNT) {
                     m_RTTValues.erase(begin(m_RTTValues));
                   }
+                  m_RTTValues.push_back(useLiteralRTT ? (static_cast<uint32_t>(GetTicks()) - Pong) : ((static_cast<uint32_t>(GetTicks()) - Pong) / 2));
                 }
               }
 
