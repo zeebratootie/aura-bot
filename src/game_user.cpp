@@ -649,7 +649,7 @@ bool CGameUser::Update(fd_set* fd, int64_t timeout)
                 m_Game.get().EventUserPongToHost(this);
               }
 
-              if (!GetIsRTTMeasuredConsistent()) {
+              if (!GetIsRTTMeasuredConsistent() && !GetIsDownloading()) {
                 // Measure player's ping as fast as possible, by chaining new pings to pongs received.
                 Send(GameProtocol::SEND_W3GS_PING_FROM_HOST(m_Aura->GetLoopTicks()));
               }
