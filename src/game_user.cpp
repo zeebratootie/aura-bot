@@ -445,7 +445,7 @@ bool CGameUser::CloseConnection(bool fromOpen)
     TrySetEnding();
     DisableReconnect();
   }
-  m_LastDisconnectTicks = GetTicks();
+  m_LastDisconnectTicks = m_Aura->GetLoopTicks();
   m_Disconnected = true;
   m_Socket->Close();
   m_Game.get().EventUserAfterDisconnect(this, fromOpen);
@@ -457,7 +457,7 @@ void CGameUser::UnrefConnection(bool deferred)
   m_Game.get().m_Aura->m_Net.OnUserKicked(this, deferred);
 
   if (!m_Disconnected) {
-    m_LastDisconnectTicks = GetTicks();
+    m_LastDisconnectTicks = m_Aura->GetLoopTicks();
     m_Disconnected = true;
   }
 }
@@ -555,8 +555,6 @@ bool CGameUser::Update(fd_set* fd, int64_t timeout)
               if (!m_Game.get().EventUserIncomingAction(this, action)) {
                 m_Game.get().EventUserDisconnectGameProtocolError(this, false);
                 Abort = true;
-              } else if (m_Disconnected) {
-                Abort = true;
               }
             }
             break;
@@ -571,10 +569,6 @@ bool CGameUser::Update(fd_set* fd, int64_t timeout)
               m_CheckSums.push(GameProtocol::RECEIVE_W3GS_OUTGOING_KEEPALIVE(Data));
               ++m_SyncCounter;
               m_Game.get().EventUserKeepAlive(this);
-
-              if (m_Disconnected) {
-                Abort = true;
-              }
             }
             break;
           }
@@ -584,10 +578,6 @@ bool CGameUser::Update(fd_set* fd, int64_t timeout)
 
             if (incomingChatMessage.GetIsValid()) {
               m_Game.get().EventUserChatOrPlayerSettings(this, incomingChatMessage);
-
-              if (m_Disconnected) {
-                Abort = true;
-              }
             }
             break;
           }
@@ -704,6 +694,9 @@ bool CGameUser::Update(fd_set* fd, int64_t timeout)
           default: {
             break;
           }
+        }
+        if (m_Disconnected) {
+          Abort = true;
         }
       }
       else if (Bytes[0] == GPSProtocol::Magic::GPS_HEADER && m_Game.get().GetIsProxyReconnectable()) {
@@ -968,7 +961,7 @@ void CGameUser::EventGProxyReconnect(CConnection* connection, const uint32_t las
   m_GProxyDisconnectNoticeSent = false;
   m_LastGProxyWaitNoticeSentTime = 0;
   if (m_LastDisconnectTicks.has_value()) {
-    m_TotalDisconnectTicks += GetTicks() - m_LastDisconnectTicks.value();
+    m_TotalDisconnectTicks += m_Aura->GetLoopTicks() - m_LastDisconnectTicks.value();
   }
   if (GetGProxyExtended()) {
     m_Game.get().SendAllChat("Player [" + GetDisplayName() + "] reconnected with GProxyDLL!");
@@ -997,7 +990,7 @@ int64_t CGameUser::GetTotalDisconnectTicks() const
   if (!m_Disconnected || !m_LastDisconnectTicks.has_value()) {
     return m_TotalDisconnectTicks;
   } else {
-    return m_TotalDisconnectTicks + GetTicks() - m_LastDisconnectTicks.value();
+    return m_TotalDisconnectTicks + m_Aura->GetLoopTicks() - m_LastDisconnectTicks.value();
   }
 }
 
