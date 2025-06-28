@@ -98,7 +98,7 @@ async function main() {
     for (const line of fileContent.split(/\r?\n/g)) {
       lineNum++;
       let trimmed = line.trim();
-      if (trimmed === `CRealmConfig::CRealmConfig(CConfig* CFG, CRealmConfig* nRootConfig, uint8_t nServerIndex)`) {
+      if (trimmed === `CRealmConfig::CRealmConfig(CConfig& CFG, CRealmConfig* nRootConfig, uint8_t nServerIndex)`) {
         isRealmN = true;
       }
       if (fileName === `src/config/config_realm.cpp`) {

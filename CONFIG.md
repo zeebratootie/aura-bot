@@ -217,26 +217,11 @@ Config
 - Default value: Empty
 - Error handling: Use default value
 
-## \`global_realm.admins\`
-- Type: set
-- Default value: Empty
-- Error handling: Use default value
-
 ## \`global_realm.announce_chat\`
 - Type: bool
 - Default value: true
 - Error handling: Use default value
 
-## \`global_realm.announce_chat\`
-- Type: bool
-- Default value: Empty
-- Error handling: Use default value
-
-## \`global_realm.auto_register\`
-- Type: bool
-- Default value: Empty
-- Error handling: Use default value
-
 ## \`global_realm.auto_register\`
 - Type: bool
 - Default value: Empty
@@ -246,45 +231,14 @@ Config
 - Type: address
 - Error handling: Use default value
 
-## \`global_realm.bind_address\`
-- Type: address
-- Error handling: Use default value
-
-## \`global_realm.canonical_name\`
-- Type: string
-- Default value: Empty
-- Error handling: Use default value
-
-## \`global_realm.cd_key.roc\`
-- Type: string
-- Constraints: Min length: 26. Max length: 26.
-- Default value: FFFFFFFFFFFFFFFFFFFFFFFFFF
-- Error handling: Use default value
-
-## \`global_realm.cd_key.tft\`
-- Type: string
-- Constraints: Min length: 26. Max length: 26.
-- Default value: FFFFFFFFFFFFFFFFFFFFFFFFFF
-- Error handling: Use default value
-
 ## \`global_realm.commands.admin.permissions\`
-- Type: enum
-- Default value: auto
-- Error handling: Use default value
-
-## \`global_realm.commands.admin.permissions\`
-- Type: enum
-- Default value: Empty
-- Error handling: Use default value
-
-## \`global_realm.commands.bot_owner.permissions\`
 - Type: enum
 - Default value: auto
 - Error handling: Use default value
 
 ## \`global_realm.commands.bot_owner.permissions\`
 - Type: enum
-- Default value: Empty
+- Default value: auto
 - Error handling: Use default value
 
 ## \`global_realm.commands.broadcast.enabled\`
@@ -292,24 +246,9 @@ Config
 - Default value: false
 - Error handling: Use default value
 
-## \`global_realm.commands.broadcast.enabled\`
-- Type: bool
-- Default value: Empty
-- Error handling: Use default value
-
-## \`global_realm.commands.broadcast.trigger\`
-- Type: string
-- Default value: Empty
-- Error handling: Use default value
-
 ## \`global_realm.commands.common.permissions\`
 - Type: enum
 - Default value: auto
-- Error handling: Use default value
-
-## \`global_realm.commands.common.permissions\`
-- Type: enum
-- Default value: Empty
 - Error handling: Use default value
 
 ## \`global_realm.commands.hosting.permissions\`
@@ -317,19 +256,9 @@ Config
 - Default value: auto
 - Error handling: Use default value
 
-## \`global_realm.commands.hosting.permissions\`
-- Type: enum
-- Default value: Empty
-- Error handling: Use default value
-
 ## \`global_realm.commands.moderator.permissions\`
 - Type: enum
 - Default value: auto
-- Error handling: Use default value
-
-## \`global_realm.commands.moderator.permissions\`
-- Type: enum
-- Default value: Empty
 - Error handling: Use default value
 
 ## \`global_realm.commands.trigger\`
@@ -337,19 +266,9 @@ Config
 - Default value: !
 - Error handling: Use default value
 
-## \`global_realm.commands.trigger\`
-- Type: string
-- Default value: Empty
-- Error handling: Use default value
-
 ## \`global_realm.country\`
 - Type: string
 - Default value: Peru
-- Error handling: Use default value
-
-## \`global_realm.country\`
-- Type: string
-- Default value: Empty
 - Error handling: Use default value
 
 ## \`global_realm.country_short\`
@@ -357,16 +276,6 @@ Config
 - Default value: PER
 - Error handling: Use default value
 
-## \`global_realm.country_short\`
-- Type: string
-- Default value: Empty
-- Error handling: Use default value
-
-## \`global_realm.crypto_hosts\`
-- Type: set
-- Default value: Empty
-- Error handling: Use default value
-
 ## \`global_realm.crypto_hosts\`
 - Type: set
 - Default value: Empty
@@ -377,15 +286,6 @@ Config
 - Default value: false
 - Error handling: Use default value
 
-## \`global_realm.custom_ip_address.enabled\`
-- Type: bool
-- Default value: Empty
-- Error handling: Use default value
-
-## \`global_realm.custom_ip_address.value\`
-- Type: addressipv4
-- Error handling: Abort operation
-
 ## \`global_realm.custom_ip_address.value\`
 - Type: addressipv4
 - Error handling: Abort operation
@@ -395,56 +295,23 @@ Config
 - Default value: false
 - Error handling: Use default value
 
-## \`global_realm.custom_port.enabled\`
-- Type: bool
-- Default value: Empty
-- Error handling: Use default value
-
 ## \`global_realm.custom_port.value\`
 - Type: nonzeroport
 - Error handling: Abort operation
-
-## \`global_realm.custom_port.value\`
-- Type: nonzeroport
-- Error handling: Abort operation
-
-## \`global_realm.db_id\`
-- Type: string
-- Default value: Empty
-- Error handling: Use default value
 
 ## \`global_realm.enabled\`
 - Type: bool
 - Default value: true
 - Error handling: Use default value
 
-## \`global_realm.enabled\`
-- Type: bool
-- Default value: Empty
-- Error handling: Use default value
-
 ## \`global_realm.exe_auth.custom\`
-- Type: bool
-- Default value: false
-- Error handling: Use default value
-
-## \`global_realm.exe_auth.custom\`
-- Type: bool
-- Default value: Empty
-- Error handling: Use default value
-
-## \`global_realm.exe_auth.ignore_version_error\`
 - Type: bool
 - Default value: false
 - Error handling: Use default value
 
 ## \`global_realm.exe_auth.ignore_version_error\`
 - Type: bool
-- Default value: Empty
-- Error handling: Use default value
-
-## \`global_realm.exe_auth.version\`
-- Type: version
+- Default value: false
 - Error handling: Use default value
 
 ## \`global_realm.exe_auth.version\`
@@ -455,21 +322,8 @@ Config
 - Type: uint8vector
 - Error handling: Abort operation
 
-## \`global_realm.exe_auth.version_details\`
-- Type: uint8vector
-- Error handling: Abort operation
-
 ## \`global_realm.exe_auth.version_hash\`
 - Type: uint8vector
-- Error handling: Abort operation
-
-## \`global_realm.exe_auth.version_hash\`
-- Type: uint8vector
-- Error handling: Abort operation
-
-## \`global_realm.expansion\`
-- Type: enum
-- Default value: SELECT_EXPANSION_TFT
 - Error handling: Abort operation
 
 ## \`global_realm.expansion\`
@@ -482,16 +336,6 @@ Config
 - Default value: The Void
 - Error handling: Use default value
 
-## \`global_realm.first_channel\`
-- Type: string
-- Default value: Empty
-- Error handling: Use default value
-
-## \`global_realm.flood.immune\`
-- Type: bool
-- Default value: Empty
-- Error handling: Use default value
-
 ## \`global_realm.flood.immune\`
 - Type: bool
 - Default value: Empty
@@ -500,11 +344,6 @@ Config
 ## \`global_realm.flood.lines\`
 - Type: uint8
 - Default value: 5
-- Error handling: Use default value
-
-## \`global_realm.flood.lines\`
-- Type: uint8
-- Default value: Empty
 - Error handling: Use default value
 
 ## \`global_realm.flood.max_size\`
@@ -512,19 +351,9 @@ Config
 - Default value: 160
 - Error handling: Use default value
 
-## \`global_realm.flood.max_size\`
-- Type: uint16
-- Default value: Empty
-- Error handling: Use default value
-
 ## \`global_realm.flood.time\`
 - Type: uint8
 - Default value: 5
-- Error handling: Use default value
-
-## \`global_realm.flood.time\`
-- Type: uint8
-- Default value: Empty
 - Error handling: Use default value
 
 ## \`global_realm.flood.wrap\`
@@ -532,35 +361,14 @@ Config
 - Default value: 40
 - Error handling: Use default value
 
-## \`global_realm.flood.wrap\`
-- Type: uint16
-- Default value: Empty
-- Error handling: Use default value
-
 ## \`global_realm.game_host.throttle\`
-- Type: bool
-- Default value: true
-- Error handling: Use default value
-
-## \`global_realm.game_host.throttle\`
-- Type: bool
-- Default value: !m_IsHostOften
-- Error handling: Use default value
-
-## \`global_realm.game_host.unique\`
 - Type: bool
 - Default value: true
 - Error handling: Use default value
 
 ## \`global_realm.game_host.unique\`
 - Type: bool
-- Default value: !m_IsHostMulti
-- Error handling: Use default value
-
-## \`global_realm.game_list.lobby.display.priority\`
-- Type: enum\<realmbroadcastdisplaypriority\>
-- Constraints: none, low, high.
-- Default value: Empty
+- Default value: true
 - Error handling: Use default value
 
 ## \`global_realm.game_list.lobby.display.priority\`
@@ -572,11 +380,6 @@ Config
 ## \`global_realm.game_list.lobby.name_template\`
 - Type: gamenametemplate
 - Default value: {NAME}{COUNTER}
-- Error handling: Use default value
-
-## \`global_realm.game_list.lobby.name_template\`
-- Type: gamenametemplate
-- Default value: Empty
 - Error handling: Use default value
 
 ## \`global_realm.game_list.rehost.name_template\`
@@ -584,17 +387,6 @@ Config
 - Default value: -{COUNT}
 - Error handling: Use default value
 
-## \`global_realm.game_list.rehost.name_template\`
-- Type: gamenametemplate
-- Default value: Empty
-- Error handling: Use default value
-
-## \`global_realm.game_list.watchable.display.priority\`
-- Type: enum\<realmbroadcastdisplaypriority\>
-- Constraints: none, low, high.
-- Default value: Empty
-- Error handling: Use default value
-
 ## \`global_realm.game_list.watchable.display.priority\`
 - Type: enum\<realmbroadcastdisplaypriority\>
 - Constraints: none, low, high.
@@ -606,43 +398,13 @@ Config
 - Default value: {NAME}{COUNTER}
 - Error handling: Use default value
 
-## \`global_realm.game_list.watchable.name_template\`
-- Type: gamenametemplate
-- Default value: Empty
-- Error handling: Use default value
-
 ## \`global_realm.game_version\`
 - Type: version
-- Error handling: Use default value
-
-## \`global_realm.game_version\`
-- Type: version
-- Error handling: Use default value
-
-## \`global_realm.host_name\`
-- Type: string
-- Default value: Empty
-- Error handling: Use default value
-
-## \`global_realm.input_id\`
-- Type: string
-- Default value: Empty
 - Error handling: Use default value
 
 ## \`global_realm.licensee\`
 - Type: string
 - Default value: Empty
-- Error handling: Use default value
-
-## \`global_realm.licensee\`
-- Type: string
-- Default value: Empty
-- Error handling: Use default value
-
-## \`global_realm.locale_short\`
-- Type: string
-- Constraints: Min length: 4. Max length: 4.
-- Default value: esES
 - Error handling: Use default value
 
 ## \`global_realm.locale_short\`
@@ -654,11 +416,6 @@ Config
 ## \`global_realm.login.hash_type\`
 - Type: enum
 - Default value: REALM_TYPE_PVPGN
-- Error handling: Abort operation
-
-## \`global_realm.login.hash_type\`
-- Type: enum
-- Default value: pvpgn
 - Error handling: Abort operation
 
 ## \`global_realm.logs.console.chat\`
@@ -666,24 +423,9 @@ Config
 - Default value: true
 - Error handling: Use default value
 
-## \`global_realm.logs.console.chat\`
-- Type: bool
-- Default value: Empty
-- Error handling: Use default value
-
 ## \`global_realm.main\`
 - Type: bool
 - Default value: false
-- Error handling: Use default value
-
-## \`global_realm.main\`
-- Type: bool
-- Default value: Empty
-- Error handling: Use default value
-
-## \`global_realm.map_transfers.max_size\`
-- Type: uint32
-- Default value: Empty
 - Error handling: Use default value
 
 ## \`global_realm.map_transfers.max_size\`
@@ -696,16 +438,6 @@ Config
 - Default value: false
 - Error handling: Use default value
 
-## \`global_realm.mirror\`
-- Type: bool
-- Default value: Empty
-- Error handling: Use default value
-
-## \`global_realm.password\`
-- Type: string
-- Default value: Empty
-- Error handling: Use default value
-
 ## \`global_realm.password\`
 - Type: string
 - Default value: Empty
@@ -714,11 +446,6 @@ Config
 ## \`global_realm.password.case_sensitive\`
 - Type: bool
 - Default value: false
-- Error handling: Use default value
-
-## \`global_realm.password.case_sensitive\`
-- Type: bool
-- Default value: Empty
 - Error handling: Use default value
 
 ## \`global_realm.protocol.whisper.error_reply\`
@@ -726,16 +453,6 @@ Config
 - Default value: string(
 - Error handling: Use default value
 
-## \`global_realm.protocol.whisper.error_reply\`
-- Type: string
-- Default value: Empty
-- Error handling: Use default value
-
-## \`global_realm.queries.games_list.enabled\`
-- Type: bool
-- Default value: Empty
-- Error handling: Use default value
-
 ## \`global_realm.queries.games_list.enabled\`
 - Type: bool
 - Default value: Empty
@@ -744,11 +461,6 @@ Config
 ## \`global_realm.rehoster\`
 - Type: bool
 - Default value: false
-- Error handling: Use default value
-
-## \`global_realm.rehoster\`
-- Type: bool
-- Default value: Empty
 - Error handling: Use default value
 
 ## \`global_realm.server_port\`
@@ -756,16 +468,6 @@ Config
 - Default value: 6112
 - Error handling: Use default value
 
-## \`global_realm.server_port\`
-- Type: uint16
-- Default value: Empty
-- Error handling: Use default value
-
-## \`global_realm.sudo_users\`
-- Type: set
-- Default value: Empty
-- Error handling: Use default value
-
 ## \`global_realm.sudo_users\`
 - Type: set
 - Default value: Empty
@@ -776,24 +478,9 @@ Config
 - Default value: REALM_TYPE_PVPGN
 - Error handling: Use default value
 
-## \`global_realm.type\`
-- Type: enum
-- Default value: REALM_TYPE_PVPGN
-- Error handling: Use default value
-
-## \`global_realm.unique_name\`
-- Type: string
-- Default value: Empty
-- Error handling: Use default value
-
 ## \`global_realm.unverified_users.always_verify\`
 - Type: bool
 - Default value: false
-- Error handling: Use default value
-
-## \`global_realm.unverified_users.always_verify\`
-- Type: bool
-- Default value: Empty
 - Error handling: Use default value
 
 ## \`global_realm.unverified_users.auto_kick\`
@@ -801,34 +488,14 @@ Config
 - Default value: false
 - Error handling: Use default value
 
-## \`global_realm.unverified_users.auto_kick\`
-- Type: bool
-- Default value: Empty
-- Error handling: Use default value
-
 ## \`global_realm.unverified_users.reject_commands\`
-- Type: bool
-- Default value: false
-- Error handling: Use default value
-
-## \`global_realm.unverified_users.reject_commands\`
-- Type: bool
-- Default value: Empty
-- Error handling: Use default value
-
-## \`global_realm.unverified_users.reject_start\`
 - Type: bool
 - Default value: false
 - Error handling: Use default value
 
 ## \`global_realm.unverified_users.reject_start\`
 - Type: bool
-- Default value: Empty
-- Error handling: Use default value
-
-## \`global_realm.username\`
-- Type: string
-- Default value: Empty
+- Default value: false
 - Error handling: Use default value
 
 ## \`global_realm.username\`
@@ -841,24 +508,9 @@ Config
 - Default value: false
 - Error handling: Use default value
 
-## \`global_realm.username.case_sensitive\`
-- Type: bool
-- Default value: Empty
-- Error handling: Use default value
-
 ## \`global_realm.vpn\`
 - Type: bool
 - Default value: false
-- Error handling: Use default value
-
-## \`global_realm.vpn\`
-- Type: bool
-- Default value: Empty
-- Error handling: Use default value
-
-## \`global_realm.win32.langid\`
-- Type: uint32
-- Default value: Empty
 - Error handling: Use default value
 
 ## \`global_realm.win32.langid\`
@@ -869,11 +521,6 @@ Config
 ## \`global_realm.win32.lcid\`
 - Type: string
 - Default value: system
-- Error handling: Use default value
-
-## \`global_realm.win32.lcid\`
-- Type: string
-- Default value: Empty
 - Error handling: Use default value
 
 ## \`hosting.apm_limiter.max.average\`
@@ -1761,6 +1408,359 @@ Config
 ## \`net.udp_server.enabled\`
 - Type: bool
 - Default value: false
+- Error handling: Use default value
+
+## \`realm_N.admins\`
+- Type: set
+- Default value: \<global_realm.admins\>
+- Error handling: Use default value
+
+## \`realm_N.announce_chat\`
+- Type: bool
+- Default value: \<global_realm.announce_chat\>
+- Error handling: Use default value
+
+## \`realm_N.auto_register\`
+- Type: bool
+- Default value: \<global_realm.auto_register\>
+- Error handling: Use default value
+
+## \`realm_N.bind_address\`
+- Type: address
+- Error handling: Use default value
+
+## \`realm_N.canonical_name\`
+- Type: string
+- Default value: \<global_realm.canonical_name\>
+- Error handling: Use default value
+
+## \`realm_N.cd_key.roc\`
+- Type: string
+- Constraints: Min length: 26. Max length: 26.
+- Default value: \<global_realm.cd_key.roc\>
+- Error handling: Use default value
+
+## \`realm_N.cd_key.tft\`
+- Type: string
+- Constraints: Min length: 26. Max length: 26.
+- Default value: \<global_realm.cd_key.tft\>
+- Error handling: Use default value
+
+## \`realm_N.commands.admin.permissions\`
+- Type: enum
+- Default value: \<global_realm.commands.admin.permissions\>
+- Error handling: Use default value
+
+## \`realm_N.commands.bot_owner.permissions\`
+- Type: enum
+- Default value: \<global_realm.commands.bot_owner.permissions\>
+- Error handling: Use default value
+
+## \`realm_N.commands.broadcast.enabled\`
+- Type: bool
+- Default value: \<global_realm.commands.broadcast.enabled\>
+- Error handling: Use default value
+
+## \`realm_N.commands.broadcast.trigger\`
+- Type: string
+- Default value: \<global_realm.commands.broadcast.trigger\>
+- Error handling: Use default value
+
+## \`realm_N.commands.common.permissions\`
+- Type: enum
+- Default value: \<global_realm.commands.common.permissions\>
+- Error handling: Use default value
+
+## \`realm_N.commands.hosting.permissions\`
+- Type: enum
+- Default value: \<global_realm.commands.hosting.permissions\>
+- Error handling: Use default value
+
+## \`realm_N.commands.moderator.permissions\`
+- Type: enum
+- Default value: \<global_realm.commands.moderator.permissions\>
+- Error handling: Use default value
+
+## \`realm_N.commands.trigger\`
+- Type: string
+- Default value: \<global_realm.commands.trigger\>
+- Error handling: Use default value
+
+## \`realm_N.country\`
+- Type: string
+- Default value: \<global_realm.country\>
+- Error handling: Use default value
+
+## \`realm_N.country_short\`
+- Type: string
+- Default value: \<global_realm.country_short\>
+- Error handling: Use default value
+
+## \`realm_N.crypto_hosts\`
+- Type: set
+- Default value: \<global_realm.crypto_hosts\>
+- Error handling: Use default value
+
+## \`realm_N.custom_ip_address.enabled\`
+- Type: bool
+- Default value: \<global_realm.custom_ip_address.enabled\>
+- Error handling: Use default value
+
+## \`realm_N.custom_ip_address.value\`
+- Type: addressipv4
+- Error handling: Use default value
+
+## \`realm_N.custom_port.enabled\`
+- Type: bool
+- Default value: \<global_realm.custom_port.enabled\>
+- Error handling: Use default value
+
+## \`realm_N.custom_port.value\`
+- Type: nonzeroport
+- Error handling: Use default value
+
+## \`realm_N.db_id\`
+- Type: string
+- Default value: \<global_realm.db_id\>
+- Error handling: Use default value
+
+## \`realm_N.enabled\`
+- Type: bool
+- Default value: \<global_realm.enabled\>
+- Error handling: Use default value
+
+## \`realm_N.exe_auth.custom\`
+- Type: bool
+- Default value: \<global_realm.exe_auth.custom\>
+- Error handling: Use default value
+
+## \`realm_N.exe_auth.ignore_version_error\`
+- Type: bool
+- Default value: \<global_realm.exe_auth.ignore_version_error\>
+- Error handling: Use default value
+
+## \`realm_N.exe_auth.version\`
+- Type: version
+- Error handling: Use default value
+
+## \`realm_N.exe_auth.version_details\`
+- Type: uint8vector
+- Error handling: Use default value
+
+## \`realm_N.exe_auth.version_hash\`
+- Type: uint8vector
+- Error handling: Use default value
+
+## \`realm_N.expansion\`
+- Type: enum
+- Default value: \<global_realm.expansion\>
+- Error handling: Use default value
+
+## \`realm_N.first_channel\`
+- Type: string
+- Default value: \<global_realm.first_channel\>
+- Error handling: Use default value
+
+## \`realm_N.flood.immune\`
+- Type: bool
+- Default value: \<global_realm.flood.immune\>
+- Error handling: Use default value
+
+## \`realm_N.flood.lines\`
+- Type: uint8
+- Default value: \<global_realm.flood.lines\>
+- Error handling: Use default value
+
+## \`realm_N.flood.max_size\`
+- Type: uint16
+- Default value: \<global_realm.flood.max_size\>
+- Error handling: Use default value
+
+## \`realm_N.flood.time\`
+- Type: uint8
+- Default value: \<global_realm.flood.time\>
+- Error handling: Use default value
+
+## \`realm_N.flood.wrap\`
+- Type: uint16
+- Default value: \<global_realm.flood.wrap\>
+- Error handling: Use default value
+
+## \`realm_N.game_host.throttle\`
+- Type: bool
+- Default value: \<global_realm.game_host.throttle\>
+- Error handling: Use default value
+
+## \`realm_N.game_host.unique\`
+- Type: bool
+- Default value: \<global_realm.game_host.unique\>
+- Error handling: Use default value
+
+## \`realm_N.game_list.lobby.display.priority\`
+- Type: enum\<realmbroadcastdisplaypriority\>
+- Constraints: none, low, high.
+- Default value: \<global_realm.game_list.lobby.display.priority\>
+- Error handling: Use default value
+
+## \`realm_N.game_list.lobby.name_template\`
+- Type: gamenametemplate
+- Default value: \<global_realm.game_list.lobby.name_template\>
+- Error handling: Use default value
+
+## \`realm_N.game_list.rehost.name_template\`
+- Type: gamenametemplate
+- Default value: \<global_realm.game_list.rehost.name_template\>
+- Error handling: Use default value
+
+## \`realm_N.game_list.watchable.display.priority\`
+- Type: enum\<realmbroadcastdisplaypriority\>
+- Constraints: none, low, high.
+- Default value: \<global_realm.game_list.watchable.display.priority\>
+- Error handling: Use default value
+
+## \`realm_N.game_list.watchable.name_template\`
+- Type: gamenametemplate
+- Default value: \<global_realm.game_list.watchable.name_template\>
+- Error handling: Use default value
+
+## \`realm_N.game_version\`
+- Type: version
+- Error handling: Use default value
+
+## \`realm_N.host_name\`
+- Type: string
+- Default value: \<global_realm.host_name\>
+- Error handling: Use default value
+
+## \`realm_N.input_id\`
+- Type: string
+- Default value: \<global_realm.input_id\>
+- Error handling: Use default value
+
+## \`realm_N.licensee\`
+- Type: string
+- Default value: \<global_realm.licensee\>
+- Error handling: Use default value
+
+## \`realm_N.locale_short\`
+- Type: string
+- Constraints: Min length: 4. Max length: 4.
+- Default value: \<global_realm.locale_short\>
+- Error handling: Use default value
+
+## \`realm_N.login.hash_type\`
+- Type: enum
+- Default value: \<global_realm.login.hash_type\>
+- Error handling: Use default value
+
+## \`realm_N.logs.console.chat\`
+- Type: bool
+- Default value: \<global_realm.logs.console.chat\>
+- Error handling: Use default value
+
+## \`realm_N.main\`
+- Type: bool
+- Default value: \<global_realm.main\>
+- Error handling: Use default value
+
+## \`realm_N.map_transfers.max_size\`
+- Type: uint32
+- Default value: \<global_realm.map_transfers.max_size\>
+- Error handling: Use default value
+
+## \`realm_N.mirror\`
+- Type: bool
+- Default value: \<global_realm.mirror\>
+- Error handling: Use default value
+
+## \`realm_N.password\`
+- Type: string
+- Default value: \<global_realm.password\>
+- Error handling: Use default value
+
+## \`realm_N.password.case_sensitive\`
+- Type: bool
+- Default value: \<global_realm.password.case_sensitive\>
+- Error handling: Use default value
+
+## \`realm_N.protocol.whisper.error_reply\`
+- Type: string
+- Default value: \<global_realm.protocol.whisper.error_reply\>
+- Error handling: Use default value
+
+## \`realm_N.queries.games_list.enabled\`
+- Type: bool
+- Default value: \<global_realm.queries.games_list.enabled\>
+- Error handling: Use default value
+
+## \`realm_N.rehoster\`
+- Type: bool
+- Default value: \<global_realm.rehoster\>
+- Error handling: Use default value
+
+## \`realm_N.server_port\`
+- Type: uint16
+- Default value: \<global_realm.server_port\>
+- Error handling: Use default value
+
+## \`realm_N.sudo_users\`
+- Type: set
+- Default value: \<global_realm.sudo_users\>
+- Error handling: Use default value
+
+## \`realm_N.type\`
+- Type: enum
+- Default value: \<global_realm.type\>
+- Error handling: Use default value
+
+## \`realm_N.unique_name\`
+- Type: string
+- Default value: \<global_realm.unique_name\>
+- Error handling: Use default value
+
+## \`realm_N.unverified_users.always_verify\`
+- Type: bool
+- Default value: \<global_realm.unverified_users.always_verify\>
+- Error handling: Use default value
+
+## \`realm_N.unverified_users.auto_kick\`
+- Type: bool
+- Default value: \<global_realm.unverified_users.auto_kick\>
+- Error handling: Use default value
+
+## \`realm_N.unverified_users.reject_commands\`
+- Type: bool
+- Default value: \<global_realm.unverified_users.reject_commands\>
+- Error handling: Use default value
+
+## \`realm_N.unverified_users.reject_start\`
+- Type: bool
+- Default value: \<global_realm.unverified_users.reject_start\>
+- Error handling: Use default value
+
+## \`realm_N.username\`
+- Type: string
+- Default value: \<global_realm.username\>
+- Error handling: Use default value
+
+## \`realm_N.username.case_sensitive\`
+- Type: bool
+- Default value: \<global_realm.username.case_sensitive\>
+- Error handling: Use default value
+
+## \`realm_N.vpn\`
+- Type: bool
+- Default value: \<global_realm.vpn\>
+- Error handling: Use default value
+
+## \`realm_N.win32.langid\`
+- Type: uint32
+- Default value: \<global_realm.win32.langid\>
+- Error handling: Use default value
+
+## \`realm_N.win32.lcid\`
+- Type: string
+- Default value: \<global_realm.win32.lcid\>
 - Error handling: Use default value
 
 ## \`ui.notify_joins.enabled\`
