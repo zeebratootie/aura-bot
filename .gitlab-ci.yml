@@ -37,7 +37,6 @@ Assemble:
   - export CXX="ccache g++"
   - export CMAKE_CC_COMPILER_LAUNCHER="ccache"
   - export CMAKE_CXX_COMPILER_LAUNCHER="ccache"
-  - mkdir -p jass cache/ccache cache/curl dist/bin-static dist/bin-shared
   - curl --remote-time --time-cond cache/curl/Blizzard.j --output cache/curl/Blizzard.j "https://raw.githubusercontent.com/lep/jassdoc/master/Blizzard.j" || true
   - curl --remote-time --time-cond cache/curl/common.j --output cache/curl/common.j "https://raw.githubusercontent.com/lep/jassdoc/master/common.j" || true
   - cp cache/curl/Blizzard.j jass/Blizzard.j
@@ -59,7 +58,7 @@ Assemble:
   - cd deps/StormLib
   #- sed -i -e 's/option(BUILD_SHARED_LIBS "Compile shared libraries" OFF)/option(BUILD_SHARED_LIBS "Compile shared libraries" ON)/g' CMakeLists.txt
   - rm -rf build && mkdir -p build
-  - cd build && cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=1 ..
+  - cd build && cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=1 -DSTORM_UNICODE=1 ..
   - make && make install
   - cd $CI_PROJECT_DIR
   ## Shared library
