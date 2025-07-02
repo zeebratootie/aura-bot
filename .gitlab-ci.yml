@@ -84,11 +84,11 @@ Assemble:
   - cp /usr/lib/libminiupnpc.so /usr/local/lib
   - cp /usr/lib/libminiupnpc.so* dist/bin-shared
   # CPR (shared, .so)
-  - cp -r --preserve=all cpr-src/ cpr-src-cached/ || true
-  - rm -rf cpr-src
+  #- cp -r --preserve=all cpr-src/ cpr-src-cached/ || true
+  #- rm -rf cpr-src
   - git clone https://github.com/libcpr/cpr.git cpr-src --depth 1
-  - cp -r --preserve=all cpr-src-cached/* cpr-src/ || true
-  - rm -rf cpr-src-cached || true
+  #- cp -r --preserve=all cpr-src-cached/* cpr-src/ || true
+  #- rm -rf cpr-src-cached || true
   - cd cpr-src && mkdir -p build && cd build
   - cmake .. -DCPR_USE_SYSTEM_CURL=ON -DBUILD_SHARED_LIBS=ON
   - cmake --build . --parallel
@@ -133,10 +133,8 @@ Assemble:
   - export AURABUILD_MINIUPNP=1
   # Not yet supported in Linux
   - export AURABUILD_PJASS=0
-  - make WFLAGS="-Wall -Wextra"
-  - make OFLAGS="-O1"
   - ccache -z
-  - make
+  - make WFLAGS="-Wall -Wextra" OFLAGS="-O1"
   - ccache -s
   - make install
   - unset AURABUILD_CPR
