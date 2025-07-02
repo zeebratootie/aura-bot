@@ -159,7 +159,7 @@ Follow this table to enable/disable components.
 | D++ | ``DISABLE_DPP`` | ``dpp.lib`` | ``dpp.dll;libcrypto-1.1.dll,libssl-1_1.dll,opus.dll,zlib1.dll`` |
 | D++ (x64) | ``DISABLE_DPP`` | ``dpp.lib`` | ``dpp.dll;libcrypto-1.1-x64.dll,libssl-1_1-x64.dll,opus.dll,zlib1.dll`` |
 | pjass | ``DISABLE_PJASS`` | ``pjass.lib`` | None |
-| MDNS (Bonjour Ⓡ) | ``DISABLE_MDNS`` | ``bonjour.lib`` | ``dnssd.dll`` |
+| MDNS (Bonjour &#9415;) | ``DISABLE_MDNS`` | ``bonjour.lib`` | ``dnssd.dll`` |
 
 The following software must be installed as a requirement for some components.
 
@@ -170,7 +170,7 @@ The following software must be installed as a requirement for some components.
 | D++ | None | Dynamic libraries from previous table |
 | D++ (x64) | None | Dynamic libraries from previous table |
 | pjass | `flex` and `bison` [8] | None |
-| MDNS (Bonjour Ⓡ) | Bonjour SDK for Windows [2] | Bonjour Printer Services for Windows [3] |
+| MDNS (Bonjour &#9415;) | Bonjour SDK for Windows [2] | Bonjour Printer Services for Windows [3] |
 
 
 **Note**: (Release/Custom) `dpp.dll` and other libraries required in runtime by `D++` are available in DPP releases [7].

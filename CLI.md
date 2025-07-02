@@ -482,7 +482,7 @@ This flag is enabled by default.
 
 ## \`--tft\`
 
-This flag enables Warcraft III: Frozen Throne Ⓡ support for the hosted game.
+This flag enables Warcraft III: Frozen Throne &#9415; support for the hosted game.
 
 A game may only target either Reign of Chaos or Frozen Throne. Therefore, `--tft` is incompatible with `--roc`.
 
@@ -494,7 +494,7 @@ This flag is enabled by default.
 
 ## \`--roc\`
 
-This flag enables Warcraft III: Frozen Throne Ⓡ support for the hosted game.
+This flag enables Warcraft III: Frozen Throne &#9415; support for the hosted game.
 
 A game may only target either Reign of Chaos or Frozen Throne. Therefore, `--roc` is incompatible with `--tft`.
 

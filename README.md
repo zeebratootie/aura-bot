@@ -4,7 +4,7 @@
 
 ## Overview
 
-[Aura][1] is a modern cross-platform hosting bot for Warcraft III Ⓡ.
+[Aura][1] is a modern cross-platform hosting bot for Warcraft III &#9415;.
 It's based on [GHost++][2] by Trevor Hogan. After several overhauls across 
 the entire code base, it now has excellent performance, and extensive networking, 
 configuration, and input capabilities, making it very easy to use not only by players, 
