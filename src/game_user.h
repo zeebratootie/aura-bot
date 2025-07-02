@@ -242,6 +242,7 @@ namespace GameUser
 
     [[nodiscard]] inline int64_t               GetStartedLaggingTicks() const { return m_StartedLaggingTicks; }
     [[nodiscard]] inline int64_t               GetLastGProxyWaitNoticeSentTime() const { return m_LastGProxyWaitNoticeSentTime; }
+    [[nodiscard]] inline size_t                GetGProxyUnqueuedPackets() const { return m_TotalPacketsSent - m_GProxyBufferSize; }
     [[nodiscard]] inline uint32_t              GetGProxyReconnectKey() const { return m_GProxyReconnectKey; }
     [[nodiscard]] inline bool                  GetGProxyCheckGameID() const { return m_GProxyCheckGameID; }
     [[nodiscard]] inline bool                  GetGProxyAny() const { return m_GProxy; }
@@ -433,6 +434,7 @@ namespace GameUser
 
     void Send(const std::vector<uint8_t>& data) final;
 
+    bool UnqueueGProxyPackets(const size_t lastPacket);
     void EventGProxyAck(const size_t lastPacket);
     void EventGProxyReconnect(CConnection* connection, const uint32_t LastPacket);
     void EventGProxyReconnectInvalid();

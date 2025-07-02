@@ -905,10 +905,18 @@ void CGameUser::CheckGProxyExtendedStartHandShake() const
   }
 }
 
-void CGameUser::EventGProxyAck(const size_t lastPacket)
+bool CGameUser::UnqueueGProxyPackets(const size_t lastPacket)
 {
-  const size_t alreadyUnqueued = m_TotalPacketsSent - m_GProxyBufferSize;
-  if (lastPacket <= alreadyUnqueued) return;
+  const size_t alreadyUnqueued = GetGProxyUnqueuedPackets();
+  if (lastPacket <= alreadyUnqueued) {
+    // The client is likely caught up to the server.
+    // Or it's doing some incorrect/rogue stuff:
+    // - ACK sent before the game starts (not a big deal, but we can only ignore it, since no packets are buffered yet)
+    //   * If load-in-game is enabled, and not everyone has loaded yet, then this behavior is legitimate, but we don't have any buffered packets anyway.
+    // - lastPacket zero (ACK sent even before the server accepts the join request)
+    // - Out-of-order ACKs
+    return lastPacket == alreadyUnqueued;
+  }
 
   size_t pendingUnqueue = min(m_GProxyBufferSize, lastPacket - alreadyUnqueued);
   size_t thisUnqueue = 0;
@@ -924,6 +932,23 @@ void CGameUser::EventGProxyAck(const size_t lastPacket)
     }
     pendingUnqueue -= thisUnqueue;
     m_GProxyBufferSize -= thisUnqueue;
+  }
+
+  return true;
+}
+
+void CGameUser::EventGProxyAck(const size_t lastPacket)
+{
+  if (!UnqueueGProxyPackets(lastPacket)) {
+#ifdef DEBUG
+    if (!m_FinishedLoading) {
+      DPRINT_IF(LogLevel::kTrace, m_Game.get().GetLogPrefix() + "[GPROXY] player [" + m_Name + "] sent GPS_ACK before loading the game")
+    } else if (!m_Game.get().GetGameLoaded()) {
+      DPRINT_IF(LogLevel::kTrace, m_Game.get().GetLogPrefix() + "[GPROXY] player [" + m_Name + "] sent GPS_ACK before the game is fully loaded")
+    } else {
+      DPRINT_IF(LogLevel::kTrace, m_Game.get().GetLogPrefix() + "[GPROXY] player [" + m_Name + "] sent bad lastPacket " + to_string(lastPacket) + " < " + to_string(GetGProxyUnqueuedPackets()))
+    }
+#endif
   }
 }
 

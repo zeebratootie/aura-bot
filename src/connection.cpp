@@ -192,7 +192,7 @@ uint8_t CConnection::Update(fd_set* fd, fd_set* send_fd, int64_t timeout)
             } else {
               targetUser = m_Aura->m_Net.GetReconnectTargetUserLegacy(Bytes[4], reconnectKey);
             }
-            if (!targetUser || targetUser->GetGProxyReconnectKey() != reconnectKey) {
+            if (!targetUser || targetUser->GetGProxyReconnectKey() != reconnectKey || targetUser->GetGProxyUnqueuedPackets() > lastPacket) {
               m_Socket->PutBytes(GPSProtocol::SEND_GPSS_REJECT(targetUser == nullptr ? REJECTGPS_NOTFOUND : REJECTGPS_INVALID));
               if (targetUser) targetUser->EventGProxyReconnectInvalid();
               Abort = true;
