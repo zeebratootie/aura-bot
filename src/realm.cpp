@@ -1,3 +1,4 @@
+
 /*
 
   Copyright [2024-2025] [Leonardo Julca]
@@ -284,7 +285,7 @@ void CRealm::UpdateConnected(fd_set* fd, fd_set* send_fd)
             }
             if (!m_GameBroadcast.expired()) {
               if (BNETProtocol::RECEIVE_SID_STARTADVEX3(Data)) {
-                DPRINT_IF(LogLevel::kTrace, GetLogPrefix() + "Game published OK <<" + GetGameBroadcastName() + ">>")
+                DPRINT_IF(LogLevel::kTrace2, GetLogPrefix() + "Game published OK <<" + GetGameBroadcastName() + ">>")
                 m_Aura->EventBNETGameRefreshSuccess(shared_from_this());
               } else {
                 PRINT_IF(LogLevel::kNotice, GetLogPrefix() + "Failed to publish game <<" + GetGameBroadcastName() + ">> Try another name")
