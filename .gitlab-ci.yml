@@ -35,8 +35,8 @@ Assemble:
   - export PATH="/usr/lib/ccache:$PATH"
   - export CC="ccache gcc"
   - export CXX="ccache g++"
-  - export CMAKE_CC_COMPILER_LAUNCHER=ccache
-  - export CMAKE_CXX_COMPILER_LAUNCHER=ccache
+  - export CMAKE_CC_COMPILER_LAUNCHER="ccache"
+  - export CMAKE_CXX_COMPILER_LAUNCHER="ccache"
   - mkdir -p jass dist/bin-static dist/bin-shared
   - curl https://raw.githubusercontent.com/lep/jassdoc/master/Blizzard.j > "jass/blizzard.j"
   - curl https://raw.githubusercontent.com/lep/jassdoc/master/common.j > "jass/common.j"
