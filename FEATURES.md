@@ -95,6 +95,7 @@ in Aura's console.
 - Uses C++17
 - Has a Windows 64-bit build
 - Has an Ubuntu 24 CI build
+- Supports Unicode
 - Implements a command-line interface (CLI)
 - Implements integration with Windows Explorer
 - Higher modularization
