@@ -106,7 +106,7 @@ CGameUser::CGameUser(shared_ptr<CGame> nGame, CConnection* connection, uint8_t n
     m_RealmHostName(std::move(nJoinedRealm)),
     m_Name(std::move(nName)),
     m_TotalPacketsSent(0),
-    m_TotalPacketsReceived(1), // REQJOIN
+    m_TotalPacketsReceived(1), // REQJOIN at (connection.cpp, game_seeker.cpp) is not passthrough
     m_LeftCode(PLAYERLEAVE_LOBBY),
     m_Status(USERSTATUS_LOBBY),
     m_IsLeaver(false),
