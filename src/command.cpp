@@ -8279,7 +8279,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
         spectator->SendProgressReport();
       }
       if (spectator->GetFrameRate() > 8) {
-        spectator->SendChat("NOTE: your computer may not be able to keep up with a speed higher than 8x.");
+        spectator->SendChat("NOTE: Your computer may not be able to keep up with a speed higher than 8x.");
       }
       break;
     }
