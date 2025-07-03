@@ -8090,9 +8090,10 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
         GetGameUser()->ClearUserReady();
         break;
       }
-      --targetGame->m_ControllersReadyCount;
-      ++targetGame->m_ControllersNotReadyCount;
-      SendAll("Player [" + GetSender() + "] no longer ready to start the game. When you are, use " + cmdToken + "ready");
+
+      targetGame->UpdateReadyCounters();
+      SendAll("Player [" + GetSender() + "] no longer ready to start the game.");
+      SendAll("Use " + cmdToken + "ready when you are.");
       break;
     }
 
@@ -8140,8 +8141,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
         GetGameUser()->ClearUserReady();
         break;
       }
-      ++targetGame->m_ControllersReadyCount;
-      --targetGame->m_ControllersNotReadyCount;
+      targetGame->UpdateReadyCounters();
       SendAll("Player [" + GetSender() + "] now ready to start the game.");
       break;
     }
@@ -8163,6 +8163,43 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
       if (!unreadyPlayers.empty()) {
         SendReply("Waiting for: " + ToNameListSentence(unreadyPlayers));
       }
+      break;
+    }
+
+    case HashCode("readymode"): {
+      UseImplicitHostedGame();
+      shared_ptr<CGame> targetGame = GetTargetGame();
+
+      if (!targetGame || !targetGame->GetIsLobbyStrict())
+        break;
+
+      if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
+        ErrorReply("Not allowed to change player ready mode.");
+        break;
+      }
+
+      bool match = true;
+      switch (HashCode(ToLowerCase(target))) {
+        case HashCode("fast"):
+          targetGame->m_Config.m_PlayersReadyMode = PlayersReadyMode::kFast;
+          break;
+        case HashCode("race"):
+          targetGame->m_Config.m_PlayersReadyMode = PlayersReadyMode::kExpectRace;
+          break;
+        case HashCode("explicit"):
+          targetGame->m_Config.m_PlayersReadyMode = PlayersReadyMode::kExplicit;
+          break;
+        default:
+          match = false;
+          break;
+      }
+
+      if (!match) {
+        ErrorReply("Invalid ready mode [" + target + "]");
+        break;
+      }
+      targetGame->UpdateReadyCounters();
+      SendAll("Ready mode set to " + target + ".");
       break;
     }
 

@@ -286,6 +286,7 @@ Commands
 ## \`pickrace\`
 
 ## \`pin\`
+- Aliases: fast, race, explicit
 - Syntax: pin \<MESSAGE\>
 
 ## \`portforward\`
@@ -329,6 +330,8 @@ Commands
 
 ## \`ready\`
 - Aliases: r
+
+## \`readymode\`
 
 ## \`readystatus\`
 - Aliases: checkready, askready
