@@ -766,7 +766,7 @@ enum class InconType : uint8_t {
 // game_user.h
 
 constexpr uint8_t CONSISTENT_PINGS_COUNT = 3u;
-constexpr uint8_t MAXIMUM_PINGS_COUNT = 6u;
+constexpr size_t MAXIMUM_PINGS_COUNT = 6u;
 constexpr uint32_t MAX_PING_WEIGHT = 4u;
 
 constexpr uint8_t SMART_COMMAND_NONE = 0u;
@@ -821,6 +821,9 @@ enum class AsyncObserverGoal : uint8_t {
 constexpr uint8_t ASYNC_OBSERVER_OK = 0u;
 constexpr uint8_t ASYNC_OBSERVER_DESTROY = 1u;
 constexpr uint8_t ASYNC_OBSERVER_PROMOTED = 2u;
+
+constexpr size_t MAXIMUM_TIMESTAMPS_COUNT = 20;
+constexpr int TIMESTAMPS_SAMPLE_RATE = 10;
 
 enum class AsyncObserver : uint8_t {
   kOk = 0,

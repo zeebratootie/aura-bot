@@ -24,6 +24,7 @@
  */
 
 #include <utility>
+#include <random>
 
 #include "async_observer.h"
 #include "aura.h"
@@ -66,6 +67,7 @@ CAsyncObserver::CAsyncObserver(shared_ptr<CGame> nGame, CConnection* nConnection
     m_Latency(nGame->GetGameHistory()->GetDefaultLatency()),
     m_SyncCounter(0),
     m_ActionFrameCounter(0),
+    m_FrameSampler(UniformFrameSampler(TIMESTAMPS_SAMPLE_RATE)),
     m_StartedLoading(false),
     m_StartedLoadingTicks(0),
     m_FinishedLoading(false),
@@ -223,7 +225,7 @@ uint8_t CAsyncObserver::Update(fd_set* fd, fd_set* send_fd, int64_t timeout)
             }
 
             case GameProtocol::Magic::OUTGOING_KEEPALIVE: {
-              UpdateClientGameState(GameProtocol::RECEIVE_W3GS_OUTGOING_KEEPALIVE(Data));
+              EventClientGameState(GameProtocol::RECEIVE_W3GS_OUTGOING_KEEPALIVE(Data));
 
               if (!m_Socket->GetConnected()) {
                 Abort = true;
@@ -329,9 +331,9 @@ uint8_t CAsyncObserver::Update(fd_set* fd, fd_set* send_fd, int64_t timeout)
       if (m_FrameRate > 1 && canSendChat) {
         if ((m_LastProgressReportTime + 30 <= Time && Ticks <= m_FinishedLoadingTicks + 120000) || m_LastProgressReportTime + 75 <= Time) {
           SendProgressReport();
-          m_MissingLog = GetMissingLog();
+          m_MissingLog = GetClientMissingLog();
         } else if (m_LastProgressReportTime + 5 <= Time) {
-          uint8_t missingLog = GetMissingLog();
+          uint8_t missingLog = GetClientMissingLog();
           if (m_MissingLog < missingLog) {
             // Ensure progress reports around 75% 87.5% 91.25% ...
             SendProgressReport();
@@ -340,7 +342,7 @@ uint8_t CAsyncObserver::Update(fd_set* fd, fd_set* send_fd, int64_t timeout)
         }
       }
     }
-    CheckGameOver();
+    CheckPlayBackOver();
   }
 
   if (m_LastPingTicks + 5000 <= Ticks) {
@@ -352,9 +354,14 @@ uint8_t CAsyncObserver::Update(fd_set* fd, fd_set* send_fd, int64_t timeout)
   return result;
 }
 
-void CAsyncObserver::CheckGameOver()
+bool CAsyncObserver::GetIsGameOver() const
 {
-  if (!m_Game.expired() && !m_Game.lock()->GetIsGameOver()) return;
+  return m_Game.expired() || m_Game.lock()->GetIsGameOver();
+}
+
+void CAsyncObserver::CheckPlayBackOver()
+{
+  if (!GetIsGameOver()) return;
   FlushGameFrames();
   if (m_GameHistory->m_PlayingBuffer.size() <= m_Offset) {
     m_PlaybackEnded = true;
@@ -372,6 +379,11 @@ int64_t CAsyncObserver::GetNextTimedActionByTicks() const
     return APP_MAX_TICKS;
   }
   return m_LastFrameTicks + m_Latency / m_FrameRate;
+}
+
+bool CAsyncObserver::GetClientIsBehindFrames(const uint32_t limit) const
+{
+  return (m_ActionFrameCounter >= m_SyncCounter) && (m_ActionFrameCounter - m_SyncCounter >= limit);
 }
 
 bool CAsyncObserver::PushGameFrames(bool isFlush)
@@ -405,6 +417,7 @@ bool CAsyncObserver::PushGameFrames(bool isFlush)
       case GAME_FRAME_TYPE_LATENCY:
         // it stored, GAME_FRAME_TYPE_LATENCY always goes after GAME_FRAME_TYPE_ACTIONS
         m_Latency = ByteArrayToUInt16(it->GetBytes(), false, 0);
+        ResetClientFrameRate();
         break;
       case GAME_FRAME_TYPE_ACTIONS:  
         gameDurationWanted -= m_Latency;
@@ -441,40 +454,58 @@ void CAsyncObserver::EventRealmDeleted(shared_ptr<const CRealm> nRealm)
   }
 }
 
-void CAsyncObserver::UpdateClientGameState(const uint32_t checkSum)
+void CAsyncObserver::EventClientGameState(const uint32_t checkSum)
 {
-  if (!m_StateSynchronized) return;
+  ++m_SyncCounter;
 
-  if (!m_Game.expired() && m_Game.lock()->GetSyncCounter() <= m_SyncCounter) {
+  if (!UpdateClientGameState(checkSum)) {
+    m_StateSynchronized = false;
+  }
+
+  if (m_FrameSampler.GetBernoulli()) {
+    if (m_CheckSumsTimeStamps.size() >= MAXIMUM_TIMESTAMPS_COUNT) {
+      m_CheckSumsTimeStamps.pop_front();
+    }
+    m_CheckSumsTimeStamps.push_back(m_Aura->GetLoopTicks());
+  }
+}
+
+bool CAsyncObserver::UpdateClientGameState(const uint32_t checkSum)
+{
+  if (!m_StateSynchronized) return false;
+
+  if (!m_Game.expired() && m_Game.lock()->GetSyncCounter() < m_SyncCounter) {
     string text = GetLogPrefix() + "incorrectly ahead of sync";
     Print(text);
     m_Aura->LogPersistent(text);
-    return;
+    return false;
   }
-  if (m_GameHistory->GetDesynchronized() && m_SyncCounter >= m_GameHistory->GetNumCheckSums()) {
-    return;
+  if (m_GameHistory->GetDesynchronized() && m_SyncCounter > m_GameHistory->GetNumCheckSums()) {
+    return false;
   }
 
   m_CheckSums.push(checkSum);
-  ++m_SyncCounter;
-  CheckClientGameState();
+  return CheckClientGameState();
 }
 
-void CAsyncObserver::CheckClientGameState()
+bool CAsyncObserver::CheckClientGameState()
 {
-  if (!m_StateSynchronized) return;
-
+  bool success = true;
   size_t nextCheckSumIndex = m_SyncCounter - m_CheckSums.size();
   while (!m_CheckSums.empty() && nextCheckSumIndex < m_GameHistory->GetNumCheckSums()) {
     uint32_t nextCheckSum = m_CheckSums.front();
     if (nextCheckSum != m_GameHistory->GetCheckSum(nextCheckSumIndex)) {
-      m_StateSynchronized = false; // how? idfk
-      EventDesync();
+      success = false;
       break;
     }
     ++nextCheckSumIndex;
     m_CheckSums.pop();
   }
+
+  if (!success) {
+    EventDesync();
+  }
+  return success;
 }
 
 void CAsyncObserver::UpdateDownloadProgression(const uint8_t downloadProgression)
@@ -752,10 +783,27 @@ void CAsyncObserver::SendGameLoadedReport()
   m_SentGameLoadedReport = true;
 }
 
-uint8_t CAsyncObserver::GetMissingLog() const
+void CAsyncObserver::ResetClientFrameRate()
+{
+  m_CheckSumsTimeStamps.clear();
+}
+
+size_t CAsyncObserver::GetClientFrameClamped() const
+{
+  return min(m_SyncCounter, m_ActionFrameCounter);
+}
+
+double CAsyncObserver::GetClientFrameRate() const
+{
+  if (m_CheckSumsTimeStamps.size() < 2) return (double)m_FrameRate; // fallback to server frame rate
+  int64_t deltaTicks = m_CheckSumsTimeStamps.back() - m_CheckSumsTimeStamps.front();
+  return (double)((m_CheckSumsTimeStamps.size() - 1) * m_Latency * (int64_t)(TIMESTAMPS_SAMPLE_RATE)) / (double)(deltaTicks);
+}
+
+uint8_t CAsyncObserver::GetClientMissingLog() const
 {
   constexpr double epsilon = numeric_limits<double>::epsilon();
-  double missing = 1.0 - ((double)m_ActionFrameCounter / (double)m_GameHistory->GetNumActionFrames());
+  double missing = 1.0 - ((double)(GetClientFrameClamped()) / (double)m_GameHistory->GetNumActionFrames());
   if (missing < epsilon) return 0;
   double missingLog = clamp(-log2(missing), 0.0, 255.0);
   return static_cast<uint8_t>(missingLog);
@@ -763,11 +811,27 @@ uint8_t CAsyncObserver::GetMissingLog() const
 
 void CAsyncObserver::SendProgressReport()
 {
-  double progress = (double)m_ActionFrameCounter / (double)m_GameHistory->GetNumActionFrames();
-  int64_t etaMilliSeconds = m_Latency * static_cast<int64_t>(m_GameHistory->GetNumActionFrames() - m_ActionFrameCounter) / (m_FrameRate - 1);
-  // Let it fit in chat log (F12)
-  SendChat(ToFormattedString(PERCENT_FACTOR * progress) + "% - Fast-forwarding at " + to_string(m_FrameRate) + "x - ETA " + ToDurationString(etaMilliSeconds / 1000));
-  m_LastProgressReportTime = GetTime();
+  constexpr double epsilon = numeric_limits<double>::epsilon();
+  size_t clientFrame = GetClientFrameClamped();
+  double clientFrameRate = GetClientFrameRate();
+  double progress = (double)clientFrame / (double)m_GameHistory->GetNumActionFrames();
+
+  double catchUpFrameRate = clientFrameRate;
+  if (!GetIsGameOver()) catchUpFrameRate = max(0.0, catchUpFrameRate - 1.0);
+
+  string rateFragment = ToFormattedString(PERCENT_FACTOR * progress) + "% - Fast-forwarding at " + to_string(static_cast<int64_t>(round(clientFrameRate))) + "x";
+  if (catchUpFrameRate < epsilon) {
+    SendChat(rateFragment);
+  } else {
+    // Estimate time for catching up with live (or finished) game, assuming that latency will be constant.
+    double etaSeconds = (double)m_Latency * (double)(m_GameHistory->GetNumActionFrames() - clientFrame) / catchUpFrameRate / 1000.0;
+    // Let it fit in chat log (F12)
+    SendChat(rateFragment + " - ETA " + ToDurationString((int64_t)etaSeconds));
+  }
+
+  if (!m_CheckSumsTimeStamps.empty() || (clientFrameRate - 6.) < epsilon /* 6x or slower can be trusted */) {
+    m_LastProgressReportTime = GetTime();
+  }
 }
 
 string CAsyncObserver::GetLogPrefix() const

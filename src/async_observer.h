@@ -26,6 +26,9 @@
 #ifndef AURA_ASYNC_OBSERVER_H_
 #define AURA_ASYNC_OBSERVER_H_
 
+#include <deque>
+#include <random>
+
 #include "includes.h"
 #include "command_history.h"
 #include "connection.h"
@@ -33,6 +36,24 @@
 #include "map.h"
 #include "realm.h"
 #include "protocol/game_protocol.h"
+
+struct UniformFrameSampler
+{
+  std::mt19937 rng;
+  std::uniform_int_distribution<int> GetValue;
+
+  UniformFrameSampler(int sampleRate)
+   : rng(std::random_device{}()),
+     GetValue(std::uniform_int_distribution<int>(1, sampleRate))
+  {
+  };
+
+  ~UniformFrameSampler()
+  {
+  }
+
+  [[nodiscard]] inline bool GetBernoulli() { return GetValue(rng) == 1; }
+};
 
 //
 // CAsyncObserver
@@ -63,6 +84,8 @@ public:
   size_t                                                        m_SyncCounter;                  // the number of keepalive packets received from this player
   size_t                                                        m_ActionFrameCounter;
   std::queue<uint32_t>                                          m_CheckSums;                    // the last few checksums the player has sent (for detecting desyncs)
+  std::deque<int64_t>                                           m_CheckSumsTimeStamps;
+  UniformFrameSampler                                           m_FrameSampler;
 
   /*
   std::vector<uint32_t>                                         m_RTTValues;                    // store the last few (10) pings received so we can take an average
@@ -132,11 +155,13 @@ public:
 
   bool PushGameFrames(bool isFlush = false);
   inline void FlushGameFrames() { PushGameFrames(true); }
-  void CheckGameOver();
+  [[nodiscard]] bool GetIsGameOver() const;
+  void CheckPlayBackOver();
   void EventGameReset(std::shared_ptr<const CGame> nGame);
   void EventRealmDeleted(std::shared_ptr<const CRealm> nRealm);
-  void UpdateClientGameState(const uint32_t checkSum);
-  void CheckClientGameState();
+  void EventClientGameState(const uint32_t checkSum);
+  bool UpdateClientGameState(const uint32_t checkSum);
+  bool CheckClientGameState();
   void UpdateDownloadProgression(const uint8_t downloadProgression);
   [[nodiscard]] uint8_t NextSendMap();
   void EventDesync();
@@ -154,9 +179,13 @@ public:
   void SendOtherPlayersInfo();
   void SendChat(const std::string& message);
   void SendGameLoadedReport();
-  uint8_t GetMissingLog() const;
-  void SendProgressReport();
-  std::string GetLogPrefix() const;
+  void                                          ResetClientFrameRate();
+  [[nodiscard]] bool                            GetClientIsBehindFrames(const uint32_t limit) const;
+  [[nodiscard]] size_t                          GetClientFrameClamped() const;
+  [[nodiscard]] double                          GetClientFrameRate() const;
+  [[nodiscard]] uint8_t                         GetClientMissingLog() const;
+  void                                          SendProgressReport();
+  std::string                                   GetLogPrefix() const;
 
   [[nodiscard]] inline bool static SortObserversByDownloadProgressAscending(const CAsyncObserver* a, const CAsyncObserver* b) {
     return a->InspectMapTransfer().GetLastSentOffsetEnd() < b->InspectMapTransfer().GetLastSentOffsetEnd();
