@@ -74,14 +74,13 @@ namespace GameUser
   {
   public:
     std::reference_wrapper<CGame>    m_Game;
+    std::shared_ptr<CGProxyServer>   m_GProxy;
     MapTransfer                      m_MapTransfer;
     CommandHistory                   m_CommandHistory;
     std::array<uint8_t, 4>           m_IPv4Internal;                 // the player's internal IP address as reported by the player when connecting
     std::vector<uint32_t>            m_RTTValues;                    // store the last few (10) pings received so we can take an average
     OptionalTimedUint32              m_MeasuredRTT;
     std::queue<uint32_t>             m_CheckSums;                    // the last few checksums the player has sent (for detecting desyncs)
-    std::queue<GameProtocol::PacketWrapper>        m_GProxyBuffer;                 // buffer with data used with GProxy++
-    size_t                           m_GProxyBufferSize;
     std::string                      m_LeftReason;                   // the reason the player left the game
     uint32_t                         m_RealmInternalId;
     std::string                      m_RealmHostName;                // the realm the player joined on (probable, can be spoofed)
@@ -104,10 +103,7 @@ namespace GameUser
     int64_t                          m_FinishedLoadingTicks;         // GetTicks when the player finished loading the game
     int64_t                          m_HandicapTicks;
     int64_t                          m_StartedLaggingTicks;          // GetTicks when the player started laggin
-    int64_t                          m_LastGProxyWaitNoticeSentTime; // GetTime when the last disconnection notice has been sent when using GProxy++
-    uint32_t                         m_GProxyReconnectKey;           // the GProxy++ reconnect key
     std::optional<int64_t>           m_KickByTicks;
-    std::optional<int64_t>           m_LastGProxyAckTicks;           // GetTime when we last acknowledged GProxy++ packet
     uint8_t                          m_SID;                          // the player's SID - this is well defined only after the game starts loading
     uint8_t                          m_UID;                          // the player's UID
     uint8_t                          m_OldUID;
@@ -142,16 +138,11 @@ namespace GameUser
     int64_t                          m_CheckStatusByTicks;
     int64_t                          m_MuteEndTicks;
 
-    bool                             m_GProxy;                       // if the player is using GProxy++
-    uint16_t                         m_GProxyPort;                   // port where GProxy will try to reconnect
-    bool                             m_GProxyCheckGameID;
-    bool                             m_GProxyDisconnectNoticeSent;   // if a disconnection notice has been sent or not when using GProxy++
-
-    bool                             m_GProxyExtended;               // if the player is using GProxyDLL
-    uint32_t                         m_GProxyVersion;
     bool                             m_Disconnected;
+    bool                             m_DisconnectNoticeSent;
     int64_t                          m_TotalDisconnectTicks;
     std::optional<int64_t>           m_LastDisconnectTicks;
+    std::optional<int64_t>           m_LastDisconnectRepeatNoticeTicks;
 
     uint8_t                          m_TeamCaptain;
 
@@ -187,6 +178,7 @@ namespace GameUser
     [[nodiscard]] std::string                     GetLowerName() const;
     [[nodiscard]] std::string                     GetDisplayName() const;
     [[nodiscard]] std::shared_ptr<CGame>          GetGame();
+    [[nodiscard]] std::shared_ptr<CGProxyServer>  GetGProxy() const;
     [[nodiscard]] inline MapTransfer&             GetMapTransfer() { return m_MapTransfer; }
     [[nodiscard]] inline const MapTransfer&       InspectMapTransfer() const { return m_MapTransfer; }
     [[nodiscard]] bool                            GetIsDownloading() const;
@@ -197,6 +189,7 @@ namespace GameUser
     [[nodiscard]] inline bool                     GetIsRTTMeasured() const { return m_MeasuredRTT.has_value() || !m_RTTValues.empty(); }
     [[nodiscard]] bool                            GetIsRTTMeasuredConsistent() const;
     [[nodiscard]] bool                            GetIsRTTMeasuredBadConsistent() const;
+    [[nodiscard]] bool                            GetCanReconnect() const;
     [[nodiscard]] inline uint32_t                 GetPongCounter() const { return m_PongCounter; }
     [[nodiscard]] inline size_t                   GetNumCheckSums() const { return m_CheckSums.size(); }
     [[nodiscard]] inline std::queue<uint32_t>*    GetCheckSums() { return &m_CheckSums; }
@@ -241,20 +234,14 @@ namespace GameUser
     [[nodiscard]] inline int64_t               GetHandicapTicks() const { return m_HandicapTicks; }
 
     [[nodiscard]] inline int64_t               GetStartedLaggingTicks() const { return m_StartedLaggingTicks; }
-    [[nodiscard]] inline int64_t               GetLastGProxyWaitNoticeSentTime() const { return m_LastGProxyWaitNoticeSentTime; }
-    [[nodiscard]] inline size_t                GetGProxyUnqueuedPackets() const { return m_TotalPacketsSent - m_GProxyBufferSize; }
-    [[nodiscard]] inline uint32_t              GetGProxyReconnectKey() const { return m_GProxyReconnectKey; }
-    [[nodiscard]] inline bool                  GetGProxyCheckGameID() const { return m_GProxyCheckGameID; }
-    [[nodiscard]] inline bool                  GetGProxyAny() const { return m_GProxy; }
-    [[nodiscard]] inline bool                  GetGProxyLegacy() const { return m_GProxy && !m_GProxyExtended; }
-    [[nodiscard]] inline bool                  GetGProxyExtended() const { return m_GProxyExtended; }
-    [[nodiscard]] inline bool                  GetGProxyDisconnectNoticeSent() const { return m_GProxyDisconnectNoticeSent; }
-    
+
     [[nodiscard]] inline bool                  GetDisconnected() const { return m_Disconnected; }
-    [[nodiscard]] inline bool                  GetDisconnectedUnrecoverably() const { return m_Disconnected && !m_GProxy; }
+    bool                                       GetDisconnectedUnrecoverably() const;
     [[nodiscard]] int64_t                      GetTotalDisconnectTicks() const;
-    [[nodiscard]] std::string                  GetDelayText(bool displaySync) const;
+    [[nodiscard]] inline bool                  GetDisconnectNoticeSent() const { return m_DisconnectNoticeSent; }
+    inline void                                SetDisconnectNoticeSent(bool nDisconnectNoticeSent = true) { m_DisconnectNoticeSent = nDisconnectNoticeSent; }
     [[nodiscard]] std::string                  GetReconnectionText() const;
+    [[nodiscard]] std::string                  GetDelayText(bool displaySync) const;
     [[nodiscard]] std::string                  GetSyncText() const;
     
     [[nodiscard]] inline bool                  GetIsReserved() const { return m_Reserved; }
@@ -368,10 +355,6 @@ namespace GameUser
     inline void SetStatusMessageSent(bool nStatusMessageSent) { m_StatusMessageSent = nStatusMessageSent; }
     inline void SetLatencySent(bool nLatencySent) { m_LatencySent = nLatencySent; }
     inline void SetLeftMessageSent(bool nLeftMessageSent) { m_LeftMessageSent = nLeftMessageSent; }
-    inline void SetGProxy(bool nGProxy) { m_GProxy = nGProxy; }
-    inline void SetGProxyExtended(bool nGProxyExtended) { m_GProxyExtended = nGProxyExtended; }
-    inline void SetGProxyDisconnectNoticeSent(bool nGProxyDisconnectNoticeSent) { m_GProxyDisconnectNoticeSent = nGProxyDisconnectNoticeSent; }
-    inline void SetLastGProxyWaitNoticeSentTime(uint64_t nLastGProxyWaitNoticeSentTime) { m_LastGProxyWaitNoticeSentTime = nLastGProxyWaitNoticeSentTime; }
     void DisableReconnect();
     inline void SetKickByTicks(int64_t nKickByTicks) { m_KickByTicks = nKickByTicks; }
     inline void ClearKickByTicks() { m_KickByTicks = std::nullopt; }
@@ -434,18 +417,16 @@ namespace GameUser
 
     void Send(const std::vector<uint8_t>& data) final;
 
-    bool UnqueueGProxyPackets(const size_t lastPacket);
+
+    void EventGProxyClientInit(const uint32_t version);
+    void EventGProxyExtendedClientInit(const std::vector<uint8_t>& data);
+    void EventGProxyChangeKey(const uint32_t key);
     void EventGProxyAck(const size_t lastPacket);
     void EventGProxyReconnect(CConnection* connection, const uint32_t LastPacket);
     void EventGProxyReconnectInvalid();
-    void RotateGProxyReconnectKey() const;
+
     bool CloseConnection(bool fromOpen = false);
     void UnrefConnection(bool deferred = false);
-
-    void InitGProxy(const uint32_t version);
-    void ConfirmGProxyExtended(const std::vector<uint8_t>& data);
-    void UpdateGProxyEmptyActions() const;
-    void CheckGProxyExtendedStartHandShake() const;
   };
 
   [[nodiscard]] inline std::string ToNameListSentence(ImmutableUserList userList, bool useRealNames = false) {

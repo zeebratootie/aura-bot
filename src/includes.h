@@ -148,6 +148,19 @@ std::string::size_type constexpr GetStringLength(const char* str)
 #define APP_MAX_TICKS std::numeric_limits<int64_t>::max()
 #define APP_MIN_TICKS std::numeric_limits<int64_t>::min()
 
+#ifdef NDEBUG
+#define DCHECK(F, T) \
+    do {\
+      F;\
+    } while (0)
+#else
+#define DCHECK(F, T) \
+    do {\
+        bool _assert_val = F;\
+        assert(_assert_val && T);\
+    } while (0)
+#endif
+
 // time
 
 inline int64_t GetTime()

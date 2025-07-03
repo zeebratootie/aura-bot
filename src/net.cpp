@@ -41,6 +41,7 @@
 #include "game.h"
 #include "protocol/game_protocol.h"
 #include "proxy/tcp_proxy.h"
+#include "proxy/gproxy_server.h"
 #include "game_seeker.h"
 #include "game_user.h"
 #include "realm.h"
@@ -990,7 +991,7 @@ GameUser::CGameUser* CNet::GetReconnectTargetUser(const uint32_t gameID, const u
     if (game->GetGameID() != gameID) continue;
     if (game->GetGameLoaded() && !game->GetIsGameOver() && game->GetIsProxyReconnectable()) {
       GameUser::CGameUser* user = game->GetUserFromUID(UID);
-      if (user && !user->GetDeleteMe() && user->GetGProxyAny()) {
+      if (user && !user->GetDeleteMe() && user->GetCanReconnect()) {
         matchUser = user;
       }
     }
@@ -1007,7 +1008,7 @@ GameUser::CGameUser* CNet::GetReconnectTargetUserLegacy(const uint8_t UID, const
   for (auto& game : m_Aura->m_StartedGames) {
     if (game->GetGameLoaded() && !game->GetIsGameOver() && game->GetIsProxyReconnectable()) {
       GameUser::CGameUser* user = game->GetUserFromUID(UID);
-      if (user && !user->GetDeleteMe() && user->GetGProxyAny() && !user->GetGProxyCheckGameID() && user->GetGProxyReconnectKey() == reconnectKey) {
+      if (user && !user->GetDeleteMe() && user->GetCanReconnect() && !user->GetGProxy()->GetCheckGameID() && user->GetGProxy()->GetReconnectKey() == reconnectKey) {
         matchUser = user;
         break;
       }

@@ -214,6 +214,7 @@ public:
   [[nodiscard]] inline int64_t GetLoopTicks() const { return m_LoopTicks; }
   [[nodiscard]] inline bool GetTicksIsAfter(int64_t referenceTicks) const { return referenceTicks <= m_LoopTicks; }
   [[nodiscard]] inline bool GetTicksIsAfterDelay(int64_t referenceTicks, int64_t delayTicks) const { return referenceTicks + delayTicks <= m_LoopTicks; }
+  [[nodiscard]] inline bool GetTicksIsFirstOrAfterDelay(std::optional<int64_t> referenceTicks, int64_t delayTicks) const { return !referenceTicks.has_value() || referenceTicks.value() + delayTicks <= m_LoopTicks; }
 
   // events
 

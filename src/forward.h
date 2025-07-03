@@ -53,6 +53,7 @@ class CGameInteractiveHost;
 class CGameSeeker;
 class CGameSetup;
 class CGameSlot;
+class CGProxyServer;
 class CIncomingAction;
 class CIncomingChatEvent;
 class CIncomingChatMessage;

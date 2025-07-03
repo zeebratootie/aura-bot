@@ -69,6 +69,7 @@
 #include "protocol/game_protocol.h"
 #include "protocol/gps_protocol.h"
 #include "protocol/vlan_protocol.h"
+#include "proxy/gproxy_server.h"
 #include "stats/dota.h"
 #include "stats/w3mmd.h"
 #include "integration/irc.h"
@@ -1342,7 +1343,7 @@ ImmutableUserList CGame::GetWaitingReconnectPlayers() const
 {
   ImmutableUserList players;
   for (const auto& user : m_Users) {
-    if (!user->GetLeftMessageSent() && user->GetDisconnected() && user->GetGProxyAny()) {
+    if (!user->GetLeftMessageSent() && user->GetDisconnected() && user->GetCanReconnect()) {
       players.push_back(user);
     }
   }
@@ -1580,9 +1581,9 @@ void CGame::UpdateLoaded()
         continue;
       }
       bool timeExceeded = false;
-      if (user->GetDisconnected() && user->GetGProxyExtended()) {
+      if (user->GetDisconnected() && user->GetGProxy()->GetIsExtended()) {
         timeExceeded = Ticks - user->GetStartedLaggingTicks() > waitTicks.second;
-      } else if (user->GetDisconnected() && user->GetGProxyAny()) {
+      } else if (user->GetDisconnected() && user->GetCanReconnect()) {
         timeExceeded = Ticks - user->GetStartedLaggingTicks() > waitTicks.first;
       } else {
         timeExceeded = Ticks - user->GetStartedLaggingTicks() > 60000;
@@ -1619,7 +1620,7 @@ void CGame::UpdateLoaded()
         continue;
       }
 
-      if (user->GetGProxyDisconnectNoticeSent()) {
+      if (user->GetDisconnectNoticeSent()) {
         ++playersLaggingCounter;
         ReportRecoverableDisconnect(user);
         continue;
@@ -1773,7 +1774,7 @@ bool CGame::Update(fd_set* fd, fd_set* send_fd)
   // update users
 
   for (auto i = begin(m_Users); i != end(m_Users);) {
-    if ((*i)->Update(fd, (*i)->GetGProxyAny() ? GAME_USER_TIMEOUT_RECONNECTABLE : GAME_USER_TIMEOUT_VANILLA)) {
+    if ((*i)->Update(fd, (*i)->GetCanReconnect() ? GAME_USER_TIMEOUT_RECONNECTABLE : GAME_USER_TIMEOUT_VANILLA)) {
       EventUserDeleted(*i, fd, send_fd);
       m_Aura->m_Net.OnUserKicked(*i);
       delete *i;
@@ -3810,7 +3811,7 @@ void CGame::SendGProxyEmptyActions()
   // GProxy sends these empty actions itself BEFORE every action received.
   // So we need to match it, to avoid desyncs.
   for (auto& user : m_Users) {
-    if (!user->GetGProxyAny()) {
+    if (!user->GetCanReconnect()) {
       Send(user, emptyActions);
 
       // Warcraft III doesn't respond to empty actions,
@@ -4008,8 +4009,8 @@ uint8_t CGame::CalcActiveReconnectProtocols() const
 {
   uint8_t protocols = 0;
   for (const auto& user : m_Users) {
-    if (!user->GetGProxyAny()) continue;
-    if (user->GetGProxyExtended()) {
+    if (!user->GetCanReconnect()) continue;
+    if (user->GetGProxy()->GetIsExtended()) {
       protocols |= RECONNECT_ENABLED_GPROXY_EXTENDED;
       if (protocols != RECONNECT_ENABLED_GPROXY_EXTENDED) break;
     } else {
@@ -4025,9 +4026,9 @@ string CGame::GetActiveReconnectProtocolsDetails() const
   // Must only be used to print to console, because GetName() is used instead of GetDisplayName()
   vector<string> protocols;
   for (const auto& user : m_Users) {
-    if (!user->GetGProxyAny()) {
+    if (!user->GetCanReconnect()) {
       protocols.push_back("[" + user->GetName() + ": OFF]");
-    } else if (user->GetGProxyExtended()) {
+    } else if (user->GetGProxy()->GetIsExtended()) {
       protocols.push_back("[" + user->GetName() + ": EXT]");
     } else {
       protocols.push_back("[" + user->GetName() + ": ON]");
@@ -4039,7 +4040,7 @@ string CGame::GetActiveReconnectProtocolsDetails() const
 bool CGame::CalcAnyUsingGProxy() const
 {
   for (const auto& user : m_Users) {
-    if (user->GetGProxyAny()) {
+    if (user->GetCanReconnect()) {
       return true;
     }
   }
@@ -4049,8 +4050,8 @@ bool CGame::CalcAnyUsingGProxy() const
 bool CGame::CalcAnyUsingGProxyLegacy() const
 {
   for (const auto& user : m_Users) {
-    if (!user->GetGProxyAny()) continue;
-    if (!user->GetGProxyExtended()) {
+    if (!user->GetCanReconnect()) continue;
+    if (!user->GetGProxy()->GetIsExtended()) {
       return true;
     }
   }
@@ -4613,7 +4614,7 @@ void CGame::ReportAllPings() const
 
   if (m_IsLagging) {
     GameUser::CGameUser* worstLagger = SortedPlayers[0];
-    if (worstLagger->GetDisconnected() && worstLagger->GetGProxyAny()) {
+    if (worstLagger->GetDisconnected() && worstLagger->GetCanReconnect()) {
       ImmutableUserList waitingReconnectPlayers = GetWaitingReconnectPlayers();
       uint8_t laggerCount = CountLaggingPlayers() - static_cast<uint8_t>(waitingReconnectPlayers.size());
       string laggerText;
@@ -4678,7 +4679,7 @@ void CGame::SetLaggingPlayerAndUpdate(GameUser::CGameUser* user)
     // Report lagging users:
     // - Just disconnected user
     // - Players outside safe sync limit
-    // Since the disconnected user has already been flagged with SetGProxyDisconnectNoticeSent, they get
+    // Since the disconnected user has already been flagged with SetDisconnectNoticeSent, they get
     // excluded from the output vector of CalculateNewLaggingPlayers(),
     // So we have to add them afterwards.
     UserList laggingPlayers = CalculateNewLaggingPlayers();
@@ -4724,24 +4725,25 @@ pair<int64_t, int64_t> CGame::GetReconnectWaitTicks() const
 
 void CGame::ReportRecoverableDisconnect(GameUser::CGameUser* user)
 {
-  int64_t Time = GetTime(), Ticks = GetTicks();
-  if (Time - user->GetLastGProxyWaitNoticeSentTime() < 20) {
+  if (user->m_LastDisconnectRepeatNoticeTicks.has_value() && !m_Aura->GetTicksIsAfterDelay(user->m_LastDisconnectRepeatNoticeTicks.value(), 20000)) {
     return;
   }
 
   int64_t timeRemaining = 0;
   pair<int64_t, int64_t> ticksRemaining = GetReconnectWaitTicks();
-  if (user->GetGProxyExtended()) {
-    timeRemaining = Ticks - user->GetStartedLaggingTicks() - ticksRemaining.second;
+  if (user->GetGProxy()->GetIsExtended()) {
+    timeRemaining = m_Aura->GetLoopTicks() - user->GetStartedLaggingTicks() - ticksRemaining.second;
   } else {
-    timeRemaining = Ticks - user->GetStartedLaggingTicks() - ticksRemaining.first;
+    timeRemaining = m_Aura->GetLoopTicks() - user->GetStartedLaggingTicks() - ticksRemaining.first;
   }
+
+  timeRemaining /= 1000;
   if (timeRemaining <= 0) {
     return;
   }
 
   SendAllChat(user->GetUID(), "Please wait for me to reconnect (time limit: " + to_string(timeRemaining) + " seconds)");
-  user->SetLastGProxyWaitNoticeSentTime(Time);
+  user->m_LastDisconnectRepeatNoticeTicks = m_Aura->GetLoopTicks();
 }
 
 void CGame::OnRecoverableDisconnect(GameUser::CGameUser* user)
@@ -4781,11 +4783,11 @@ void CGame::EventUserAfterDisconnect(GameUser::CGameUser* user, bool fromOpen)
 void CGame::EventUserDisconnectTimedOut(GameUser::CGameUser* user)
 {
   if (user->GetDisconnected()) return;
-  if (user->GetGProxyAny() && m_GameLoaded) {
-    if (!user->GetGProxyDisconnectNoticeSent()) {
+  if (user->GetCanReconnect() && m_GameLoaded) {
+    if (!user->GetDisconnectNoticeSent()) {
       user->UnrefConnection();
-      user->SetGProxyDisconnectNoticeSent(true);
-      if (user->GetGProxyExtended()) {
+      user->SetDisconnectNoticeSent(true);
+      if (user->GetGProxy()->GetIsExtended()) {
         SendAllChat(user->GetDisplayName() + " has disconnected, but is using GProxyDLL and may reconnect");
       } else {
         SendAllChat(user->GetDisplayName() + " has disconnected, but is using GProxy++ and may reconnect");
@@ -4812,11 +4814,11 @@ void CGame::EventUserDisconnectTimedOut(GameUser::CGameUser* user)
 void CGame::EventUserDisconnectSocketError(GameUser::CGameUser* user)
 {
   if (user->GetDisconnected()) return;
-  if (user->GetGProxyAny() && m_GameLoaded) {
-    if (!user->GetGProxyDisconnectNoticeSent()) {
+  if (user->GetCanReconnect() && m_GameLoaded) {
+    if (!user->GetDisconnectNoticeSent()) {
       string errorString = user->GetConnectionErrorString();
       user->UnrefConnection();
-      user->SetGProxyDisconnectNoticeSent(true);
+      user->SetDisconnectNoticeSent(true);
       SendAllChat(user->GetDisplayName() + " has disconnected (connection error - " + errorString + ") but is using GProxy++ and may reconnect");
     }
 
@@ -4839,10 +4841,10 @@ void CGame::EventUserDisconnectSocketError(GameUser::CGameUser* user)
 void CGame::EventUserDisconnectConnectionClosed(GameUser::CGameUser* user)
 {
   if (user->GetDisconnected()) return;
-  if (user->GetGProxyAny() && m_GameLoaded) {
-    if (!user->GetGProxyDisconnectNoticeSent()) {
+  if (user->GetCanReconnect() && m_GameLoaded) {
+    if (!user->GetDisconnectNoticeSent()) {
       user->UnrefConnection();
-      user->SetGProxyDisconnectNoticeSent(true);
+      user->SetDisconnectNoticeSent(true);
       SendAllChat(user->GetDisplayName() + " has terminated the connection, but is using GProxy++ and may reconnect");
     }
 
@@ -4865,10 +4867,10 @@ void CGame::EventUserDisconnectConnectionClosed(GameUser::CGameUser* user)
 void CGame::EventUserDisconnectGameProtocolError(GameUser::CGameUser* user, bool canRecover)
 {
   if (user->GetDisconnected()) return;
-  if (canRecover && user->GetGProxyAny() && m_GameLoaded) {
-    if (!user->GetGProxyDisconnectNoticeSent()) {
+  if (canRecover && user->GetCanReconnect() && m_GameLoaded) {
+    if (!user->GetDisconnectNoticeSent()) {
       user->UnrefConnection();
-      user->SetGProxyDisconnectNoticeSent(true);
+      user->SetDisconnectNoticeSent(true);
       SendAllChat(user->GetDisplayName() + " has disconnected (protocol error) but is using GProxy++ and may reconnect");
     }
 
@@ -5059,7 +5061,7 @@ bool CGame::SendEveryoneElseLeftAndDisconnect(const string& reason) const
       p1->SetLeftCode(PLAYERLEAVE_DISCONNECT);
     }
     p1->SetLeftMessageSent(true);
-    if (p1->GetGProxyAny()) {
+    if (p1->GetCanReconnect()) {
       // Let GProxy know that it should give up at reconnecting.
       Send(p1, GameProtocol::SEND_W3GS_PLAYERLEAVE_OTHERS(p1->GetUID(), PLAYERLEAVE_DISCONNECT));
     }
@@ -5142,9 +5144,9 @@ void CGame::EventUserCheckStatus(GameUser::CGameUser* user)
 
   string GProxyFragment;
   if (m_Aura->m_Net.m_Config.m_AnnounceGProxy && GetIsProxyReconnectable() && !hideNames) {
-    if (user->GetGProxyExtended()) {
+    if (user->GetGProxy()->GetIsExtended()) {
       GProxyFragment = " is using GProxyDLL, a Warcraft III plugin to protect against disconnections. See: <" + m_Aura->m_Net.m_Config.m_AnnounceGProxySite + ">";
-    } else if (user->GetGProxyAny()) {
+    } else if (user->GetCanReconnect()) {
       if (GetIsProxyReconnectableLong()) {
         GProxyFragment = " is using an outdated GProxy++. Please upgrade to GProxyDLL at: <" + m_Aura->m_Net.m_Config.m_AnnounceGProxySite + ">";
       } else {
@@ -5746,7 +5748,7 @@ void CGame::EventUserLeft(GameUser::CGameUser* user, const uint32_t clientReason
   // however, clients not only send the leave packet by a user clicking on Quit Game
   // clients also will send a leave packet if the server sends unexpected data
 
-  if (clientReason == PLAYERLEAVE_GPROXY && (user->GetGProxyAny() || GetIsLobbyStrict() /* in case GProxy handshake could not be completed*/)) {
+  if (clientReason == PLAYERLEAVE_GPROXY && (user->GetCanReconnect() || GetIsLobbyStrict() /* in case GProxy handshake could not be completed*/)) {
     user->SetLeftReason("Game client disconnected automatically");
     user->SetLeftCode(PLAYERLEAVE_DISCONNECT);
   } else {
@@ -5794,7 +5796,7 @@ void CGame::EventUserLoaded(GameUser::CGameUser* user)
     }
     // GProxy sends m_GProxyEmptyActions additional empty actions for every action received.
     // So we need to match it, to avoid desyncs.
-    if (user->GetGProxyAny()) {
+    if (user->GetCanReconnect()) {
       Send(user, GameProtocol::SEND_W3GS_EMPTY_ACTIONS(m_BeforePlayingEmptyActions));
     } else {
       Send(user, GameProtocol::SEND_W3GS_EMPTY_ACTIONS(m_BeforePlayingEmptyActions * (1 + m_GProxyEmptyActions)));
@@ -6661,10 +6663,13 @@ void CGame::EventGameStartedLoading()
   if (m_GProxyEmptyActions > 0 && m_ReconnectProtocols == RECONNECT_ENABLED_GPROXY_EXTENDED) {
     m_GProxyEmptyActions = 0;
     for (const auto& user : m_Users) {
-      if (user->GetGProxyAny()) {
-        user->UpdateGProxyEmptyActions();
+      if (user->GetCanReconnect()) {
+        user->GetGProxy()->UpdateEmptyActions(0);
       }
     }
+  }
+  for (const auto& user : m_Users) {
+    user->GetGProxy()->EventGameStart();
   }
 
   ResolveBuffering();
@@ -9323,7 +9328,7 @@ UserList CGame::CalculateNewLaggingPlayers() const
     if (user->GetIsObserver()) {
       continue;
     }
-    if (user->GetIsLagging() || user->GetGProxyDisconnectNoticeSent() || user->GetDisconnectedUnrecoverably()) {
+    if (user->GetIsLagging() || user->GetDisconnectNoticeSent() || user->GetDisconnectedUnrecoverably()) {
       continue;
     }
     if (!user->GetFinishedLoading()) {
@@ -9374,7 +9379,7 @@ void CGame::ResetLagScreen()
 
       // GProxy sends these empty actions itself for every action received.
       // So we need to match it, to avoid desyncs.
-      if (anyUsingGProxy && !user->GetGProxyAny()) {
+      if (anyUsingGProxy && !user->GetCanReconnect()) {
         Send(user, GameProtocol::SEND_W3GS_EMPTY_ACTIONS(m_GProxyEmptyActions));
 
         // Warcraft III doesn't respond to empty actions,
@@ -9395,7 +9400,7 @@ void CGame::ResetLagScreen()
       // so we need to artificially increase users' sync counters.
       /*
       user->AddSyncCounterOffset(1);
-      if (anyUsingGProxy && !user->GetGProxyAny()) {
+      if (anyUsingGProxy && !user->GetCanReconnect()) {
         user->AddSyncCounterOffset(m_GProxyEmptyActions);
       }
       */

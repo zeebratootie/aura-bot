@@ -34,6 +34,7 @@
 #include "protocol/game_protocol.h"
 #include "protocol/gps_protocol.h"
 #include "protocol/vlan_protocol.h"
+#include "proxy/gproxy_server.h"
 #include "game.h"
 #include "socket.h"
 #include "net.h"
@@ -192,7 +193,7 @@ uint8_t CConnection::Update(fd_set* fd, fd_set* send_fd, int64_t timeout)
             } else {
               targetUser = m_Aura->m_Net.GetReconnectTargetUserLegacy(Bytes[4], reconnectKey);
             }
-            if (!targetUser || targetUser->GetGProxyReconnectKey() != reconnectKey || targetUser->GetGProxyUnqueuedPackets() > lastPacket) {
+            if (!targetUser || !targetUser->GetGProxy()->ValidateReconnect(reconnectKey, lastPacket)) {
               m_Socket->PutBytes(GPSProtocol::SEND_GPSS_REJECT(targetUser == nullptr ? REJECTGPS_NOTFOUND : REJECTGPS_INVALID));
               if (targetUser) targetUser->EventGProxyReconnectInvalid();
               Abort = true;

@@ -134,6 +134,7 @@ OBJS = $(OBJDIR)lib/base64/base64.o \
        $(OBJDIR)src/config/config_irc.o \
        $(OBJDIR)src/config/config_discord.o \
        $(OBJDIR)src/config/config_net.o \
+       $(OBJDIR)src/proxy/gproxy_server.o \
        $(OBJDIR)src/proxy/tcp_proxy.o \
        $(OBJDIR)src/auradb.o \
        $(OBJDIR)src/bncsutil_interface.o \

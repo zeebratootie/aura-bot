@@ -579,6 +579,7 @@
     <ClCompile Include="config\config_irc.cpp" />
     <ClCompile Include="config\config_discord.cpp" />
     <ClCompile Include="config\config_net.cpp" />
+    <ClCompile Include="proxy\gproxy_server.cpp" />
     <ClCompile Include="proxy\tcp_proxy.cpp" />
     <ClCompile Include="optional.cpp" />
     <ClCompile Include="util.cpp" />
@@ -649,6 +650,7 @@
     <ClInclude Include="config\config_irc.h" />
     <ClInclude Include="config\config_discord.h" />
     <ClInclude Include="config\config_net.h" />
+    <ClInclude Include="proxy\gproxy_server.h" />
     <ClInclude Include="proxy\tcp_proxy.h" />
     <ClInclude Include="ms_stdint.h" />
     <ClInclude Include="optional.h" />

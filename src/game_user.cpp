@@ -58,6 +58,7 @@
 #include "game.h"
 #include "socket.h"
 #include "net.h"
+#include "proxy/gproxy_server.h"
 
 using namespace std;
 using namespace GameUser;
@@ -101,12 +102,9 @@ CGameUser::CGameUser(shared_ptr<CGame> nGame, CConnection* connection, uint8_t n
   : CConnection(*connection),
     m_Game(ref(*nGame)),
     m_IPv4Internal(std::move(nInternalIP)),
-    m_GProxyBufferSize(0),
     m_RealmInternalId(nJoinedRealmInternalId),
     m_RealmHostName(std::move(nJoinedRealm)),
     m_Name(std::move(nName)),
-    m_TotalPacketsSent(0),
-    m_TotalPacketsReceived(1), // REQJOIN at (connection.cpp, game_seeker.cpp) is not passthrough
     m_LeftCode(PLAYERLEAVE_LOBBY),
     m_Status(USERSTATUS_LOBBY),
     m_IsLeaver(false),
@@ -120,8 +118,6 @@ CGameUser::CGameUser(shared_ptr<CGame> nGame, CConnection* connection, uint8_t n
     m_FinishedLoadingTicks(0),
     m_HandicapTicks(0),
     m_StartedLaggingTicks(0),
-    m_LastGProxyWaitNoticeSentTime(0),
-    m_GProxyReconnectKey(rand()),
     m_SID(0xFF),
     m_UID(nUID),
     m_OldUID(0xFF),
@@ -154,13 +150,8 @@ CGameUser::CGameUser(shared_ptr<CGame> nGame, CConnection* connection, uint8_t n
     m_CheckStatusByTicks(GetTicks() + CHECK_STATUS_LATENCY),
     m_MuteEndTicks(0),
 
-    m_GProxy(false),
-    m_GProxyPort(0),
-    m_GProxyCheckGameID(false),
-    m_GProxyDisconnectNoticeSent(false),
-    m_GProxyExtended(false),
-    m_GProxyVersion(0),
     m_Disconnected(false),
+    m_DisconnectNoticeSent(false),
     m_TotalDisconnectTicks(0),
 
     m_TeamCaptain(0),
@@ -169,6 +160,9 @@ CGameUser::CGameUser(shared_ptr<CGame> nGame, CConnection* connection, uint8_t n
     m_RemainingSaves(GAME_SAVES_PER_PLAYER),
     m_RemainingPauses(GAME_PAUSES_PER_PLAYER)
 {
+  m_GProxy = make_shared<CGProxyServer>(this);
+  m_GProxy->AddRecvPacket(); // REQJOIN at (connection.cpp, game_seeker.cpp) is not passthrough
+
   m_RecentActionCounter.fill(0);
   m_RTTValues.reserve(MAXIMUM_PINGS_COUNT);
   m_Socket->SetLogErrors(true);
@@ -254,6 +248,11 @@ bool CGameUser::GetIsRTTMeasuredBadConsistent() const
   return m_MeasuredRTT.has_value() || GetStoredRTTCount() >= 2;
 }
 
+bool CGameUser::GetCanReconnect() const
+{
+  return m_GProxy->GetIsEnabled();
+}
+
 string CGameUser::GetConnectionErrorString() const
 {
   string errorString;
@@ -296,6 +295,11 @@ string CGameUser::GetDisplayName() const
 shared_ptr<CGame> CGameUser::GetGame()
 {
   return m_Game.get().shared_from_this();
+}
+
+shared_ptr<CGProxyServer> CGameUser::GetGProxy() const
+{
+  return m_GProxy;
 }
 
 uint32_t CGameUser::GetPingEqualizerDelay() const
@@ -441,7 +445,7 @@ bool CGameUser::GetIsBehindFramesNormal(const uint32_t frameLimit) const
 bool CGameUser::CloseConnection(bool fromOpen)
 {
   if (m_Disconnected) return false;
-  if (!m_Game.get().GetGameLoaded() || !m_GProxy) {
+  if (!m_Game.get().GetGameLoaded() || !GetCanReconnect()) {
     TrySetEnding();
     DisableReconnect();
   }
@@ -477,7 +481,7 @@ void CGameUser::RefreshUID()
 bool CGameUser::Update(fd_set* fd, int64_t timeout)
 {
   if (m_Disconnected) {
-    if (m_GProxyExtended && GetTotalDisconnectTicks() > m_Game.get().m_Aura->m_Net.m_Config.m_ReconnectWaitTicks) {
+    if (m_GProxy->GetIsExtended() && GetTotalDisconnectTicks() > m_Game.get().m_Aura->m_Net.m_Config.m_ReconnectWaitTicks) {
       m_Game.get().EventUserKickGProxyExtendedTimeout(this);
     }
     return m_DeleteMe;
@@ -520,7 +524,7 @@ bool CGameUser::Update(fd_set* fd, int64_t timeout)
 
       if (Bytes[0] == GameProtocol::Magic::W3GS_HEADER)
       {
-        ++m_TotalPacketsReceived;
+        m_GProxy->AddRecvPacket();
 
         // byte 1 contains the packet ID
 
@@ -703,14 +707,11 @@ bool CGameUser::Update(fd_set* fd, int64_t timeout)
         if (Bytes[1] == GPSProtocol::Magic::ACK && Length == 8) {
           EventGProxyAck(ByteArrayToUInt32(Data, false, 4));
         } else if (Bytes[1] == GPSProtocol::Magic::INIT) {
-          InitGProxy(Length >= 8 ? ByteArrayToUInt32(Bytes, false, 4) : 0);
+          EventGProxyClientInit(/* version */ Length >= 8 ? ByteArrayToUInt32(Bytes, false, 4) : 0);
         } else if (Bytes[1] == GPSProtocol::Magic::SUPPORT_EXTENDED && Length >= 8) {
-          if (m_GProxy && m_Game.get().GetIsProxyReconnectableLong()) {
-            ConfirmGProxyExtended(Data);
-          }
+          EventGProxyExtendedClientInit(Data);
         } else if (Bytes[1] == GPSProtocol::Magic::CHANGEKEY && Length >= 8) {
-          m_GProxyReconnectKey = ByteArrayToUInt32(Bytes, false, 4);
-          Print(m_Game.get().GetLogPrefix() + "player [" + m_Name + "] updated their reconnect key");
+          EventGProxyChangeKey(ByteArrayToUInt32(Bytes, false, 4));
         }
       }
 
@@ -767,11 +768,7 @@ bool CGameUser::Update(fd_set* fd, int64_t timeout)
   }
 
   if (!m_Disconnected) {
-    // GProxy++ acks
-    if (m_GProxy && (!m_LastGProxyAckTicks.has_value() || Ticks - m_LastGProxyAckTicks.value() >= GPS_ACK_PERIOD)) {
-      m_Socket->PutBytes(GPSProtocol::SEND_GPSS_ACK(m_TotalPacketsReceived));
-      m_LastGProxyAckTicks = Ticks;
-    }
+    m_GProxy->CheckSendAck();
 
     // wait 5 seconds after joining before sending the /whois or /w
     // if we send the /whois too early battle.net may not have caught up with where the player is and return erroneous results
@@ -816,57 +813,61 @@ uint8_t CGameUser::NextSendMap()
 
 void CGameUser::Send(const std::vector<uint8_t>& data)
 {
-  // must start counting packet total from beginning of connection
-  // accepting fragmented packets should not make an observable difference,
-  // but it's the safest behavior, just in case something weird is going on in the caller side.
-  size_t count = GameProtocol::GetPacketCount<GameProtocol::FragmentPolicy::kAccept>(data);
-  m_TotalPacketsSent += count;
-
-  if (m_GProxy && m_Game.get().GetGameLoaded()) {
-    // we can avoid buffering packets until we know the client is using GProxy++ since that'll be determined before the game starts
-    // this prevents us from buffering packets for non-reconnectable clients
-    m_GProxyBuffer.push(GameProtocol::PacketWrapper(data, count));
-    m_GProxyBufferSize += count;
-  }
+  m_GProxy->EventSendData(data, m_Game.get().GetGameLoaded());
 
   if (!m_Disconnected && !m_Socket->HasError()) {
     m_Socket->PutBytes(data);
   }
 }
 
-void CGameUser::InitGProxy(const uint32_t version)
+void CGameUser::EventGProxyClientInit(const uint32_t version)
 {
   shared_ptr<CRealm> realm = GetRealm(false);
+  const CGame& game = m_Game.get();
 
-  m_GProxy = true;
-  m_GProxyVersion = version;
 
   // the port to which the client directly connects
   // this means that if Aura is behind a reverse proxy,
   // this port should match its publicly visible port
+  uint16_t port = 6112;
   if (realm) {
-    m_GProxyPort = realm->GetUsesCustomPort() ? realm->GetPublicHostPort() : m_Game.get().GetHostPort();
+    port = realm->GetUsesCustomPort() ? realm->GetPublicHostPort() : game.GetHostPort();
   } else if (m_RealmInternalId == 0) {
-    m_GProxyPort = m_Game.get().m_Aura->m_Net.m_Config.m_UDPEnableCustomPortTCP4 ? m_Game.get().m_Aura->m_Net.m_Config.m_UDPCustomPortTCP4 : m_Game.get().GetHostPort();
-  } else {
-    m_GProxyPort = 6112;
+    port = game.m_Aura->m_Net.m_Config.m_UDPEnableCustomPortTCP4 ? game.m_Aura->m_Net.m_Config.m_UDPCustomPortTCP4 : game.GetHostPort();
   }
 
-  UpdateGProxyEmptyActions();
-  CheckGProxyExtendedStartHandShake();
+  m_GProxy->Init(
+    m_UID, version, port, game.GetGProxyEmptyActions(),
+    // Extended
+    game.GetIsProxyReconnectableLong(), game.m_Aura->m_Net.m_Config.m_ReconnectWaitTicks, game.GetGameID()
+  );
 
-  Print(m_Game.get().GetLogPrefix() + "player [" + m_Name + "] will reconnect at port " + to_string(m_GProxyPort) + " if disconnected");
+  Print(game.GetLogPrefix() + "player [" + m_Name + "] will reconnect at port " + to_string(port) + " if disconnected");
 }
 
-void CGameUser::ConfirmGProxyExtended(const vector<uint8_t>& data)
+void CGameUser::EventGProxyExtendedClientInit(const vector<uint8_t>& data)
 {
-  m_GProxyExtended = true;
-  if (data.size() >= 12) {
-    m_GProxyCheckGameID = true;
-    Print(m_Game.get().GetLogPrefix() + "player [" + m_Name + "] is using GProxy Extended+");
-  } else {
-    Print(m_Game.get().GetLogPrefix() + "player [" + m_Name + "] is using GProxy Extended");
-  }
+  GProxyExtendedClientResult extendedMode = m_GProxy->ConfirmExtended(data);
+  switch (extendedMode) {
+    case GProxyExtendedClientResult::kInvalid:
+      Print(m_Game.get().GetLogPrefix() + "player [" + m_Name + "] sent premature GProxy Extended handshake");
+      break;
+    case GProxyExtendedClientResult::kAlready:
+      Print(m_Game.get().GetLogPrefix() + "player [" + m_Name + "] sent multiple GProxy Extended handshakes");
+      break;
+    case GProxyExtendedClientResult::kNormal:
+      Print(m_Game.get().GetLogPrefix() + "player [" + m_Name + "] is using GProxy Extended");
+      break;
+    case GProxyExtendedClientResult::kCheckGameID:
+      Print(m_Game.get().GetLogPrefix() + "player [" + m_Name + "] is using GProxy Extended+");
+      break;
+    }
+}
+
+void CGameUser::EventGProxyChangeKey(const uint32_t key)
+{
+  m_GProxy->SynchronizeReconnectKeyFromClient(key);
+  Print(m_Game.get().GetLogPrefix() + "player [" + m_Name + "] updated their reconnect key");
 }
 
 double CGameUser::GetAPM() const
@@ -893,60 +894,16 @@ void CGameUser::RestrictAPM(double apm, double burstActions)
   m_APMQuota.emplace(APM_RATE_LIMITER_TICK_INTERVAL, apm * APM_RATE_LIMITER_TICK_SCALING_FACTOR, burstActions, burstActions);
 }
 
-void CGameUser::UpdateGProxyEmptyActions() const
-{
-  m_Socket->PutBytes(GPSProtocol::SEND_GPSS_INIT(m_GProxyPort, m_UID, m_GProxyReconnectKey, m_Game.get().GetGProxyEmptyActions()));
-}
-
-void CGameUser::CheckGProxyExtendedStartHandShake() const
-{
-  if (m_GProxyVersion >= 2 && m_Game.get().GetIsProxyReconnectableLong()) {
-    m_Socket->PutBytes(GPSProtocol::SEND_GPSS_SUPPORT_EXTENDED(m_Game.get().m_Aura->m_Net.m_Config.m_ReconnectWaitTicks, static_cast<uint32_t>(m_Game.get().GetGameID())));
-  }
-}
-
-bool CGameUser::UnqueueGProxyPackets(const size_t lastPacket)
-{
-  const size_t alreadyUnqueued = GetGProxyUnqueuedPackets();
-  if (lastPacket <= alreadyUnqueued) {
-    // The client is likely caught up to the server.
-    // Or it's doing some incorrect/rogue stuff:
-    // - ACK sent before the game starts (not a big deal, but we can only ignore it, since no packets are buffered yet)
-    //   * If load-in-game is enabled, and not everyone has loaded yet, then this behavior is legitimate, but we don't have any buffered packets anyway.
-    // - lastPacket zero (ACK sent even before the server accepts the join request)
-    // - Out-of-order ACKs
-    return lastPacket == alreadyUnqueued;
-  }
-
-  size_t pendingUnqueue = min(m_GProxyBufferSize, lastPacket - alreadyUnqueued);
-  size_t thisUnqueue = 0;
-  size_t frontCount = 0;
-  while (pendingUnqueue > 0) {
-    GameProtocol::PacketWrapper& frontPackets = m_GProxyBuffer.front();
-    frontCount = frontPackets.count;
-    thisUnqueue = min(frontCount, pendingUnqueue);
-    if (thisUnqueue == frontCount) {
-      m_GProxyBuffer.pop();
-    } else {
-      frontPackets.Remove(thisUnqueue);
-    }
-    pendingUnqueue -= thisUnqueue;
-    m_GProxyBufferSize -= thisUnqueue;
-  }
-
-  return true;
-}
-
 void CGameUser::EventGProxyAck(const size_t lastPacket)
 {
-  if (!UnqueueGProxyPackets(lastPacket)) {
+  if (!m_GProxy->UnqueuePackets(lastPacket)) {
 #ifdef DEBUG
     if (!m_FinishedLoading) {
       DPRINT_IF(LogLevel::kTrace, m_Game.get().GetLogPrefix() + "[GPROXY] player [" + m_Name + "] sent GPS_ACK before loading the game")
     } else if (!m_Game.get().GetGameLoaded()) {
       DPRINT_IF(LogLevel::kTrace, m_Game.get().GetLogPrefix() + "[GPROXY] player [" + m_Name + "] sent GPS_ACK before the game is fully loaded")
     } else {
-      DPRINT_IF(LogLevel::kTrace, m_Game.get().GetLogPrefix() + "[GPROXY] player [" + m_Name + "] sent bad lastPacket " + to_string(lastPacket) + " < " + to_string(GetGProxyUnqueuedPackets()))
+      DPRINT_IF(LogLevel::kTrace, m_Game.get().GetLogPrefix() + "[GPROXY] player [" + m_Name + "] sent bad lastPacket " + to_string(lastPacket) + " < " + to_string(GetGProxy()->GetUnqueuedPacketsCount()))
     }
 #endif
   }
@@ -966,29 +923,17 @@ void CGameUser::EventGProxyReconnect(CConnection* connection, const uint32_t las
   connection->SetSocket(nullptr);
 
   m_Socket->SetLogErrors(true);
-  m_Socket->PutBytes(GPSProtocol::SEND_GPSS_RECONNECT(m_TotalPacketsReceived));
-  EventGProxyAck(lastPacket);
-
-  {
-    // send remaining packets from buffer,
-    // but preserve buffer in case the client disconnects again
-    queue<GameProtocol::PacketWrapper> tempBuffer;
-    while (!m_GProxyBuffer.empty()) {
-      m_Socket->PutBytes(m_GProxyBuffer.front().data);
-      tempBuffer.push(move(m_GProxyBuffer.front()));
-      m_GProxyBuffer.pop();
-    }
-    m_GProxyBuffer.swap(tempBuffer);
-  }
-
+  m_Socket->PutBytes(GPSProtocol::SEND_GPSS_RECONNECT(m_GProxy->GetRecvPacketsCount()));
+  DCHECK((m_GProxy->UnqueuePackets(lastPacket)), ("EventGProxyReconnect() triggered with an old lastPacket"));
+  m_GProxy->SynchronizeFromBuffer();
   m_Disconnected = false;
   m_StartedLaggingTicks = GetTicks();
-  m_GProxyDisconnectNoticeSent = false;
-  m_LastGProxyWaitNoticeSentTime = 0;
+  m_DisconnectNoticeSent = false;
+  m_LastDisconnectRepeatNoticeTicks.reset();
   if (m_LastDisconnectTicks.has_value()) {
     m_TotalDisconnectTicks += m_Aura->GetLoopTicks() - m_LastDisconnectTicks.value();
   }
-  if (GetGProxyExtended()) {
+  if (GetGProxy()->GetIsExtended()) {
     m_Game.get().SendAllChat("Player [" + GetDisplayName() + "] reconnected with GProxyDLL!");
   } else {
     m_Game.get().SendAllChat("Player [" + GetDisplayName() + "] reconnected with GProxy++!");
@@ -1002,12 +947,12 @@ void CGameUser::EventGProxyReconnectInvalid()
 {
   if (m_Disconnected) return;
   // TODO: Do we need different logic for rotating GProxy keys?
-  RotateGProxyReconnectKey();
+  m_GProxy->RotateReconnectKey();
 }
 
-void CGameUser::RotateGProxyReconnectKey() const
+bool CGameUser::GetDisconnectedUnrecoverably() const
 {
-  m_Socket->PutBytes(GPSProtocol::SEND_GPSS_CHANGE_KEY(rand()));
+  return m_Disconnected && !GetCanReconnect();
 }
 
 int64_t CGameUser::GetTotalDisconnectTicks() const
@@ -1062,10 +1007,10 @@ string CGameUser::GetDelayText(bool displaySync) const
 
 string CGameUser::GetReconnectionText() const
 {
-  if (!GetGProxyAny()) {
+  if (!GetCanReconnect()) {
     return "No";
   }
-  if (GetGProxyExtended()) {
+  if (GetGProxy()->GetIsExtended()) {
     return "Extended";
   }
   return "Yes";
@@ -1173,22 +1118,8 @@ bool CGameUser::UpdateReady()
 
 void CGameUser::DisableReconnect()
 {
-  if (!m_GProxy) return;
-  m_GProxy = false;
-  m_GProxyExtended = false;
-  m_GProxyDisconnectNoticeSent = false;
-  while (!m_GProxyBuffer.empty()) {
-    m_GProxyBuffer.pop();
-  }
-  /*
-  m_LastGProxyWaitNoticeSentTime = 0;
-  m_GProxyReconnectKey = 0;
-  m_LastGProxyAckTicks = nullopt;
-  m_GProxyPort = 0;
-  m_GProxyCheckGameID = false;
-  m_GProxyVersion = 0;
-  m_GProxyBufferSize = 0;
-  */
+  if (!m_GProxy->GetIsEnabled()) return;
+  m_GProxy->Disable();
 }
 
 bool CGameUser::GetReadyReminderIsDue() const

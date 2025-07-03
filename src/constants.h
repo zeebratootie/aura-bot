@@ -791,13 +791,20 @@ constexpr uint8_t USERSTATUS_PLAYING = 2u;
 constexpr uint8_t USERSTATUS_ENDING = 3u;
 constexpr uint8_t USERSTATUS_ENDED = 4u;
 
-enum class Userstatus : uint8_t {
+enum class UserStatus : uint8_t {
   kLobby = 0,
   kLoadingScreen = 1,
   kPlaying = 2,
   kEnding = 3,
   kEnded = 4,
   LAST = 5,
+};
+
+enum class GProxyExtendedClientResult : uint8_t {
+  kInvalid = 0,
+  kAlready = 1,
+  kNormal = 2,
+  kCheckGameID = 3,
 };
 
 // game_async_observer.h
