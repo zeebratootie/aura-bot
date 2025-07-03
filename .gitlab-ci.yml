@@ -38,9 +38,9 @@ Assemble:
   - export CMAKE_CC_COMPILER_LAUNCHER="ccache"
   - export CMAKE_CXX_COMPILER_LAUNCHER="ccache"
   - mkdir -p jass cache/ccache cache/curl dist/bin-static dist/bin-shared
-  - curl --remote-time --time-cond cache/curl/Blizzard.j --output cache/curl/Blizzard.j "https://raw.githubusercontent.com/lep/jassdoc/master/Blizzard.j" || true
+  - curl --remote-time --time-cond cache/curl/blizzard.j --output cache/curl/blizzard.j "https://raw.githubusercontent.com/lep/jassdoc/master/Blizzard.j" || true
   - curl --remote-time --time-cond cache/curl/common.j --output cache/curl/common.j "https://raw.githubusercontent.com/lep/jassdoc/master/common.j" || true
-  - cp cache/curl/Blizzard.j jass/Blizzard.j
+  - cp cache/curl/blizzard.j jass/blizzard.j
   - cp cache/curl/common.j jass/common.j
   # BNCSUtil (dynamic, .so)
   - cd $CI_PROJECT_DIR
