@@ -205,7 +205,9 @@ uint8_t CAsyncObserver::Update(fd_set* fd, fd_set* send_fd, int64_t timeout)
               }
               bool skipActions = false;
               switch (Data[8]) {
-                case ACTION_SCENARIO_TRIGGER: // seen in WarChasers
+                case ACTION_SCENARIO_TRIGGER: // seen in WarChasers, WormWar
+                  skipActions = (Length - 8) % GameProtocol::GetActionSize(Data[8]) == 0;
+                  break;
                 case ACTION_MINIMAPSIGNAL:
                 case ACTION_MODAL_BTN_CLICK:
                 case ACTION_MODAL_BTN:
