@@ -2885,7 +2885,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
       if (!targetGame || targetGame->GetIsMirror())
         break;
 
-      if (!GetIsSudo()) {
+      if (!GetIsSudo() && !(m_Permissions & USER_PERMISSIONS_BOT_SUDO_SPOOFABLE)) {
         ErrorReply("You are not a sudoer, and therefore cannot disconnect a player.");
         break;
       }
