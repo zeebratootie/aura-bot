@@ -429,7 +429,7 @@ bool CAsyncObserver::PushGameFrames(bool isFlush)
         m_Latency = ByteArrayToUInt16(it->GetBytes(), false, 0);
         ResetClientFrameRate();
         break;
-      case GAME_FRAME_TYPE_ACTIONS:  
+      case GAME_FRAME_TYPE_ACTIONS:
         gameDurationWanted -= m_Latency;
         m_GameTicks += m_Latency;
         // falls through
