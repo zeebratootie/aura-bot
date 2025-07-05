@@ -1047,28 +1047,27 @@ optional<sockaddr_storage> CConfig::GetMaybeAddress(const string& key)
 
 void CConfig::Set(const string& key, const string& value)
 {
-  if (!utf8::is_valid(value.begin(), value.end())) return;
-  m_CFG[key] = value;
+  SetString(key, value);
 }
 
 void CConfig::SetString(const string& key, const string& value)
 {
   if (!utf8::is_valid(value.begin(), value.end())) return;
+  string trimmedValue = TrimString(value);
+  if (CConfig::GetIsEnvVar(trimmedValue)) return;
   m_CFG[key] = value;
 }
 
 void CConfig::SetString(const std::string& key, const char* start, const std::string::size_type& size)
 {
   string value(start, size);
-  if (!utf8::is_valid(value.begin(), value.end())) return;
-  m_CFG[key] = value;
+  SetString(key, value);
 }
 
 void CConfig::SetString(const std::string& key, const unsigned char* start, const std::string::size_type& size)
 {
   string value(reinterpret_cast<const char*>(start), size);
-  if (!utf8::is_valid(value.begin(), value.end())) return;
-  m_CFG[key] = value;
+  SetString(key, value);
 }
 
 void CConfig::SetBool(const string& key, const bool& value)
