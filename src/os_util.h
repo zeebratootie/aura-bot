@@ -69,6 +69,7 @@ bool SetUserRegistryKey(const wchar_t* subKey, const wchar_t* valueName, const w
 [[nodiscard]] std::filesystem::path GetExePath();
 [[nodiscard]] std::filesystem::path GetExeDirectory();
 [[nodiscard]] PLATFORM_STRING_TYPE GetEnvironmentVariable(const PLATFORM_STRING_TYPE& nKey);
+[[nodiscard]] PLATFORM_STRING_TYPE GetEnvironmentVariableTrimmed(const PLATFORM_STRING_TYPE& nKey);
 [[nodiscard]] PLATFORM_STRING_TYPE ReadPersistentUserPathEnvironment();
 void SetPersistentUserPathEnvironment(const PLATFORM_STRING_TYPE& nUserPath);
 [[nodiscard]] bool GetIsDirectoryInUserPath(const std::filesystem::path& nDirectory, PLATFORM_STRING_TYPE& nUserPath);

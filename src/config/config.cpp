@@ -115,34 +115,17 @@ using namespace std;
   }\
   string T = _it->second
 
-#ifdef _WIN32
+
 #define TRY_ENV_VAR(K, T, U) \
     do {\
       if (CConfig::GetIsEnvVar(T)) {\
-        PLATFORM_STRING_TYPE _envName;\
-        utf8::utf8to16(T.begin() + 4, T.end(), back_inserter(_envName));\
-        PLATFORM_STRING_TYPE _envVal = GetEnvironmentVariable(_envName);\
-        if (_envVal.empty()) {\
-          ENV_VAR_MISSING(K, U);\
-        }\
-        string _utf8Val;\
-        utf8::utf16to8(_envVal.begin(), _envVal.end(), back_inserter(_utf8Val));\
-        T = _utf8Val;\
-      }\
-    } while (0)
-#else
-#define TRY_ENV_VAR(K, T, U) \
-    do {\
-      if (CConfig::GetIsEnvVar(T)) {\
-        PLATFORM_STRING_TYPE _envName = T.substr(4);\
-        PLATFORM_STRING_TYPE _envVal = GetEnvironmentVariable(_envName);\
+        string _envVal = CConfig::ReadEnvVar(T);\
         if (_envVal.empty()) {\
           ENV_VAR_MISSING(K, U);\
         }\
         T = _envVal;\
       }\
     } while (0)
-#endif
 
 
 #define TRY_JSON_STRING(K, T, U) \
@@ -237,8 +220,8 @@ bool CConfig::Read(const filesystem::path& file, CConfig* adapterConfig)
     }
     if (!utf8::is_valid(line.begin() + valueStart, line.begin() + valueEnd)) {
       // Be as lenient as possible - only check values.
-      // This means that an invalid file may yield no warnings, if errors are inside comments,
-      // but let's not worry about that.
+      // This means that an invalid file may yield no warnings
+      // (when errors are inside comments), but let's not worry about that.
       Print("[CONFIG] warning - encoding errors found in [" + PathToString(file) + "] - expected UTF8 - omitted <" + key + ">");
       continue;
     }
@@ -336,8 +319,11 @@ string CConfig::GetString(const string& key, const uint32_t minLength, const uin
 
 string CConfig::GetKeyValue(const string& key)
 {
-  GET_KEY(key, value, string());
-  return "<" + key + " = " + value + ">";
+  auto it = m_CFG.find(key);
+  if (it == end(m_CFG)) {
+    return "<" + key + " = >";
+  }
+  return "<" + key + " = " + it->second + ">";
 }
 
 string CConfig::GetGameCounterTemplate(const string& key, const string& defaultValue)
@@ -1221,6 +1207,38 @@ bool CConfig::GetIsEnvVar(const string& value)
 bool CConfig::GetIsJSONValue(const string& value)
 {
   return value.size() >= 5 && value.substr(0, 5) == "json:";
+}
+
+string CConfig::ReadEnvVar(const string& configKey)
+{
+  string utf8Key, fallback;
+  string::size_type eqIndex = configKey.find('=');
+  if (eqIndex == string::npos) {
+    utf8Key = TrimString(configKey.substr(4));
+  } else {
+    utf8Key = TrimString(configKey.substr(4, eqIndex - 4));
+    fallback = TrimString(configKey.substr(eqIndex + 1));
+  }
+#ifdef _WIN32
+  PLATFORM_STRING_TYPE key;
+  key.reserve(utf8Key.size());
+  utf8::utf8to16(utf8Key.begin(), utf8Key.end(), back_inserter(key));
+  PLATFORM_STRING_TYPE value = GetEnvironmentVariableTrimmed(key);
+#else
+  PLATFORM_STRING_TYPE value = GetEnvironmentVariableTrimmed(utf8Key);
+#endif
+  if (value.empty()) {
+    return fallback;
+  }
+#ifdef _WIN32
+  string utf8Val;
+  utf8Val.reserve(value.size());
+  utf8::utf16to8(value.begin(), value.end(), back_inserter(utf8Val));
+  return utf8Val;
+#else
+  static_assert(is_same_v<value, string>);
+  return value.substr(firstNonSpace, lastNonSpace - firstNonSpace + 1);
+#endif
 }
 
 #undef SUCCESS

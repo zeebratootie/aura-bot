@@ -110,7 +110,7 @@ inline void GetAuraHome(const CCLI& cliApp, filesystem::path& homeDir)
     homeDir = cliApp.m_HomePath.value();
     return;
   }
-  PLATFORM_STRING_TYPE homeDirString = GetEnvironmentVariable(PLATFORM_STRING("AURA_HOME"));
+  PLATFORM_STRING_TYPE homeDirString = GetEnvironmentVariableTrimmed(PLATFORM_STRING("AURA_HOME"));
   if (!homeDirString.empty()) {
     homeDir = filesystem::path(homeDirString);
     NormalizeDirectory(homeDir);
@@ -1731,7 +1731,7 @@ void CAura::OnLoadConfigs()
   if (m_Config.m_Warcraft3Path.has_value()) {
     m_GameInstallPath = m_Config.m_Warcraft3Path.value();
   } else if (m_GameInstallPath.empty()) {
-    PLATFORM_STRING_TYPE war3Path = GetEnvironmentVariable(PLATFORM_STRING("WAR3_HOME"));
+    PLATFORM_STRING_TYPE war3Path = GetEnvironmentVariableTrimmed(PLATFORM_STRING("WAR3_HOME"));
     if (!war3Path.empty()) {
       m_GameInstallPath = filesystem::path(war3Path);
     } else {

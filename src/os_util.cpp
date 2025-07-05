@@ -209,6 +209,15 @@ PLATFORM_STRING_TYPE GetEnvironmentVariable(const PLATFORM_STRING_TYPE& key)
   return PLATFORM_STRING_TYPE();
 }
 
+PLATFORM_STRING_TYPE GetEnvironmentVariableTrimmed(const PLATFORM_STRING_TYPE& key)
+{
+  if (key.empty()) {
+    return PLATFORM_STRING_TYPE();
+  }
+  PLATFORM_STRING_TYPE value = GetEnvironmentVariable(key);
+  return TrimPlatformString(value);
+}
+
 PLATFORM_STRING_TYPE ReadPersistentUserPathEnvironment()
 {
 #ifdef _WIN32

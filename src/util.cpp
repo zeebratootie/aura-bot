@@ -93,13 +93,27 @@ string TrimString(const string& str)
 {
   if (str.empty()) return string();
 
-  size_t firstNonSpace = str.find_first_not_of(" ");
-  size_t lastNonSpace = str.find_last_not_of(" ");
+  string::size_type firstNonSpace = str.find_first_not_of(" ");
+  string::size_type lastNonSpace = str.find_last_not_of(" ");
 
   if (firstNonSpace != string::npos && lastNonSpace != string::npos) {
     return str.substr(firstNonSpace, lastNonSpace - firstNonSpace + 1);
   } else {
     return string();
+  }
+}
+
+PLATFORM_STRING_TYPE TrimPlatformString(const PLATFORM_STRING_TYPE& str)
+{
+  if (str.empty()) return PLATFORM_STRING_TYPE();
+
+  PLATFORM_STRING_TYPE::size_type firstNonSpace = str.find_first_not_of(PLATFORM_STRING(" "));
+  PLATFORM_STRING_TYPE::size_type lastNonSpace = str.find_last_not_of(PLATFORM_STRING(" "));
+
+  if (firstNonSpace != PLATFORM_STRING_TYPE::npos && lastNonSpace != PLATFORM_STRING_TYPE::npos) {
+    return str.substr(firstNonSpace, lastNonSpace - firstNonSpace + 1);
+  } else {
+    return PLATFORM_STRING_TYPE();
   }
 }
 
@@ -114,6 +128,20 @@ string TrimStringExtended(const string& str)
     return str.substr(firstNonSpace, lastNonSpace - firstNonSpace + 1);
   } else {
     return string();
+  }
+}
+
+PLATFORM_STRING_TYPE TrimPlatformStringExtended(const PLATFORM_STRING_TYPE& str)
+{
+  if (str.empty()) return PLATFORM_STRING_TYPE();
+
+  PLATFORM_STRING_TYPE::size_type firstNonSpace = str.find_first_not_of(PLATFORM_STRING(" \r\n"));
+  PLATFORM_STRING_TYPE::size_type lastNonSpace = str.find_last_not_of(PLATFORM_STRING(" \r\n"));
+
+  if (firstNonSpace != PLATFORM_STRING_TYPE::npos && lastNonSpace != PLATFORM_STRING_TYPE::npos) {
+    return str.substr(firstNonSpace, lastNonSpace - firstNonSpace + 1);
+  } else {
+    return PLATFORM_STRING_TYPE();
   }
 }
 

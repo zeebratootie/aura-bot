@@ -87,6 +87,8 @@ template <typename T>
 [[nodiscard]] std::string ToDecStringPadded(const int64_t num, const std::string::size_type padding);
 [[nodiscard]] std::string TrimString(const std::string& str);
 [[nodiscard]] std::string TrimStringExtended(const std::string& str);
+[[nodiscard]] PLATFORM_STRING_TYPE TrimPlatformString(const PLATFORM_STRING_TYPE& str);
+[[nodiscard]] PLATFORM_STRING_TYPE TrimPlatformStringExtended(const PLATFORM_STRING_TYPE& str);
 [[nodiscard]] std::string RemoveDuplicateWhiteSpace(const std::string& str);
 void EllideEmptyElementsInPlace(std::vector<std::string>& list);
 
