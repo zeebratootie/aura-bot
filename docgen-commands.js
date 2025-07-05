@@ -10,6 +10,7 @@ const COMMAND_FILES = ['src/command.cpp'];
 const aliasRegExp = /case HashCode\("([a-zA-Z0-9]+)"\):/;
 const mainCmdRegExp = /case HashCode\("([a-zA-Z0-9]+)"\): \{/;
 const usageRegExp = /"Usage: " \+ cmdToken \+ "([^"]+)"\);/;
+const controlFlowBreakRegExp = /\b(break|return);/;
 
 async function main() {
   const aliases = new Map();
@@ -37,6 +38,10 @@ async function main() {
       if (aliasMatch) {
         currentCommandName = '';
         currentCommandAliases.push(aliasMatch[1]);
+        continue;
+      }
+      if (controlFlowBreakRegExp.exec(trimmed)) {
+        currentCommandAliases.length = 0;
         continue;
       }
       let usageMatch = usageRegExp.exec(trimmed);

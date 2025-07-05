@@ -17,7 +17,6 @@ Commands
 - Syntax: announce \<REALM\>, \<GAME NAME\>
 
 ## \`apm\`
-- Aliases: slot
 
 ## \`apmhandicap\`
 - Aliases: ah
@@ -286,7 +285,6 @@ Commands
 ## \`pickrace\`
 
 ## \`pin\`
-- Aliases: fast, race, explicit
 - Syntax: pin \<MESSAGE\>
 
 ## \`portforward\`
