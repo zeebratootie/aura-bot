@@ -261,7 +261,8 @@ public:
   [[nodiscard]] std::vector<uint8_t> Export() const;
 
   [[nodiscard]] static std::string ReadString(const std::filesystem::path& file, const std::string& key);
-  [[nodiscard]] bool GetIsJSONValue(const std::string& value);
+  [[nodiscard]] static bool GetIsEnvVar(const std::string& value);
+  [[nodiscard]] static bool GetIsJSONValue(const std::string& value);
 };
 
 #undef SUCCESS

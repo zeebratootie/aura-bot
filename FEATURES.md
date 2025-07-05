@@ -10,6 +10,7 @@
 - Config is validated
 - Config can be hot-reloaded, including realms settings
 - Complex config values may use a json: prefix for JSON encoding
+- Config may read environment variables by using an env: prefix
 - Blizzard.j, common.j moved to their own folder (jass/)
 - Games can be hosted from the command line
 - Games can be hosted from Windows Explorer

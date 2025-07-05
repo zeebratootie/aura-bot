@@ -181,6 +181,34 @@ filesystem::path GetExeDirectory()
   return exeDirectory;
 } 
 
+PLATFORM_STRING_TYPE GetEnvironmentVariable(const PLATFORM_STRING_TYPE& key)
+{
+  if (key.empty()) {
+    return PLATFORM_STRING_TYPE();
+  }
+#ifdef _WIN32
+  wchar_t* buffer = nullptr;
+  size_t valueSize = 0;
+  errno_t err = _wdupenv_s(&buffer, &valueSize, key.c_str());
+  if (!err && buffer != nullptr) {
+    PLATFORM_STRING_TYPE value(buffer);
+    free(buffer);
+    return value;
+  }
+#else
+  const char* envValue = getenv(key.c_str());
+  if (envValue != nullptr) {
+    return PLATFORM_STRING_TYPE(envValue);
+  }
+#endif
+  // Even though a POSIX envvar may be set but empty,
+  // that's not the case for Windows.
+  // 
+  // So, we follow the lowest common denominator, and
+  // treat empty environment variables as equivalent to non-existent.
+  return PLATFORM_STRING_TYPE();
+}
+
 PLATFORM_STRING_TYPE ReadPersistentUserPathEnvironment()
 {
 #ifdef _WIN32
