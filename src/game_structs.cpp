@@ -221,12 +221,12 @@ GameHistory::GameHistory()
    m_Desynchronized(false),
    m_SoftDesynchronized(false),
    m_GProxyEmptyActions(0),
-   m_DefaultLatency(0),
-   m_ActiveLatency(0),
-   m_SpectatorActiveLatency(0),
    m_NumActionFrames(0),
    m_NumSpectatorActionFrames(0),
    m_SpectatorOffset(0),
+   m_DefaultLatency(0),
+   m_ActiveLatency(0),
+   m_SpectatorActiveLatency(0),
    m_Duration(0),
    m_SpectatorDuration(0)
 {
