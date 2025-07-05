@@ -195,6 +195,7 @@ public:
   std::optional<FakeUsersShareUnitsMode>      m_GameFakeUsersShareUnitsMode;
   std::optional<bool>                         m_GameEnableJoinObserversInProgress;
   std::optional<bool>                         m_GameEnableJoinPlayersInProgress;
+  std::optional<uint32_t>                     m_GameSpectatorDelay;
   std::optional<bool>                         m_GameLogCommands;
   std::optional<bool>                         m_GameAutoStartRequiresBalance;
 

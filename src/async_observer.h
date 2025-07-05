@@ -71,6 +71,7 @@ public:
   bool                                                          m_MapReady;                     // if we received a valid W3GS_MAPSIZE packet from the client matching the map size
   bool                                                          m_StateSynchronized;
   bool                                                          m_TimeSynchronized;
+  bool                                                          m_TimeLiveSynchronized;
   size_t                                                        m_Offset;
   uint8_t                                                       m_Goal;
   uint8_t                                                       m_UID;
@@ -166,6 +167,7 @@ public:
   [[nodiscard]] uint8_t NextSendMap();
   void EventDesync();
   void EventMapReady();
+  bool CheckStartLoading();
   void StartLoading();
   void EventGameLoaded();
   void EventChatOrPlayerSettings(const CIncomingChatMessage& chatPlayer);

@@ -2873,7 +2873,6 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
       break;
     }
 
-
 #ifdef DEBUG
     //
     // !TESTDC (disconnect a user)

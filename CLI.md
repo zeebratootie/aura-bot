@@ -1218,6 +1218,14 @@ This option is equivalent to ``<hosting.game_start.count_down_ticks>`` in `confi
 
 This option is equivalent to ``<map.hosting.game_start.count_down_ticks>`` in map configuration
 
+## \`--spectator-delay \<VALUE\>\`
+
+This parameter specifies how the delay with which spectators watch ongoing games.
+
+This option is equivalent to ``<hosting.spectator_delay>`` in `config.ini`
+
+This option is equivalent to ``<map.hosting.spectator_delay>`` in map configuration
+
 ## \`--hcl\`
 
 This parameter specifies a custom game mode to be prepicked for maps that implement the HCL standard.

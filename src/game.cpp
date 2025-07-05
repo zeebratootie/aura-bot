@@ -576,6 +576,10 @@ void CGame::Reset()
   m_InertVirtualUser.reset();
   m_JoinInProgressVirtualUser.reset();
   m_FakeUsers.clear();
+  if (!m_GameHistory->GetIsFinished()) {
+    m_GameHistory->SetIsFinished(true);
+    m_GameHistory->UpdateSpectatorActions((int64_t)m_Config.m_SpectatorDelay);
+  }
   m_GameHistory.reset();
   m_GameResults.reset();
 
@@ -848,6 +852,10 @@ void CGame::StartGameOverTimer(bool isMMD)
     m_GameOverTolerance = 300;
   } else {
     m_GameOverTolerance = 60;
+  }
+  if (!m_GameHistory->GetIsFinished()) {
+    m_GameHistory->SetIsFinished(true);
+    m_GameHistory->UpdateSpectatorActions((int64_t)m_Config.m_SpectatorDelay);
   }
 
   if (GetNumJoinedUsers() > 0) {
@@ -1955,6 +1963,8 @@ void CGame::RunActionsScheduler()
     if (m_BufferingEnabled & BUFFERING_ENABLED_PLAYING) {
       vector<uint8_t> storedLatency = CreateByteArray(static_cast<uint16_t>(newLatency), false);
       m_GameHistory->m_PlayingBuffer.emplace_back(GAME_FRAME_TYPE_LATENCY, storedLatency);
+      m_GameHistory->SetActiveLatency(newLatency);
+      m_GameHistory->UpdateSpectatorActions((int64_t)m_Config.m_SpectatorDelay);
     }
   }
 
@@ -3844,7 +3854,8 @@ void CGame::SendAllActions()
 
   if (m_BufferingEnabled & BUFFERING_ENABLED_PLAYING) {
     m_GameHistory->m_PlayingBuffer.emplace_back(m_IsPaused ? GAME_FRAME_TYPE_PAUSED : GAME_FRAME_TYPE_ACTIONS, actions);
-    m_GameHistory->AddActionFrameCounter();
+    m_GameHistory->EventActionFramePushed();
+    m_GameHistory->UpdateSpectatorActions((int64_t)m_Config.m_SpectatorDelay);
   }
 
   SendAllActionsCallback();
@@ -7125,7 +7136,9 @@ void CGame::EventGameLoaded()
   }
 
   if (m_BufferingEnabled & BUFFERING_ENABLED_PLAYING) {
-    m_GameHistory->SetDefaultLatency((uint16_t)m_LatencyTicks);
+    m_GameHistory->SetDefaultLatency(m_LatencyTicks);
+    m_GameHistory->SetActiveLatency(m_LatencyTicks);
+    m_GameHistory->SetSpectatorActiveLatency(m_LatencyTicks);
     m_GameHistory->SetGProxyEmptyActions(m_GProxyEmptyActions);
     m_GameHistory->SetStartedTicks(m_FinishedLoadingTicks);
   } else {

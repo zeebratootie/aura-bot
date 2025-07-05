@@ -2326,6 +2326,9 @@ void CMap::LoadGameConfigOverrides(CConfig& CFG)
   if (CFG.Exists("map.hosting.join_in_progress.players")) {
     m_EnableJoinPlayersInProgress = CFG.GetBool("map.hosting.join_in_progress.players", false);
   }
+  if (CFG.Exists("map.hosting.spectator_delay")) {
+    m_SpectatorDelay = CFG.GetUint32("map.hosting.spectator_delay", 300); // default: 5 minutes
+  }
   if (CFG.Exists("map.hosting.log_commands")) {
     m_LogCommands = CFG.GetBool("map.hosting.log_commands", false);
   }

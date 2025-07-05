@@ -334,6 +334,7 @@ public:
   std::optional<FakeUsersShareUnitsMode>          m_FakeUsersShareUnitsMode;
   std::optional<bool>                             m_EnableJoinObserversInProgress;
   std::optional<bool>                             m_EnableJoinPlayersInProgress;
+  std::optional<uint32_t>                         m_SpectatorDelay;
 
   std::optional<bool>                             m_LogCommands;
   std::optional<uint8_t>                          m_ReconnectionMode;

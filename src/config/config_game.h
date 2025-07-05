@@ -115,6 +115,7 @@ struct CGameConfig
   FakeUsersShareUnitsMode          m_FakeUsersShareUnitsMode;
   bool                             m_EnableJoinObserversInProgress;
   bool                             m_EnableJoinPlayersInProgress;
+  uint32_t                         m_SpectatorDelay;
 
   std::set<std::string>            m_LoggedWords;
   uint8_t                          m_LogChatTypes;

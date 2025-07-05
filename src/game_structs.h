@@ -115,12 +115,19 @@ struct GameFrame
 
 struct GameHistory
 {
+  bool                                                   m_Finished;
   bool                                                   m_Desynchronized;
-  bool                                                   m_SoftDesynchronized;            // desynchronizes observers
+  bool                                                   m_SoftDesynchronized;            // desynchronizes spectators
   uint8_t                                                m_GProxyEmptyActions;
-  uint16_t                                               m_DefaultLatency;
   std::optional<int64_t>                                 m_StartedTicks;
   size_t                                                 m_NumActionFrames;
+  size_t                                                 m_NumSpectatorActionFrames;
+  size_t                                                 m_SpectatorOffset;
+  uint16_t                                               m_DefaultLatency;
+  int64_t                                                m_ActiveLatency;
+  int64_t                                                m_SpectatorActiveLatency;
+  int64_t                                                m_Duration;
+  int64_t                                                m_SpectatorDuration;
   std::vector<uint32_t>                                  m_CheckSums;
   std::vector<uint8_t>                                   m_LobbyBuffer;
   std::vector<uint8_t>                                   m_PlayersBuffer;
@@ -129,32 +136,35 @@ struct GameHistory
   std::vector<uint8_t>                                   m_LoadingVirtualBuffer;          // fake W3GS_GAMELOADED messages for fake players, but also for disconnected real players - for consistent game load, m_LoadingVirtualBuffer is sent after m_LoadingRealBuffer
   std::vector<GameFrame>                                 m_PlayingBuffer;
 
-  GameHistory()
-   : m_Desynchronized(false),
-     m_SoftDesynchronized(false),
-     m_GProxyEmptyActions(0),
-     m_DefaultLatency(0),
-     m_NumActionFrames(0)
-  {}
+  GameHistory();
+  ~GameHistory();
 
-  ~GameHistory() = default;
-
-  void AddCheckSum(const uint32_t checkSum) { m_CheckSums.push_back(checkSum); }
-  inline uint32_t GetCheckSum(const size_t index) { return m_CheckSums[index]; }
-  inline size_t GetNumCheckSums() { return m_CheckSums.size(); }
+  inline void AddCheckSum(const uint32_t checkSum) { m_CheckSums.push_back(checkSum); }
+  [[nodiscard]] inline uint32_t GetCheckSum(const size_t index) { return m_CheckSums[index]; }
+  [[nodiscard]] inline size_t GetNumCheckSums() { return m_CheckSums.size(); }
   inline void SetDesynchronized(const bool nDesynchronized = true) { m_Desynchronized = nDesynchronized; }
-  inline bool GetDesynchronized() { return m_Desynchronized; }
+  [[nodiscard]] inline bool GetDesynchronized() { return m_Desynchronized; }
   inline void SetSoftDesynchronized(const bool nSoftDesynchronized = true) { m_SoftDesynchronized = nSoftDesynchronized; }
-  inline bool GetSoftDesynchronized() { return m_SoftDesynchronized; }
-  inline void SetDefaultLatency(const uint16_t nLatency) { m_DefaultLatency = nLatency; }
-  inline uint16_t GetDefaultLatency() { return m_DefaultLatency; }
+  [[nodiscard]] inline bool GetSoftDesynchronized() { return m_SoftDesynchronized; }
+  inline void SetDefaultLatency(const int64_t nLatency) { m_DefaultLatency = static_cast<uint16_t>(nLatency); }
+  [[nodiscard]] inline uint16_t GetDefaultLatency() { return m_DefaultLatency; }
+  inline void SetActiveLatency(const int64_t nLatency) { m_ActiveLatency = static_cast<uint16_t>(nLatency); }
+  [[nodiscard]] inline int64_t GetActiveLatency() { return m_ActiveLatency; }
+  inline void SetSpectatorActiveLatency(const int64_t nLatency) { m_SpectatorActiveLatency = static_cast<uint16_t>(nLatency); }
+  [[nodiscard]] inline int64_t GetSpectatorActiveLatency() { return m_SpectatorActiveLatency; }
   inline void SetGProxyEmptyActions(const uint8_t nCount) { m_GProxyEmptyActions = nCount; }
-  inline uint32_t GetGProxyEmptyActions() { return m_GProxyEmptyActions; }
-  inline void AddActionFrameCounter() { ++m_NumActionFrames; }
-  inline size_t GetNumActionFrames() { return m_NumActionFrames; }
+  [[nodiscard]] inline uint32_t GetGProxyEmptyActions() { return m_GProxyEmptyActions; }
+  [[nodiscard]] inline bool GetIsFinished() { return m_Finished; }
+  inline void SetIsFinished(const bool nFinished) { m_Finished = nFinished; }
+  [[nodiscard]] inline size_t GetNumActionFrames() { return m_NumActionFrames; }
+  [[nodiscard]] inline size_t GetNumSpectatorActionFrames() { return m_NumSpectatorActionFrames; }
+  [[nodiscard]] inline size_t GetSpectatorOffset() { return m_SpectatorOffset; }
   inline void SetStartedTicks(const int64_t nStartedTicks) { m_StartedTicks = nStartedTicks; }
-  inline bool GetIsStarted() { return m_StartedTicks.has_value();}
-  inline int64_t GetStartedTicks() { return m_StartedTicks.value(); }
+  [[nodiscard]] inline bool GetIsStarted() { return m_StartedTicks.has_value();}
+  [[nodiscard]] inline int64_t GetStartedTicks() { return m_StartedTicks.value(); }
+
+  void EventActionFramePushed();
+  void UpdateSpectatorActions(int64_t SpectatorDelaySeconds);
 };
 
 //

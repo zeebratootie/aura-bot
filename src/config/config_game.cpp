@@ -182,6 +182,7 @@ CGameConfig::CGameConfig(CConfig& CFG)
   m_FakeUsersShareUnitsMode                = CFG.GetEnum<FakeUsersShareUnitsMode>("hosting.fake_users.share_units.mode", TO_ARRAY("never", "auto", "team", "all"), FakeUsersShareUnitsMode::kAuto);
   m_EnableJoinObserversInProgress          = CFG.GetBool("hosting.join_in_progress.observers", false);
   m_EnableJoinPlayersInProgress            = CFG.GetBool("hosting.join_in_progress.players", false);
+  m_SpectatorDelay                         = CFG.GetUint32("hosting.spectator_delay", 300); // default: 5 minutes
 
   m_LoggedWords                            = CFG.GetSet("hosting.log_words", ',', true, false, {});
   m_LogChatTypes                           = CFG.GetBool("hosting.log_non_ascii", false) ? LOG_CHAT_TYPE_NON_ASCII : 0;
@@ -318,6 +319,7 @@ CGameConfig::CGameConfig(CGameConfig* nRootConfig, shared_ptr<CMap> nMap, shared
   INHERIT_MAP_OR_CUSTOM(m_FakeUsersShareUnitsMode, m_FakeUsersShareUnitsMode, m_FakeUsersShareUnitsMode)
   INHERIT_MAP_OR_CUSTOM(m_EnableJoinObserversInProgress, m_EnableJoinObserversInProgress, m_EnableJoinObserversInProgress)
   INHERIT_MAP_OR_CUSTOM(m_EnableJoinPlayersInProgress, m_EnableJoinPlayersInProgress, m_EnableJoinPlayersInProgress)
+  INHERIT(m_SpectatorDelay)
 
   INHERIT(m_LoggedWords)
   INHERIT(m_LogChatTypes)

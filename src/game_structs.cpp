@@ -213,6 +213,77 @@ bool CQueuedActionsFrame::GetHasActionsBy(const uint8_t UID) const
 }
 
 //
+// GameHistory
+//
+
+GameHistory::GameHistory()
+ : m_Finished(false),
+   m_Desynchronized(false),
+   m_SoftDesynchronized(false),
+   m_GProxyEmptyActions(0),
+   m_DefaultLatency(0),
+   m_ActiveLatency(0),
+   m_SpectatorActiveLatency(0),
+   m_NumActionFrames(0),
+   m_NumSpectatorActionFrames(0),
+   m_SpectatorOffset(0),
+   m_Duration(0),
+   m_SpectatorDuration(0)
+{
+}
+
+GameHistory::~GameHistory()
+{
+}
+
+void GameHistory::EventActionFramePushed()
+{
+  m_Duration += m_ActiveLatency;
+  ++m_NumActionFrames;
+}
+
+void GameHistory::UpdateSpectatorActions(int64_t spectatorDelay /* seconds */)
+{
+  if (m_Finished) {
+    m_SpectatorOffset = m_PlayingBuffer.size();
+    m_SpectatorDuration = m_Duration;
+    m_NumSpectatorActionFrames = m_NumActionFrames;
+    return;
+  }
+
+  spectatorDelay *= 1000 /* ticks */;
+  if (m_Duration <= spectatorDelay) {
+    return;
+  }
+
+  int64_t gameDurationWanted = m_Duration - spectatorDelay;
+  auto it = begin(m_PlayingBuffer) + m_SpectatorOffset;
+  auto itEnd = end(m_PlayingBuffer);
+  while (it != itEnd && (m_SpectatorActiveLatency <= gameDurationWanted || it->GetType() == GAME_FRAME_TYPE_LATENCY)) {
+    //Print(GetLogPrefix() + "sending " + it->GetTypeName() + " frame");
+    switch (it->GetType()) {
+      case GAME_FRAME_TYPE_GPROXY:
+      case GAME_FRAME_TYPE_LATENCY:
+        // it stored, GAME_FRAME_TYPE_LATENCY always goes after GAME_FRAME_TYPE_ACTIONS
+        m_SpectatorActiveLatency = ByteArrayToUInt16(it->GetBytes(), false, 0);
+        break;
+      case GAME_FRAME_TYPE_ACTIONS:  
+        gameDurationWanted -= m_SpectatorActiveLatency;
+        m_SpectatorDuration += m_SpectatorActiveLatency;
+        // falls through
+      case GAME_FRAME_TYPE_PAUSED:
+        ++m_NumSpectatorActionFrames;
+        break;
+      default:
+        // GAME_FRAME_TYPE_LEAVER, GAME_FRAME_TYPE_CHAT
+        break;
+    }
+    ++it;
+    ++m_SpectatorOffset;
+  }
+}
+
+//
 // GameDiscoveryInterface
 //
 

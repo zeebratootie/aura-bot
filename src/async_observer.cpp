@@ -55,6 +55,7 @@ CAsyncObserver::CAsyncObserver(shared_ptr<CGame> nGame, CConnection* nConnection
     m_MapReady(false),
     m_StateSynchronized(true),
     m_TimeSynchronized(false),
+    m_TimeLiveSynchronized(false),
     m_Offset(0),
     m_Goal(ASYNC_OBSERVER_GOAL_OBSERVER),
     m_UID(nUID),
@@ -206,7 +207,7 @@ uint8_t CAsyncObserver::Update(fd_set* fd, fd_set* send_fd, int64_t timeout)
               bool skipActions = false;
               switch (Data[8]) {
                 case ACTION_SCENARIO_TRIGGER: // seen in WarChasers, WormWar
-                  skipActions = (Length - 8) % GameProtocol::GetActionSize(Data[8]) == 0;
+                  skipActions = (Length % GameProtocol::GetActionSize(Data[8]) == 8);
                   break;
                 case ACTION_MINIMAPSIGNAL:
                 case ACTION_MODAL_BTN_CLICK:
@@ -317,7 +318,9 @@ uint8_t CAsyncObserver::Update(fd_set* fd, fd_set* send_fd, int64_t timeout)
     return ASYNC_OBSERVER_DESTROY;
   }
 
-  if (m_FinishedLoading && !m_PlaybackEnded) {
+  if (!m_StartedLoading) {
+    CheckStartLoading();
+  } else if (m_FinishedLoading && !m_PlaybackEnded) {
     // If we don't wait a few seconds, the message gets lost to the F12 Chat Log ??
     const bool canSendChat =  m_FinishedLoadingTicks + 3000 <= Ticks;
     if (!m_SentGameLoadedReport && canSendChat) {
@@ -358,7 +361,7 @@ uint8_t CAsyncObserver::Update(fd_set* fd, fd_set* send_fd, int64_t timeout)
 
 bool CAsyncObserver::GetIsGameOver() const
 {
-  return m_Game.expired() || m_Game.lock()->GetIsGameOver();
+  return m_GameHistory->GetIsFinished();
 }
 
 void CAsyncObserver::CheckPlayBackOver()
@@ -377,7 +380,7 @@ void CAsyncObserver::CheckPlayBackOver()
 
 int64_t CAsyncObserver::GetNextTimedActionByTicks() const
 {
-  if (m_GameHistory->GetNumActionFrames() <= m_ActionFrameCounter) {
+  if (m_GameHistory->GetNumSpectatorActionFrames() <= m_ActionFrameCounter) {
     return APP_MAX_TICKS;
   }
   return m_LastFrameTicks + m_Latency / m_FrameRate;
@@ -397,18 +400,23 @@ bool CAsyncObserver::PushGameFrames(bool isFlush)
     // Fast path for the common case (there will never be a GAME_FRAME_TYPE_LATENCY hanging)
     return false;
   }
-  if (!isFlush && m_ActionFrameCounter >= m_GameHistory->GetNumActionFrames()) {
+  if (!isFlush && m_ActionFrameCounter >= m_GameHistory->GetNumSpectatorActionFrames()) {
     if (!m_TimeSynchronized) {
       if (m_FrameRate > 1) m_FrameRate = 1;
       m_TimeSynchronized = true;
-      SendChat("You are now synchronized with the live game.");
+      m_TimeLiveSynchronized = m_ActionFrameCounter >= m_GameHistory->GetNumActionFrames();
+      if (m_TimeLiveSynchronized) {
+        SendChat("You are now synchronized with the live game.");
+      } else {
+        SendChat("You are now synchronized with the live stream.");
+      }
     }
     return false;
   }
 
   bool success = false;
   auto it = begin(m_GameHistory->m_PlayingBuffer) + m_Offset;
-  auto itEnd = end(m_GameHistory->m_PlayingBuffer);
+  auto itEnd = begin(m_GameHistory->m_PlayingBuffer) + m_GameHistory->GetSpectatorOffset();
   while (it != itEnd && (m_Latency <= gameDurationWanted || it->GetType() == GAME_FRAME_TYPE_LATENCY)) {
     //Print(GetLogPrefix() + "sending " + it->GetTypeName() + " frame");
     switch (it->GetType()) {
@@ -560,12 +568,28 @@ void CAsyncObserver::EventMapReady()
 {
   m_MapReady = true;
 
+  if (!CheckStartLoading()) {
+    if (auto game = m_Game.lock()) {
+      int64_t remainingSeconds = (int64_t)game->m_Config.m_SpectatorDelay - m_GameHistory->m_Duration / 1000;
+      if (remainingSeconds > 0) {
+        SendChat("Please wait for spectator delay (" + to_string(remainingSeconds) + " seconds...)");
+      }
+    }
+  }
+}
+
+bool CAsyncObserver::CheckStartLoading()
+{
+  if (!m_MapReady || m_StartedLoading) return false;
+  if (m_GameHistory->GetNumSpectatorActionFrames() == 0) {
+    return false;
+  }
   StartLoading();
+  return true;
 }
 
 void CAsyncObserver::StartLoading()
 {
-  if (m_StartedLoading) return;
   Print(GetLogPrefix() + "started loading");
   Send(GameProtocol::SEND_W3GS_COUNTDOWN_START());
   Send(GameProtocol::SEND_W3GS_COUNTDOWN_END());

@@ -1731,6 +1731,7 @@ void CGameSetup::AcquireCLISimple(const CCLI* nCLI)
   WriteOpt(m_PlayersReadyMode) << nCLI->m_GamePlayersReadyMode;
   WriteOpt(m_EnableJoinObserversInProgress) << nCLI->m_GameEnableJoinObserversInProgress;
   WriteOpt(m_EnableJoinPlayersInProgress) << nCLI->m_GameEnableJoinPlayersInProgress;
+  WriteOpt(m_SpectatorDelay) << nCLI->m_GameSpectatorDelay;
 
   WriteOpt(m_LogCommands) << nCLI->m_GameLogCommands;
 

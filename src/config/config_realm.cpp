@@ -219,7 +219,7 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CNetConfig* NetConfig)
   }
   const uint32_t maxDeductedLineLength = static_cast<uint32_t>(m_VirtualLineLength) * static_cast<uint32_t>(m_FloodQuotaLines);
   if (static_cast<uint32_t>(m_MaxLineLength) > maxDeductedLineLength) {
-    m_MaxLineLength = maxDeductedLineLength;
+    m_MaxLineLength = static_cast<uint16_t>(maxDeductedLineLength);
     Print("[CONFIG] Error - Invalid value provided for <" + m_CFGKeyPrefix + "flood.max_size>. It cannot exceed " + to_string(maxDeductedLineLength) + " characters because of flood quota.");
   }
 
@@ -553,7 +553,7 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CRealmConfig* nRootConfig, uint8_t nSer
   }
   const uint32_t maxDeductedLineLength = static_cast<uint32_t>(m_VirtualLineLength) * static_cast<uint32_t>(m_FloodQuotaLines);
   if (static_cast<uint32_t>(m_MaxLineLength) > maxDeductedLineLength) {
-    m_MaxLineLength = maxDeductedLineLength;
+    m_MaxLineLength = static_cast<uint16_t>(maxDeductedLineLength);
     // PvPGN defaults make no sense: 40x5=200 seems logical, but in fact the 5th line is not allowed.
     Print("[CONFIG] using <" + m_CFGKeyPrefix + "flood.max_size = " + to_string(m_MaxLineLength) + ">");
   }

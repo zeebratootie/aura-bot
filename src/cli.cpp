@@ -742,6 +742,9 @@ CLIResult CCLI::Parse(const int argc, char** argv)
   app.add_flag(  "--join-in-progress-players,--no-join-in-progress-players{false}", m_GameEnableJoinPlayersInProgress,
     "Whether to allow players to join the game after it has already started."
   );
+  app.add_option("--spectator-delay", m_GameSpectatorDelay,
+    "Specify how long should the delay be for the spectator feature."
+  );
   app.add_flag(  "--log-game-commands,--no-log-game-commands{false}", m_GameLogCommands,
     "Whether to log usage of chat triggers in a hosted game lobby."
   );
