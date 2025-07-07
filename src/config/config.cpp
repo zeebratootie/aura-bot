@@ -326,6 +326,15 @@ string CConfig::GetKeyValue(const string& key)
   return "<" + key + " = " + it->second + ">";
 }
 
+string CConfig::GetKeyValue(const string& key, const string& defaultValue)
+{
+  auto it = m_CFG.find(key);
+  if (it == end(m_CFG)) {
+    return "<" + key + " = " + defaultValue + ">";
+  }
+  return "<" + key + " = " + it->second + ">";
+}
+
 string CConfig::GetGameCounterTemplate(const string& key, const string& defaultValue)
 {
   GET_KEY(key, value, defaultValue);
@@ -1235,8 +1244,7 @@ string CConfig::ReadEnvVar(const string& configKey)
   utf8::utf16to8(value.begin(), value.end(), back_inserter(utf8Val));
   return utf8Val;
 #else
-  static_assert(is_same_v<value, string>);
-  return value.substr(firstNonSpace, lastNonSpace - firstNonSpace + 1);
+  return value;
 #endif
 }
 
