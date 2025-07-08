@@ -31,6 +31,7 @@
 
 #include <cfloat>
 #include <filesystem>
+#include <variant>
 
 [[nodiscard]] inline std::optional<uint32_t> ParseUint32Hex(const std::string& hexString)
 {
@@ -315,6 +316,37 @@
   } catch (...) {
   }
   return result;
+}
+
+[[nodiscard]] inline std::variant<std::monostate, double, std::pair<double, double>> ParseDoubleOrRange(const std::string& input)
+{
+   std::variant<std::monostate, double, std::pair<double, double>> result;
+  {
+    std::optional<double> maybeDouble = ParseDouble(input);
+    if (maybeDouble.has_value()) {
+      result = *maybeDouble;
+      return result;
+    }
+  }
+
+  {
+    std::string::size_type hyphenPos = input.find('-');
+    if (hyphenPos == std::string::npos) {
+      return result;
+    }
+    std::string front = input.substr(0, hyphenPos);
+    std::string back = input.substr(hyphenPos + 1);
+    std::optional<double> maybeMin = ParseDouble(front);
+    if (!maybeMin.has_value()) {
+      return result;
+    }
+    std::optional<double> maybeMax = ParseDouble(back);
+    if (!maybeMax.has_value()) {
+      return result;
+    }
+    result = std::make_pair<double, double>(std::move(maybeMin.value()), std::move(maybeMax.value()));
+    return result;
+  }
 }
 
 [[nodiscard]] inline std::optional<uint8_t> ParseUint8(const std::string& input, bool decimalOnly = false) { return ParseUInt8(input, decimalOnly); }

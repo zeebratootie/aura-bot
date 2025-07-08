@@ -1403,6 +1403,62 @@ string RemoveNonAlphanumericNorHyphen(const string& s)
   return regex_replace(s, nonAlphanumericNorHyphen, "");
 }
 
+[[nodiscard]] size_t GetNearestMultiple(size_t around, size_t divisor)
+{
+  double quotientRound = round((double)around / (double)divisor);
+  size_t nearest = (size_t)quotientRound * divisor;
+  if (quotientRound > (double)around && nearest < around) { // Overflow
+    nearest = (around / divisor) * divisor;
+  }
+  return nearest;
+}
+
+RangeSizeType ResolveSyncLimits(size_t latency, double deltaTicksMs)
+{
+  size_t baseSync = DoubleToSize(deltaTicksMs);
+  size_t minSync = baseSync < latency ? latency : GetNearestMultiple(baseSync, latency);
+  size_t maxSync = minSync + latency;
+  CheckOverflowMultiples(latency, &minSync, &maxSync);
+  return make_pair<size_t, size_t>(move(minSync), move(maxSync));
+}
+
+RangeSizeType ResolveSyncLimits(size_t latency, const std::pair<double, double>& deltaTicksMs)
+{
+  size_t minSync = GetNearestMultiple(DoubleToSize(deltaTicksMs.first), latency);
+  size_t maxSync = GetNearestMultiple(DoubleToSize(deltaTicksMs.second), latency);
+  if (minSync == maxSync) {
+    return ResolveSyncLimits(latency, minSync);
+  }
+  RangeEnsureMinMaxSorted(&minSync, &maxSync);
+
+  if (minSync < latency) {
+    minSync = latency;
+    if (maxSync <= minSync) {
+      maxSync = minSync + latency;
+    }
+  }
+
+  return make_pair<size_t, size_t>(move(minSync), move(maxSync));
+}
+
+void RangeEnsureMinMaxSorted(size_t* minValue, size_t* maxValue)
+{
+  if (*maxValue < *minValue) {
+    size_t temp = *minValue;
+    *minValue = *maxValue;
+    *maxValue = *minValue;
+  }
+}
+
+void CheckOverflowMultiples(size_t divisor, size_t* minMultiple, size_t* maxMultiple)
+{
+  // After adding to *maxMultiple
+  if (*maxMultiple < *minMultiple) {
+    *maxMultiple = *minMultiple;
+    *minMultiple = *maxMultiple - divisor;
+  }
+}
+
 bool IsValidMapName(const string& s)
 {
   if (!s.length()) return false;
@@ -2045,6 +2101,14 @@ float ExponentialInterpolation(const float x, const float x1, const float x2, co
   return y;
 }
 */
+
+size_t DoubleToSize(double x)
+{
+  constexpr double maxValue = static_cast<double>(numeric_limits<size_t>::max());
+  if (x < 0) x *= -1;
+  if (x > maxValue) return numeric_limits<size_t>::max();
+  return static_cast<size_t>(x);
+}
 
 uint32_t GetRandomUInt32()
 {

@@ -191,6 +191,11 @@ template <typename T>
 [[nodiscard]] std::string FourCCToString(uint32_t fourCC);
 [[nodiscard]] std::string RemoveNonAlphanumeric(const std::string& s);
 [[nodiscard]] std::string RemoveNonAlphanumericNorHyphen(const std::string& s);
+[[nodiscard]] size_t GetNearestMultiple(size_t around, size_t divisor);
+[[nodiscard]] RangeSizeType ResolveSyncLimits(size_t latency, double deltaTicksMs);
+[[nodiscard]] RangeSizeType ResolveSyncLimits(size_t latency, const std::pair<double, double>& deltaTicksMs);
+void RangeEnsureMinMaxSorted(size_t* minValue, size_t* maxValue);
+void CheckOverflowMultiples(size_t divisor, size_t* minMultiple, size_t* maxMultiple);
 [[nodiscard]] bool IsValidMapName(const std::string& s);
 [[nodiscard]] bool IsValidCFGName(const std::string& s);
 [[nodiscard]] std::string TrimTrailingSlash(const std::string s);
@@ -228,6 +233,7 @@ bool ReplaceText(std::string& input, const std::string& fragment, const std::str
 [[nodiscard]] std::string ReplaceTemplate(const std::string& input, const FlatMap<int64_t, bool>* boolCache, const FlatMap<int64_t, std::string>* textCache, const FlatMap<int64_t, std::function<bool()>>* boolFuncsMap, const FlatMap<int64_t, std::function<std::string()>>* textFuncsMap, bool tolerant = false);
 [[nodiscard]] std::string ReplaceTemplate(const std::string& input, std::unordered_map<int64_t, bool>* boolCache, std::unordered_map<int64_t, std::string>* textCache, const FlatMap<int64_t, std::function<bool()>>* boolFuncsMap, const FlatMap<int64_t, std::function<std::string()>>* textFuncsMap, bool tolerant = false);
 [[nodiscard]] float LinearInterpolation(const float x, const float x1, const float x2, const float y1, const float y2);
+[[nodiscard]] size_t DoubleToSize(double x);
 /*
 [[nodiscard]] float HyperbolicInterpolation(const float x, const float x1, const float x2, const float y1, const float y2);
 [[nodiscard]] float ExponentialInterpolation(const float x, const float x1, const float x2, const float y1, const float y2);
