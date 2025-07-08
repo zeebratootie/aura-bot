@@ -43,6 +43,7 @@
 
 #include <tuple>
 #include <future>
+#include <variant>
 
 #ifndef DISABLE_DPP
 #include <dpp/dpp.h>
@@ -1741,7 +1742,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
 
       const uint16_t internalLatency = (uint16_t)targetGame->GetNextLatency();
       const bool suggestLowerLatency = 0 < maxPing && maxPing < internalLatency && REFRESH_PERIOD_MIN_SUGGESTED < internalLatency;
-      const bool suggestHigherLatency = 0 < maxPing && internalLatency < maxPing / 4 && REFRESH_PERIOD_MAX_SUGGESTED > internalLatency;
+      const bool suggestHigherLatency = 0 < maxPing && internalLatency < maxPing / 16 && REFRESH_PERIOD_MAX_SUGGESTED > internalLatency;
       if (targetGame->m_Config.m_LatencyEqualizerEnabled || suggestLowerLatency || suggestHigherLatency) {
         string refreshText = "Internal latency is " + to_string(targetGame->GetNextLatency()) + "ms.";
         string equalizerHeader;
@@ -3021,12 +3022,11 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
         break;
       }
 
-      string lower = target;
-      transform(begin(lower), end(lower), begin(lower), [](char c) { return static_cast<char>(std::tolower(c)); });
+      string lower = ToLowerCase(target);
 
       if (lower == "default" || lower == "reset") {
         targetGame->ResetLatency();
-        SendReply("Latency settings reset to default.", targetGame->GetIsLobbyStrict() || !targetGame->GetIsHiddenPlayerNames()  ? CHAT_SEND_TARGET_ALL : 0);
+        SendReply("Latency settings reset to default.", targetGame->GetIsLobbyStrict() || !targetGame->GetIsHiddenPlayerNames() ? CHAT_SEND_TARGET_ALL : 0);
         break;
       } else if (lower == "ignore" || lower == "bypass" || lower == "normal") {
         if (!targetGame->GetGameLoaded()) {
@@ -3034,82 +3034,159 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
           break;
         }
         targetGame->NormalizeSyncCounters();
-        SendReply("Ignoring lagging players. (They may not be able to control their units.)", targetGame->GetIsLobbyStrict() || !targetGame->GetIsHiddenPlayerNames()  ? CHAT_SEND_TARGET_ALL : 0);
+        SendReply("Ignoring lagging players. (They may not be able to control their units.)", targetGame->GetIsLobbyStrict() || !targetGame->GetIsHiddenPlayerNames() ? CHAT_SEND_TARGET_ALL : 0);
         break;
       }
 
-      vector<uint32_t> Args = SplitNumericArgs(target, 1u, 2u);
+      vector<string> Args = SplitArgs(target, 1u, 3u);
       if (Args.empty()) {
         ErrorReply("Usage: " + cmdToken + "latency [REFRESH]");
         ErrorReply("Usage: " + cmdToken + "latency [REFRESH], [TOLERANCE]");
         break;
       }
 
-      if (Args[0] <= 0 || Args[0] > 60000) {
+      optional<double> maybeRefreshTime = ParseDouble(Args[0]);
+      if (!maybeRefreshTime.has_value()) {
+        ErrorReply("Usage: " + cmdToken + "latency [REFRESH]");
+        ErrorReply("Usage: " + cmdToken + "latency [REFRESH], [TOLERANCE]");
+        break;
+      }
+
+      double refreshTime = *maybeRefreshTime;
+      if (refreshTime < 0 || 60000 < refreshTime) {
         // WC3 clients disconnect after a minute without network activity.
-        ErrorReply("Invalid game refresh period [" + to_string(Args[0]) + "ms].");
+        ErrorReply("Invalid game refresh period [" + ToFormattedString(refreshTime) + "ms].");
         break;
       }
 
-      double refreshTime = static_cast<double>(Args[0]);
-      optional<double> tolerance;
-      if (Args.size() >= 2) {
-        tolerance = static_cast<double>(Args[1]);
-        if (tolerance.value() <= 0) {
-          ErrorReply("Spike tolerance must be a positive value in ms.");
-          break;
-        }
-        if (tolerance.value() < targetGame->m_Config.m_SyncLimitSafeMinMilliSeconds && !GetIsSudo()) {
-          ErrorReply("Minimum spike tolerance is " + to_string(targetGame->m_Config.m_SyncLimitSafeMinMilliSeconds) + " ms.");
-          break;
-        }
-        if (tolerance.value() > targetGame->m_Config.m_SyncLimitMaxMilliSeconds && !GetIsSudo()) {
-          ErrorReply("Maximum spike tolerance is " + to_string(targetGame->m_Config.m_SyncLimitMaxMilliSeconds) + " ms.");
-          break;
-        }
-      }
-
-      if (refreshTime < targetGame->m_Config.m_LatencyMin) {
-        refreshTime = targetGame->m_Config.m_LatencyMin;
-      } else if (refreshTime > targetGame->m_Config.m_LatencyMax) {
-        refreshTime = targetGame->m_Config.m_LatencyMax;
-      }
-
-      const double oldRefresh = (uint16_t)targetGame->GetNextLatency();
-      const double oldSyncLimit = targetGame->GetSyncLimit();
-      const double oldSyncLimitSafe = targetGame->GetSyncLimitSafe();
-
-      double syncLimit, syncLimitSafe;
-      double resolvedTolerance = (
-        tolerance.has_value() ?
-        tolerance.value() :
-        oldSyncLimit * oldRefresh
-      );
-      syncLimit = resolvedTolerance / refreshTime;
-      syncLimitSafe = oldSyncLimitSafe * syncLimit / oldSyncLimit;
-      if (syncLimit < 4) syncLimit = 4;
-      if (syncLimitSafe < syncLimit / 2) syncLimitSafe = syncLimit / 2;
-      if (syncLimitSafe < 1) syncLimitSafe = 1;
-
-      if (!targetGame->SetupLatency(refreshTime, (uint16_t)syncLimit, (uint16_t)syncLimitSafe)) {
-        // Sudo abuse caused overflow or other aberrant behavior
-        ErrorReply("Failed to reconfigure game latency");
-        break;
-      }
-
-      const uint32_t finalToleranceMilliseconds = (
-        static_cast<uint32_t>(targetGame->GetNextLatency()) *
-        static_cast<uint32_t>(targetGame->GetSyncLimit())
-      );
-
-      if (refreshTime == targetGame->m_Config.m_LatencyMin) {
-        SendReply("Game will be updated at the fastest rate (every " + to_string(targetGame->GetNextLatency()) + " ms)", targetGame->GetIsLobbyStrict() || !targetGame->GetIsHiddenPlayerNames()  ? CHAT_SEND_TARGET_ALL : 0);
-      } else if (refreshTime == targetGame->m_Config.m_LatencyMax) {
-        SendReply("Game will be updated at the slowest rate (every " + to_string(targetGame->GetNextLatency()) + " ms)", targetGame->GetIsLobbyStrict() || !targetGame->GetIsHiddenPlayerNames()  ? CHAT_SEND_TARGET_ALL : 0);
+      uint16_t targetLatency = 0;
+      if (refreshTime < (double)targetGame->m_Config.m_LatencyMin) {
+        targetLatency = targetGame->m_Config.m_LatencyMin;
+      } else if (refreshTime > (double)targetGame->m_Config.m_LatencyMax) {
+        targetLatency = targetGame->m_Config.m_LatencyMax;
       } else {
-        SendReply("Game will be updated with a delay of " + to_string(targetGame->GetNextLatency()) + "ms.", targetGame->GetIsLobbyStrict() || !targetGame->GetIsHiddenPlayerNames()  ? CHAT_SEND_TARGET_ALL : 0);
+        targetLatency = static_cast<uint16_t>(refreshTime);
       }
-      SendReply("Spike tolerance set to " + to_string(finalToleranceMilliseconds) + "ms.", targetGame->GetIsLobbyStrict() || !targetGame->GetIsHiddenPlayerNames()  ? CHAT_SEND_TARGET_ALL : 0);
+
+      optional<RangeSizeType> playerSyncRange, observerSyncRange;
+      {
+        variant<monostate, double, pair<double, double>> playerSyncUserInput;
+        if (Args.size() >= 2) {
+          playerSyncUserInput = ParseDoubleOrRange(Args[1]);
+          if (playerSyncUserInput.index() == 0) {
+            ErrorReply("Invalid spike tolerance [" + Args[1] + "]");
+            break;
+          }
+        }
+        switch (playerSyncUserInput.index()) {
+          case 0:
+            playerSyncRange = ResolveSyncLimits(targetLatency, targetGame->GetLagDetectionRangeMilliSeconds(false));
+            break;
+          case 1:
+            playerSyncRange = ResolveSyncLimits(targetLatency, get<double>(playerSyncUserInput));
+            break;
+          case 2:
+            playerSyncRange = ResolveSyncLimits(targetLatency, get<pair<double, double>>(playerSyncUserInput));
+            break;
+        }
+      }
+      {
+        variant<monostate, double, pair<double, double>> observerSyncUserInput;
+        if (Args.size() >= 3) {
+          observerSyncUserInput = ParseDoubleOrRange(Args[2]);
+          if (observerSyncUserInput.index() == 0) {
+            ErrorReply("Invalid spike tolerance [" + Args[2] + "]");
+            break;
+          }
+        }
+        switch (observerSyncUserInput.index()) {
+          case 0:
+            observerSyncRange = ResolveSyncLimits(targetLatency, targetGame->GetLagDetectionRangeMilliSeconds(true));
+            break;
+          case 1:
+            observerSyncRange = ResolveSyncLimits(targetLatency, get<double>(observerSyncUserInput));
+            break;
+          case 2:
+            observerSyncRange = ResolveSyncLimits(targetLatency, get<pair<double, double>>(observerSyncUserInput));
+            break;
+        }
+      }
+
+      if (!GetIsSudo()) {
+        if (playerSyncRange.has_value()) {
+          if (
+            playerSyncRange->first < targetGame->m_Config.m_LagStopMinControllerSyncMilliSeconds ||
+            playerSyncRange->first > targetGame->m_Config.m_LagStopMaxControllerSyncMilliSeconds
+          ) {
+            ErrorReply(
+              "Player spike tolerance lower bound unacceptable (must be in ms [" + to_string(targetGame->m_Config.m_LagStopMinControllerSyncMilliSeconds) +
+              ", " + to_string(targetGame->m_Config.m_LagStopMaxControllerSyncMilliSeconds) + "])."
+            );
+            break;
+          }
+          if (
+            playerSyncRange->second < targetGame->m_Config.m_LagStartMinControllerSyncMilliSeconds ||
+            playerSyncRange->second > targetGame->m_Config.m_LagStartMaxControllerSyncMilliSeconds
+          ) {
+            ErrorReply(
+              "Player spike tolerance upper bound unacceptable (must be in ms [" + to_string(targetGame->m_Config.m_LagStartMinControllerSyncMilliSeconds) +
+              ", " + to_string(targetGame->m_Config.m_LagStartMaxControllerSyncMilliSeconds) + "])."
+            );
+            break;
+          }
+        }
+
+        if (observerSyncRange.has_value()) {
+          if (
+            observerSyncRange->first < targetGame->m_Config.m_LagStopMinObserverSyncMilliSeconds ||
+            observerSyncRange->first > targetGame->m_Config.m_LagStopMaxObserverSyncMilliSeconds
+          ) {
+            ErrorReply(
+              "Observer spike tolerance lower bound unacceptable (must be in ms [" + to_string(targetGame->m_Config.m_LagStopMinObserverSyncMilliSeconds) +
+              ", " + to_string(targetGame->m_Config.m_LagStopMaxObserverSyncMilliSeconds) + "])."
+            );
+            break;
+          }
+          if (
+            observerSyncRange->second < targetGame->m_Config.m_LagStartMinObserverSyncMilliSeconds ||
+            observerSyncRange->second > targetGame->m_Config.m_LagStartMaxObserverSyncMilliSeconds
+          ) {
+            ErrorReply(
+              "Observer spike tolerance upper bound unacceptable (must be in ms [" + to_string(targetGame->m_Config.m_LagStartMinObserverSyncMilliSeconds) +
+              ", " + to_string(targetGame->m_Config.m_LagStartMaxObserverSyncMilliSeconds) + "])."
+            );
+            break;
+          }
+        }
+      }
+
+      if (!targetGame->TrySetupLatency(targetLatency, playerSyncRange, observerSyncRange)) {
+        ErrorReply("Unexpected error while updating game latency.");
+        break;
+      }
+
+      if (targetLatency == targetGame->m_Config.m_LatencyMin) {
+        SendReply("Game will be updated at the fastest rate (every " + to_string(targetGame->GetNextLatency()) + " ms)", targetGame->GetIsLobbyStrict() || !targetGame->GetIsHiddenPlayerNames() ? CHAT_SEND_TARGET_ALL : 0);
+      } else if (targetLatency == targetGame->m_Config.m_LatencyMax) {
+        SendReply("Game will be updated at the slowest rate (every " + to_string(targetGame->GetNextLatency()) + " ms)", targetGame->GetIsLobbyStrict() || !targetGame->GetIsHiddenPlayerNames() ? CHAT_SEND_TARGET_ALL : 0);
+      } else {
+        SendReply("Game will be updated with a period of " + to_string(targetGame->GetNextLatency()) + "ms.", targetGame->GetIsLobbyStrict() || !targetGame->GetIsHiddenPlayerNames() ? CHAT_SEND_TARGET_ALL : 0);
+      }
+
+      vector<string> spikeToleranceInner;
+      if (playerSyncRange.has_value() && (!targetGame->GetGameLoaded() || targetGame->GetNumJoinedPlayers() > 0)) {
+        spikeToleranceInner.push_back("Players: " + to_string(playerSyncRange->first) + "-" + to_string(playerSyncRange->second) + " ms.");
+      }
+      if (observerSyncRange.has_value() && (!targetGame->GetGameLoaded() || targetGame->GetNumJoinedObservers() > 0)) {
+        spikeToleranceInner.push_back("Observers: " + to_string(observerSyncRange->first) + "-" + to_string(observerSyncRange->second) + " ms.");
+      }
+      if (!spikeToleranceInner.empty()) {
+        SendReply("Spike tolerance updated. " + JoinStrings(spikeToleranceInner, " ", false), targetGame->GetIsLobbyStrict() || !targetGame->GetIsHiddenPlayerNames() ? CHAT_SEND_TARGET_ALL : 0);
+      }
+      if (targetGame->m_Config.m_LatencyEqualizerEnabled && targetGame->m_PingEqualizerMaxFrames <= 1) {
+        targetGame->m_Config.m_LatencyEqualizerEnabled = false;
+        SendReply("Latency equalizer OFF.", targetGame->GetIsLobbyStrict() || !targetGame->GetIsHiddenPlayerNames() ? CHAT_SEND_TARGET_ALL : 0);
+      }
       break;
     }
 
@@ -3144,6 +3221,10 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
         break;
       }
 
+      if (targetToggle.value() && targetGame->m_Config.m_LatencyEqualizerMaxDelay < (uint16_t)targetGame->GetNextLatency()) {
+        ErrorReply("Latency is too high. It must be lowered to <" + to_string(targetGame->m_Config.m_LatencyEqualizerMaxDelay) + "> in order to support equalizer.");
+        break;
+      }
       targetGame->m_Config.m_LatencyEqualizerEnabled = targetToggle.value();
 
       if (!targetToggle.value()) {

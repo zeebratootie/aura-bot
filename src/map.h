@@ -292,8 +292,10 @@ public:
   std::optional<PlayersReadyMode>                 m_PlayersReadyMode;
   std::optional<bool>                             m_AutoStartRequiresBalance;
   std::optional<bool>                             m_EnableLagScreen;
-  std::optional<uint32_t>                         m_LatencyMaxFrames;
-  std::optional<uint32_t>                         m_LatencySafeFrames;
+  std::optional<uint32_t>                         m_LagStartDefaultControllerSyncMilliSeconds;
+  std::optional<uint32_t>                         m_LagStopDefaultControllerSyncMilliSeconds;
+  std::optional<uint32_t>                         m_LagStartDefaultObserverSyncMilliSeconds;
+  std::optional<uint32_t>                         m_LagStopDefaultObserverSyncMilliSeconds;
   std::optional<uint32_t>                         m_AutoKickPing;
   std::optional<uint32_t>                         m_WarnHighPing;
   std::optional<uint32_t>                         m_SafeHighPing;
@@ -322,7 +324,7 @@ public:
 
   std::optional<uint16_t>                         m_Latency;
   std::optional<bool>                             m_LatencyEqualizerEnabled;
-  std::optional<uint8_t>                          m_LatencyEqualizerFrames;
+  std::optional<uint16_t>                         m_LatencyEqualizerMaxDelay;
 
   std::optional<int64_t>                          m_AutoStartSeconds;
   std::optional<uint8_t>                          m_AutoStartPlayers;

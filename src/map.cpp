@@ -2185,12 +2185,6 @@ void CMap::LoadGameConfigOverrides(CConfig& CFG)
     m_EnableLagScreen = CFG.GetBool("map.net.lag_screen.enabled", false);
     CFG.FailIfErrorLast();
   }
-  if (CFG.Exists("map.net.start_lag.sync_limit")) {
-    m_LatencyMaxFrames = CFG.GetUint32("map.net.start_lag.sync_limit", 32);
-  }
-  if (CFG.Exists("map.net.stop_lag.sync_limit")) {
-    m_LatencySafeFrames = CFG.GetUint32("map.net.stop_lag.sync_limit", 8);
-  }
 
   if (CFG.Exists("map.hosting.high_ping.kick_ms")) {
     m_AutoKickPing = CFG.GetUint32("map.hosting.high_ping.kick_ms", 300);
@@ -2262,8 +2256,8 @@ void CMap::LoadGameConfigOverrides(CConfig& CFG)
   if (CFG.Exists("map.hosting.latency.equalizer.enabled")) {
     m_LatencyEqualizerEnabled = CFG.GetBool("map.hosting.latency.equalizer.enabled", false);
   }
-  if (CFG.Exists("map.hosting.latency.equalizer.frames")) {
-    m_LatencyEqualizerFrames = CFG.GetUint8("map.hosting.latency.equalizer.frames", PING_EQUALIZER_DEFAULT_FRAMES);
+  if (CFG.Exists("map.hosting.latency.equalizer.max_delay")) {
+    m_LatencyEqualizerMaxDelay = CFG.GetUint16("map.hosting.latency.equalizer.max_delay", 320);
   }
 
   if (CFG.Exists("map.reconnection.mode")) {
@@ -2276,6 +2270,44 @@ void CMap::LoadGameConfigOverrides(CConfig& CFG)
   }
   if (CFG.Exists("map.hosting.chat_in_game.enabled")) {
     m_EnableInGameChat = CFG.GetBool("map.hosting.chat_in_game.enabled", false);
+  }
+
+  if (CFG.Exists("map.net.sync.start_lag.players.default_ms")) {
+    m_LagStartDefaultControllerSyncMilliSeconds = CFG.GetUint32("map.net.sync.start_lag.players.default_ms", 3200); // 32 frames at 100 latency
+  }
+  if (CFG.Exists("map.net.sync.stop_lag.players.default_ms")) {
+    m_LagStopDefaultControllerSyncMilliSeconds = CFG.GetUint32("map.net.sync.stop_lag.players.default_ms", 800); // 80 frames at 100 latency
+  }
+  if (CFG.Exists("map.net.sync.start_lag.observers.default_ms")) {
+    m_LagStartDefaultObserverSyncMilliSeconds = CFG.GetUint32("map.net.sync.start_lag.observers.default_ms", 90000); // 900 frames at 100 latency
+  }
+  if (CFG.Exists("map.net.sync.stop_lag.observers.default_ms")) {
+    m_LagStopDefaultObserverSyncMilliSeconds = CFG.GetUint32("map.net.sync.stop_lag.observers.default_ms", 60000); // 600 frames at 100 latency
+  }
+
+  if (m_LagStartDefaultControllerSyncMilliSeconds.has_value() && m_LagStopDefaultControllerSyncMilliSeconds.has_value()) {
+    if (m_LagStartDefaultControllerSyncMilliSeconds.value() <= m_LagStopDefaultControllerSyncMilliSeconds.value()) {
+      m_Valid = false;
+      m_ErrorMessage = "<map.net.sync.start_lag.players.default_ms> must be larger than <map.net.sync.stop_lag.players.default_ms>";
+    } else if (m_Latency.has_value() && m_LagStartDefaultControllerSyncMilliSeconds.value() < m_LagStopDefaultControllerSyncMilliSeconds.value() + m_Latency.value()) {
+      m_Valid = false;
+      m_ErrorMessage = "<map.net.sync.start_lag.players.default_ms> must be at least <map.net.sync.stop_lag.players.default_ms> + <map.hosting.latency.default>";
+    }
+  }
+
+  if (m_LagStartDefaultObserverSyncMilliSeconds.has_value() && m_LagStopDefaultObserverSyncMilliSeconds.has_value()) {
+    if (m_LagStartDefaultObserverSyncMilliSeconds.value() <= m_LagStopDefaultObserverSyncMilliSeconds.value()) {
+      m_Valid = false;
+      m_ErrorMessage = "<map.net.sync.start_lag.observers.default_ms> must be larger than <map.net.sync.stop_lag.observers.default_ms>";
+    } else if (m_Latency.has_value() && m_LagStartDefaultObserverSyncMilliSeconds.value() < m_LagStopDefaultObserverSyncMilliSeconds.value() + m_Latency.value()) {
+      m_Valid = false;
+      m_ErrorMessage = "<map.net.sync.start_lag.observers.default_ms> must be at least <map.net.sync.stop_lag.observers.default_ms> + <map.hosting.latency.default>";
+    }
+  }
+
+  if (m_LatencyEqualizerMaxDelay.has_value() && m_Latency.has_value() && m_LatencyEqualizerMaxDelay.value() < m_Latency.value()) {
+    m_Valid = false;
+    m_ErrorMessage = "<map.hosting.latency.equalizer.max_delay> cannot be lower than <map.hosting.latency.default>";
   }
 
   if (CFG.Exists("map.hosting.ip_filter.flood_handler")) {

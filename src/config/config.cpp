@@ -484,6 +484,17 @@ uint16_t CConfig::GetNonZeroPort(const string& key, uint16_t defaultValue)
   SUCCESS(maybeResult.value());
 }
 
+uint32_t CConfig::GetNonZeroUint32(const string& key, uint32_t defaultValue)
+{
+  GET_KEY(key, value, defaultValue);
+  TRY_ENV_VAR(key, value, defaultValue);
+  optional<uint32_t> maybeResult = ParseUInt32(value);
+  if (!maybeResult.has_value() || maybeResult.value() == 0) {
+    CONFIG_ERROR(key, defaultValue);
+  }
+  SUCCESS(maybeResult.value());
+}
+
 uint8_t CConfig::GetSlot(const string& key, uint8_t defaultValue)
 {
   return GetSlot(key, MAX_SLOTS_MODERN, defaultValue);

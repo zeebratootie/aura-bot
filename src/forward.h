@@ -172,6 +172,8 @@ typedef std::pair<int64_t, uint16_t>                TimedUint16;
 typedef std::pair<uint64_t, uint8_t>                UTimedUint8;
 typedef std::pair<std::string, uint16_t>            NetworkHost;
 typedef std::pair<std::string, std::string>         StringPair;
+typedef std::pair<uint32_t, uint32_t>               RangeUint32;
+typedef std::pair<size_t, size_t>                   RangeSizeType;
 typedef std::weak_ptr<std::vector<uint8_t>>         WeakByteArray;
 typedef std::shared_ptr<std::vector<uint8_t>>       SharedByteArray;
 typedef std::variant<AppAction, LazyCommandContext> GenericAppAction;

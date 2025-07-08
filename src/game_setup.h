@@ -212,10 +212,12 @@ public:
 
   std::optional<bool>                             m_EnableLagScreen;
   std::optional<uint16_t>                         m_LatencyAverage;
-  std::optional<uint16_t>                         m_LatencyMaxFrames;
-  std::optional<uint16_t>                         m_LatencySafeFrames;
+  std::optional<uint32_t>                         m_StartLagPlayersMinMs;
+  std::optional<uint32_t>                         m_StopLagPlayersMaxMs;
+  std::optional<uint32_t>                         m_StartLagObserversMinMs;
+  std::optional<uint32_t>                         m_StopLagObserversMaxMs;
   std::optional<bool>                             m_LatencyEqualizerEnabled;
-  std::optional<uint8_t>                          m_LatencyEqualizerFrames;
+  std::optional<uint16_t>                         m_LatencyEqualizerMaxDelay;
   std::optional<std::string>                      m_HCL;
   std::optional<uint8_t>                          m_CustomLayout;
   std::optional<bool>                             m_CheckJoinable;
@@ -401,10 +403,7 @@ public:
   inline void SetBroadcastErrorHandler(const OnRealmBroadcastErrorHandler nValue) { m_BroadcastErrorHandler = nValue;}
   inline void SetEnableLagScreen(const bool nValue) { m_EnableLagScreen = nValue; }
   inline void SetLatencyAverage(const uint16_t nValue) { m_LatencyAverage = nValue; }
-  inline void SetLatencyMaxFrames(const uint16_t nValue) { m_LatencyMaxFrames = nValue; }
-  inline void SetLatencySafeFrames(const uint16_t nValue) { m_LatencySafeFrames = nValue; }
   inline void SetLatencyEqualizerEnabled(const bool nValue) { m_LatencyEqualizerEnabled = nValue; }
-  inline void SetLatencyEqualizerFrames(const uint8_t nValue) { m_LatencyEqualizerFrames = nValue; }
   inline void SetHCL(const std::string& nHCL) { m_HCL = nHCL; }
   inline void SetCustomLayout(const uint8_t nLayout) { m_CustomLayout = nLayout; }
 

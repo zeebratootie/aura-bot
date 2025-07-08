@@ -629,17 +629,23 @@ CLIResult CCLI::Parse(const int argc, char** argv)
   app.add_option("--latency", m_GameLatencyAverage,
     "Sets the refresh period for the game as a ping equalizer, in milliseconds."
   );
-  app.add_option("--latency-max-frames", m_GameLatencyMaxFrames,
-    "Sets a maximum amount of frames clients may fall behind. When exceeded, the lag screen shows up."
+  app.add_option("--lag-screen-start-min-players-delay", m_GameStartLagPlayersMinMs,
+    "Sets a minimum simulation time difference, so that if a game client falls behind, the lag screen shows up."
   );
-  app.add_option("--latency-safe-frames", m_GameLatencySafeFrames,
-    "Sets a frame difference clients must catch up to in order for the lag screen to go away."
+  app.add_option("--lag-screen-stop-max-players-delay", m_GameStopLagPlayersMaxMs,
+    "Sets a maximum simulation time difference, so that if a game client catches up, the lag screen goes away."
+  );
+  app.add_option("--lag-screen-start-min-observers-delay", m_GameStartLagObserversMinMs,
+    "Sets a minimum simulation time difference, so that if a game client falls behind, the lag screen shows up."
+  );
+  app.add_option("--lag-screen-stop-max-observers-delay", m_GameStopLagObserversMaxMs,
+    "Sets a maximum simulation time difference, so that if a game client catches up, the lag screen goes away."
   );
   app.add_flag(  "--latency-equalizer,--no-latency-equalizer{false}", m_GameLatencyEqualizerEnabled,
     "Enables a minimum delay for all actions sent by game players."
   );
-  app.add_option("--latency-equalizer-frames", m_GameLatencyEqualizerFrames,
-    "Sets the amount of frames to be used by the latency equalizer."
+  app.add_option("--latency-equalizer-max-delay", m_GameLatencyEqualizerMaxDelay,
+    "Sets the maximum delay to be used by the latency equalizer."
   );
   app.add_flag(  "--latency-normalize,--no-latency-normalize{false}", m_GameSyncNormalize,
     "Whether Aura tries to automatically fix some game-start lag issues."
@@ -866,6 +872,26 @@ CLIResult CCLI::Parse(const int argc, char** argv)
   if (m_GameOwnerLess.value_or(false) && m_GameOwner.has_value()) {
     Print("[AURA] Conflicting --owner and --no-owner flags.");
     m_ParseResult = CLIResult::kError;
+  }
+
+  if (m_GameStartLagPlayersMinMs.has_value() && m_GameStopLagPlayersMaxMs.has_value()) {
+    if (m_GameStartLagPlayersMinMs.value() <= m_GameStopLagPlayersMaxMs.value()) {
+      Print("[AURA] Conflicting --lag-screen-start-min-players-delay and --lag-screen-stop-max-players-delay options");
+      m_ParseResult = CLIResult::kError;
+    } else if (m_GameLatencyAverage.has_value() && m_GameStartLagPlayersMinMs.value() < m_GameStopLagPlayersMaxMs.value() + m_GameLatencyAverage.value()) {
+      Print("[AURA] Conflicting --lag-screen-start-min-players-delay, --lag-screen-stop-max-players-delay and --latency options");
+      m_ParseResult = CLIResult::kError;
+    }
+  }
+
+  if (m_GameStartLagObserversMinMs.has_value() && m_GameStopLagObserversMaxMs.has_value()) {
+    if (m_GameStartLagObserversMinMs.value() <= m_GameStopLagObserversMaxMs.value()) {
+      Print("[AURA] Conflicting --lag-screen-start-min-observers-delay and --lag-screen-stop-max-observers-delay options");
+      m_ParseResult = CLIResult::kError;
+    } else if (m_GameLatencyAverage.has_value() && m_GameStartLagObserversMinMs.value() < m_GameStopLagObserversMaxMs.value() + m_GameLatencyAverage.value()) {
+      Print("[AURA] Conflicting --lag-screen-start-min-observers-delay, --lag-screen-stop-max-observers-delay and --latency options");
+      m_ParseResult = CLIResult::kError;
+    }
   }
 
   // Loaded games

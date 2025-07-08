@@ -134,13 +134,19 @@ protected:
   long                                                   m_MapGameStartTime;              // for W3HMC
   int64_t                                                m_EffectiveTicks;                // ingame ticks excluding paused time
   int64_t                                                m_LatencyTicks;                  // ticks between last update and next
+  int64_t                                                m_NextLatencyTicks;              // ticks between last update and next
   int64_t                                                m_LastActionSentTicks;           // GetTicks when the last action packet was sent
   int64_t                                                m_LastActionLateBy;              // the number of ticks we were late sending the last action packet by
   int64_t                                                m_LastPausedTicks;               // GetTicks when the game was last paused
   int64_t                                                m_PausedTicksDeltaSum;           // Sum of GetTicks deltas for every game pause
   int64_t                                                m_StartedLaggingTime;            // GetTime when the last lag screen started
   int64_t                                                m_LastLagScreenTime;             // GetTime when the last lag screen was active (continuously updated)
+  int64_t                                                m_LastLagStartCheckTime;
   uint32_t                                               m_PingReportedSinceLagTimes;     // How many times we have sent players' pings since we started lagging
+  size_t                                                 m_LagStartMinPlayersFrames;      // the minimum number of packets a player falling out of sync will start the lag screen
+  size_t                                                 m_LagStopMaxPlayersFrames;       // the maximum number of packets a player behind sync will stop the lag screen
+  size_t                                                 m_LagStartMinObserversFrames;    // the minimum number of packets an observer falling out of sync will start the lag screen
+  size_t                                                 m_LagStopMaxObserversFrames;     // the minimum number of packets an observer falling out of sync will start the lag screen
   int64_t                                                m_LastUserSeen;                  // GetTicks when any user was last seen in the lobby
   int64_t                                                m_LastOwnerSeen;                 // GetTicks when the game owner was last seen in the lobby
   int64_t                                                m_LastOwnerAssigned;             // GetTicks when the game owner was assigned
@@ -157,7 +163,8 @@ protected:
   uint32_t                                               m_EntryKey;                      // random entry key for LAN, used to prove that a player is actually joining from LAN
   size_t                                                 m_SyncCounter;                   // the number of actions sent so far (for determining if anyone is lagging)
   size_t                                                 m_SyncCounterChecked;            // the number of verified keepalive packets
-  uint8_t                                                m_MaxPingEqualizerDelayFrames;
+  uint8_t                                                m_PingEqualizerMaxFrames;
+  uint8_t                                                m_PingEqualizerActiveDelayFrames;
   int64_t                                                m_LastPingEqualizerGameTicks;    // m_EffectiveTicks when ping equalizer was last run
 
   uint32_t                                               m_DownloadCounter;               // # of map bytes downloaded in the last second
@@ -330,13 +337,13 @@ public:
   inline bool                                            GetIsLobbyStrict() const { return !m_IsMirror && !m_GameLoading && !m_GameLoaded; }
   inline bool                                            GetIsRestored() const { return m_RestoredGame != nullptr; }
   inline size_t                                          GetSyncCounter() const { return m_SyncCounter; }
-  uint8_t                                                GetMaxEqualizerDelayFrames() const { return m_MaxPingEqualizerDelayFrames; }
+  uint8_t                                                GetMaxEqualizerDelayFrames() const { return m_PingEqualizerActiveDelayFrames; }
   uint8_t                                                CalcMaxEqualizerDelayFrames() const;
   int64_t                                                GetActiveLatency() const;
   int64_t                                                GetNextLatency(int64_t frameDrift = 0) const;
   int64_t                                                GetLastActionLateBy(int64_t oldLatency) const;
-  uint32_t                                               GetSyncLimit() const;
-  uint32_t                                               GetSyncLimitSafe() const;
+  uint32_t                                               GetSyncLimit(bool isObserver) const;
+  uint32_t                                               GetSyncLimitSafe(bool isObserver) const;
   inline bool                                            GetIsLagging() const { return m_IsLagging; }
   inline bool                                            GetIsPaused() const { return m_IsPaused; }
   inline bool                                            GetIsGameOver() const { return m_GameOver != GAME_ONGOING; }
@@ -729,12 +736,15 @@ public:
   bool RemoveScopeBan(const std::string& name, const std::string& hostName);
 
   std::vector<uint32_t> GetPlayersFramesBehind() const;
+  std::vector<uint32_t> GetUsersFramesBehind() const;
   UserList GetLaggingUsers() const;
   uint8_t CountLaggingPlayers() const;
   UserList CalculateNewLaggingPlayers() const;
   void RemoveFromLagScreens(GameUser::CGameUser* user) const;
   void ResetLagScreen();
-  bool SetupLatency(double latency, uint16_t syncLimit, uint16_t syncLimitSafe);
+  [[nodiscard]] std::pair<double, double> GetLagDetectionRangeMilliSeconds(bool isObserver);
+  bool TrySetupLatency(uint16_t latency, std::optional<RangeSizeType> playerSyncRange, std::optional<RangeSizeType> observerSyncRange);
+  void SetupLatency(uint16_t latency, std::optional<RangeSizeType> playerSyncRange, std::optional<RangeSizeType> observerSyncRange);
   void ResetLatency();
   void NormalizeSyncCounters() const;
   bool GetIsReserved(const std::string& name) const;

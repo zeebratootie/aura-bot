@@ -151,10 +151,12 @@ public:
 
   std::optional<bool>                         m_GameEnableLagScreen;
   std::optional<uint16_t>                     m_GameLatencyAverage;
-  std::optional<uint16_t>                     m_GameLatencyMaxFrames;
-  std::optional<uint16_t>                     m_GameLatencySafeFrames;
+  std::optional<uint32_t>                     m_GameStartLagPlayersMinMs;
+  std::optional<uint32_t>                     m_GameStopLagPlayersMaxMs;
+  std::optional<uint32_t>                     m_GameStartLagObserversMinMs;
+  std::optional<uint32_t>                     m_GameStopLagObserversMaxMs;
   std::optional<bool>                         m_GameLatencyEqualizerEnabled;
-  std::optional<uint8_t>                      m_GameLatencyEqualizerFrames;
+  std::optional<uint16_t>                     m_GameLatencyEqualizerMaxDelay;
 
   std::optional<bool>                         m_GameEnableLobbyChat;
   std::optional<bool>                         m_GameEnableInGameChat;

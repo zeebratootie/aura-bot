@@ -472,6 +472,16 @@ void CGameUser::ClearStalePings() {
   m_RTTValues.erase(m_RTTValues.begin() + 1, m_RTTValues.end());
 }
 
+bool CGameUser::GetIsSyncCounterStartLagging() const
+{
+  return GetIsBehindFramesNormal(m_Game.get().GetSyncLimit(GetIsObserver()));
+}
+
+bool CGameUser::GetIsSyncCounterStopLag() const
+{
+  return !GetIsBehindFramesNormal(m_Game.get().GetSyncLimitSafe(GetIsObserver()));
+}
+
 void CGameUser::RefreshUID()
 {
   m_OldUID = m_UID;

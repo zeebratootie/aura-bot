@@ -53,6 +53,54 @@
     this->gameConfigKey = nRootConfig->gameConfigKey; \
   }
 
+
+#define CHECK_BOUNDED_DEFAULT(MIN_VAL, DEFAULT_VAL, MAX_VAL, MIN_KEY, DEFAULT_KEY, MAX_KEY) \
+  do {\
+    if (MIN_VAL > MAX_VAL) {\
+      Print(\
+        "[CONFIG] Error - " + CFG.GetKeyValue(MIN_KEY) + " cannot be larger than " +\
+        CFG.GetKeyValue(MAX_KEY, to_string(MAX_VAL))\
+      );\
+      CFG.SetFailed();\
+    }\
+    if (DEFAULT_VAL < MIN_VAL) {\
+      Print(\
+        "[CONFIG] Error - " + CFG.GetKeyValue(DEFAULT_KEY) + " must be larger than " +\
+        CFG.GetKeyValue(MIN_KEY, to_string(MIN_VAL))\
+      );\
+      CFG.SetFailed();\
+    }\
+    if (DEFAULT_VAL > MAX_VAL) {\
+      Print(\
+        "[CONFIG] Error - " + CFG.GetKeyValue(DEFAULT_KEY) + " must be smaller than " +\
+        CFG.GetKeyValue(MAX_KEY, to_string(MAX_VAL))\
+      );\
+      CFG.SetFailed();\
+    }\
+  } while (0)
+
+#define CHECK_BOUNDED_DEFAULT_INHERITED(MIN_VAL, DEFAULT_VAL, MAX_VAL, MIN_KEY, DEFAULT_KEY, MAX_KEY) \
+  do {\
+    if (MIN_VAL > MAX_VAL) {\
+      Print(\
+        "[CONFIG] Error - <" + string(MIN_KEY) + "> cannot be larger than <" + string(MAX_KEY) + ">"\
+      );\
+      m_Valid = false;\
+    }\
+    if (DEFAULT_VAL < MIN_VAL) {\
+      Print(\
+        "[CONFIG] Error -<" + string(DEFAULT_KEY) + "> must be larger than <" + string(MIN_KEY) + ">"\
+      );\
+      m_Valid = false;\
+    }\
+    if (DEFAULT_VAL > MAX_VAL) {\
+      Print(\
+        "[CONFIG] Error - <" + string(DEFAULT_KEY) + "> must be smaller than <" + string(MAX_KEY) + ">"\
+      );\
+      m_Valid = false;\
+    }\
+  } while (0)
+
 using namespace std;
 
 //
@@ -60,6 +108,7 @@ using namespace std;
 //
 
 CGameConfig::CGameConfig(CConfig& CFG)
+ : m_Valid(true)
 {
   m_VoteKickPercentage                     = CFG.GetUint8("hosting.vote_kick.min_percent", 70);
   m_NumPlayersToStartGameOver              = CFG.GetUint8("hosting.game_over.player_count", 1);
@@ -95,56 +144,69 @@ CGameConfig::CGameConfig(CConfig& CFG)
 
   m_SaveGameAllowed                        = CFG.GetBool("hosting.save_game.allowed", true);
 
-  m_LatencyMin                             = CFG.GetUint16("hosting.latency.min", 10);
-  m_LatencyMax                             = CFG.GetUint16("hosting.latency.max", 500);
   m_LatencyDriftMax                        = CFG.GetUint16("hosting.latency.drift.max", 50);
 
-  if (m_LatencyMin > m_LatencyMax) {
-    Print("[CONFIG] Error - <hosting.latency.min> cannot be larger than <hosting.latency.max = 10>");
+  m_LatencyMin                             = CFG.GetUint16("hosting.latency.min", 10);
+  m_LatencyMax                             = CFG.GetUint16("hosting.latency.max", 500);
+  m_Latency                                = CFG.GetUint16("hosting.latency.default", 40); // everyone wants "zero latency", so let's not error if they input zero
+
+  CHECK_BOUNDED_DEFAULT(m_LatencyMin, m_Latency, m_LatencyMax, "hosting.latency.min", "hosting.latency.default", "hosting.latency.max");
+
+  m_LagStartMinControllerSyncMilliSeconds      = CFG.GetNonZeroUint32("net.sync.start_lag.players.min_ms", 500);
+  m_LagStartMaxControllerSyncMilliSeconds      = CFG.GetNonZeroUint32("net.sync.start_lag.players.max_ms", 0xFFFFFFFF);
+  m_LagStartDefaultControllerSyncMilliSeconds  = CFG.GetNonZeroUint32("net.sync.start_lag.players.default_ms", 3200); // 32 frames at 100 latency
+
+  CHECK_BOUNDED_DEFAULT(m_LagStartMinControllerSyncMilliSeconds, m_LagStartDefaultControllerSyncMilliSeconds, m_LagStartMaxControllerSyncMilliSeconds, "net.sync.start_lag.players.min", "net.sync.start_lag.players.default", "net.sync.start_lag.players.max");
+
+  m_LagStopMinControllerSyncMilliSeconds       = CFG.GetNonZeroUint32("net.sync.stop_lag.players.min_ms", 200);
+  m_LagStopMaxControllerSyncMilliSeconds       = CFG.GetNonZeroUint32("net.sync.stop_lag.players.max_ms", 0xFFFFFFFF);
+  m_LagStopDefaultControllerSyncMilliSeconds   = CFG.GetNonZeroUint32("net.sync.stop_lag.players.default_ms", 800); // 8 frames at 100 latency
+
+  CHECK_BOUNDED_DEFAULT(m_LagStopMinControllerSyncMilliSeconds, m_LagStopDefaultControllerSyncMilliSeconds, m_LagStopMaxControllerSyncMilliSeconds, "net.sync.stop_lag.players.min", "net.sync.stop_lag.players.default", "net.sync.stop_lag.players.max");
+
+  m_LagStartMinObserverSyncMilliSeconds        = CFG.GetNonZeroUint32("net.sync.start_lag.observers.min_ms", 3500);
+  m_LagStartMaxObserverSyncMilliSeconds        = CFG.GetNonZeroUint32("net.sync.start_lag.observers.max_ms", 0xFFFFFFFF);
+  m_LagStartDefaultObserverSyncMilliSeconds    = CFG.GetNonZeroUint32("net.sync.start_lag.observers.default_ms", 90000); // 900 frames at 100 latency
+
+  CHECK_BOUNDED_DEFAULT(m_LagStartMinObserverSyncMilliSeconds, m_LagStartDefaultObserverSyncMilliSeconds, m_LagStartMaxObserverSyncMilliSeconds, "net.sync.start_lag.observers.min", "net.sync.start_lag.observers.default", "net.sync.start_lag.observers.max");
+
+  m_LagStopMinObserverSyncMilliSeconds         = CFG.GetNonZeroUint32("net.sync.stop_lag.observers.min_ms", 100);
+  m_LagStopMaxObserverSyncMilliSeconds         = CFG.GetNonZeroUint32("net.sync.stop_lag.observers.max_ms", 0xFFFFFFFF);
+  m_LagStopDefaultObserverSyncMilliSeconds     = CFG.GetNonZeroUint32("net.sync.stop_lag.observers.default_ms", 60000); // 600 frames at 100 latency
+
+  CHECK_BOUNDED_DEFAULT(m_LagStopMinObserverSyncMilliSeconds, m_LagStopDefaultObserverSyncMilliSeconds, m_LagStopMaxObserverSyncMilliSeconds, "net.sync.stop_lag.observers.min", "net.sync.stop_lag.observers.default", "net.sync.stop_lag.observers.max");
+
+  if (m_LagStartDefaultControllerSyncMilliSeconds < m_LagStopDefaultControllerSyncMilliSeconds + m_Latency) {
+    Print(
+      "[CONFIG] Error - " + CFG.GetKeyValue("net.sync.start_lag.players.default_ms", to_string(m_LagStartDefaultControllerSyncMilliSeconds)) +
+      " must be larger than " + CFG.GetKeyValue("net.sync.start_lag.players.default_ms", to_string(m_LagStopDefaultControllerSyncMilliSeconds)) +
+      " by at least " + CFG.GetKeyValue("hosting.latency.default", to_string(m_Latency))
+    );
     CFG.SetFailed();
   }
 
-  m_SyncLimitMaxMilliSeconds               = CFG.GetUint32("net.start_lag.sync_limit.max_ms", 3500);
-  m_SyncLimitSafeMinMilliSeconds           = CFG.GetUint32("net.stop_lag.sync_limit.min_ms", 100);
-
-  if (m_SyncLimitSafeMinMilliSeconds > m_SyncLimitMaxMilliSeconds) {
-    Print("[CONFIG] Error - <net.stop_lag.sync_limit.min_ms> cannot be larger than <net.start_lag.sync_limit.max_ms>");
-    CFG.SetFailed();
-  }
-
-  m_Latency                                = CFG.GetUint16("hosting.latency.default", 100);
-
-  if (m_Latency < m_LatencyMin) {
-    Print("[CONFIG] Error - <hosting.latency.default> must be larger than <hosting.latency.min = 10>");
-    CFG.SetFailed();
-  }
-
-  if (m_Latency > m_LatencyMax) {
-    Print("[CONFIG] Error - <hosting.latency.default> must be smaller than <hosting.latency.max = 500>");
+  if (m_LagStartDefaultObserverSyncMilliSeconds < m_LagStopDefaultObserverSyncMilliSeconds + m_Latency) {
+    Print(
+      "[CONFIG] Error - " + CFG.GetKeyValue("net.sync.start_lag.observers.default_ms", to_string(m_LagStartDefaultObserverSyncMilliSeconds)) +
+      " must be larger than " + CFG.GetKeyValue("net.sync.start_lag.observers.default_ms", to_string(m_LagStopDefaultObserverSyncMilliSeconds)) +
+      " by at least " + CFG.GetKeyValue("hosting.latency.default", to_string(m_Latency))
+    );
     CFG.SetFailed();
   }
 
   m_LatencyEqualizerEnabled                = CFG.GetBool("hosting.latency.equalizer.enabled", false);
-  m_LatencyEqualizerFrames                 = CFG.GetUint8("hosting.latency.equalizer.frames", PING_EQUALIZER_DEFAULT_FRAMES);
+  m_LatencyEqualizerMaxDelay               = CFG.GetUint16("hosting.latency.equalizer.max_delay", 320);
+
+  if (m_LatencyEqualizerEnabled && m_LatencyEqualizerMaxDelay < m_Latency) {
+    Print(
+      "[CONFIG] Error - " + CFG.GetKeyValue("hosting.latency.equalizer.max_delay", to_string(m_LatencyEqualizerMaxDelay)) +
+      " cannot be lower than " + CFG.GetKeyValue("hosting.latency.default", to_string(m_Latency))
+    );
+    CFG.SetFailed();
+  }
 
   m_EnableLagScreen                        = CFG.GetBool("net.lag_screen.enabled", true);
-  m_SyncNormalize                          = CFG.GetBool("net.sync_normalization.enabled", true);
-  m_SyncLimit                              = CFG.GetUint32("net.start_lag.sync_limit.default", 32);
-  m_SyncLimitSafe                          = CFG.GetUint32("net.stop_lag.sync_limit.default", 8);
-  if (m_SyncLimit <= m_SyncLimitSafe) {
-    Print("[CONFIG] Error - <net.start_lag.sync_limit> must be larger than <net.stop_lag.sync_limit>");
-    CFG.SetFailed();
-  }
-
-  if (m_SyncLimitMaxMilliSeconds < m_Latency * m_SyncLimit) {
-    Print("[CONFIG] Error - <net.start_lag.sync_limit> times <hosting.latency> product is " + to_string(m_Latency * m_SyncLimit) + " ms, which is larger than <net.start_lag.sync_limit.max_ms = " + to_string(m_SyncLimitMaxMilliSeconds) + ">");
-    CFG.SetFailed();
-  }
-
-  if (m_Latency * m_SyncLimitSafe < m_SyncLimitSafeMinMilliSeconds) {
-    Print("[CONFIG] Error - <net.stop_lag.sync_limit> times <hosting.latency> product is " + to_string(m_Latency * m_SyncLimitSafe) + " ms, which is smaller than <net.stop_lag.sync_limit.min_ms = " + to_string(m_SyncLimitSafeMinMilliSeconds) + ">");
-    CFG.SetFailed();
-  }
+  m_SyncNormalize                          = CFG.GetBool("net.sync.normalization.enabled", true);
 
   m_PerfThreshold                          = static_cast<int64_t>(CFG.GetUint32("bot.perf_limit", 150));
   m_LacksMapKickDelay                      = CFG.GetUint32("hosting.map.missing.kick_delay", 60); // default: 1 minute
@@ -205,6 +267,7 @@ CGameConfig::CGameConfig(CConfig& CFG)
 }
 
 CGameConfig::CGameConfig(CGameConfig* nRootConfig, shared_ptr<CMap> nMap, shared_ptr<CGameSetup> nGameSetup)
+ : m_Valid(true)
 {
   if (nMap->GetMapHasTargetGameIsExpansion()) {
     // CMap::AcquireGameIsExpansion() takes care of reading CFG in lieu of CGameSetup
@@ -262,25 +325,64 @@ CGameConfig::CGameConfig(CGameConfig* nRootConfig, shared_ptr<CMap> nMap, shared
 
   INHERIT_MAP_OR_CUSTOM(m_SaveGameAllowed, m_SaveGameAllowed, m_SaveGameAllowed)
 
-  INHERIT(m_LatencyMin)
-  INHERIT(m_LatencyMax)
   INHERIT(m_LatencyDriftMax)
 
-  INHERIT(m_SyncLimitMaxMilliSeconds)
-  INHERIT(m_SyncLimitSafeMinMilliSeconds)
-
+  INHERIT(m_LatencyMin)
+  INHERIT(m_LatencyMax)
   INHERIT_MAP_OR_CUSTOM(m_Latency, m_Latency, m_LatencyAverage)
-  INHERIT_MAP_OR_CUSTOM(m_LatencyEqualizerEnabled, m_LatencyEqualizerEnabled, m_LatencyEqualizerEnabled)
-  INHERIT_MAP_OR_CUSTOM(m_LatencyEqualizerFrames, m_LatencyEqualizerFrames, m_LatencyEqualizerFrames)
 
-  if (m_LatencyEqualizerFrames == 0) {
-    m_LatencyEqualizerFrames = 1;
+  INHERIT(m_LagStartMinControllerSyncMilliSeconds)
+  INHERIT(m_LagStartMaxControllerSyncMilliSeconds)
+  INHERIT_MAP_OR_CUSTOM(m_LagStartDefaultControllerSyncMilliSeconds, m_LagStartDefaultControllerSyncMilliSeconds, m_StartLagPlayersMinMs)
+
+  CHECK_BOUNDED_DEFAULT_INHERITED(m_LagStartMinControllerSyncMilliSeconds, m_LagStartDefaultControllerSyncMilliSeconds, m_LagStartMaxControllerSyncMilliSeconds, "net.sync.start_lag.players.min", "net.sync.start_lag.players.default", "net.sync.start_lag.players.max");
+
+  INHERIT(m_LagStopMinControllerSyncMilliSeconds)
+  INHERIT(m_LagStopMaxControllerSyncMilliSeconds)
+  INHERIT_MAP_OR_CUSTOM(m_LagStopDefaultControllerSyncMilliSeconds, m_LagStopDefaultControllerSyncMilliSeconds, m_StopLagPlayersMaxMs)
+
+  CHECK_BOUNDED_DEFAULT_INHERITED(m_LagStopMinControllerSyncMilliSeconds, m_LagStopDefaultControllerSyncMilliSeconds, m_LagStopMaxControllerSyncMilliSeconds, "net.sync.stop_lag.players.min", "net.sync.stop_lag.players.default", "net.sync.stop_lag.players.max");
+
+  INHERIT(m_LagStartMinObserverSyncMilliSeconds)
+  INHERIT(m_LagStartMaxObserverSyncMilliSeconds)
+  INHERIT_MAP_OR_CUSTOM(m_LagStartDefaultObserverSyncMilliSeconds, m_LagStartDefaultObserverSyncMilliSeconds, m_StartLagObserversMinMs)
+
+  CHECK_BOUNDED_DEFAULT_INHERITED(m_LagStartMinObserverSyncMilliSeconds, m_LagStartDefaultObserverSyncMilliSeconds, m_LagStartMaxObserverSyncMilliSeconds, "net.sync.start_lag.observers.min", "net.sync.start_lag.observers.default", "net.sync.start_lag.observers.max");
+
+  INHERIT(m_LagStopMinObserverSyncMilliSeconds)
+  INHERIT(m_LagStopMaxObserverSyncMilliSeconds)
+  INHERIT_MAP_OR_CUSTOM(m_LagStopDefaultObserverSyncMilliSeconds, m_LagStopDefaultObserverSyncMilliSeconds, m_StopLagObserversMaxMs)
+
+  CHECK_BOUNDED_DEFAULT_INHERITED(m_LagStopMinObserverSyncMilliSeconds, m_LagStopDefaultObserverSyncMilliSeconds, m_LagStopMaxObserverSyncMilliSeconds, "net.sync.stop_lag.observers.min", "net.sync.stop_lag.observers.default", "net.sync.stop_lag.observers.max");
+
+  if (m_LagStartDefaultControllerSyncMilliSeconds < m_LagStopDefaultControllerSyncMilliSeconds + m_Latency) {
+    Print(
+      "[CONFIG] Error - <net.sync.start_lag.players.default_ms> must be larger than <net.sync.start_lag.players.default_ms>"
+      " by at least <hosting.latency.default>"
+    );
+    m_Valid = false;
   }
+
+  if (m_LagStartDefaultObserverSyncMilliSeconds < m_LagStopDefaultObserverSyncMilliSeconds + m_Latency) {
+    Print(
+      "[CONFIG] Error - <net.sync.start_lag.observers.default_ms> must be larger than <net.sync.start_lag.observers.default_ms>"
+      " by at least <hosting.latency.default>"
+    );
+    m_Valid = false;
+  }
+
+  if (m_LatencyEqualizerEnabled && m_LatencyEqualizerMaxDelay < m_Latency) {
+    Print(
+      "[CONFIG] Error - <hosting.latency.equalizer.max_delay> cannot be lower than <hosting.latency.default>"
+    );
+    m_Valid = false;
+  }
+
+  INHERIT_MAP_OR_CUSTOM(m_LatencyEqualizerEnabled, m_LatencyEqualizerEnabled, m_LatencyEqualizerEnabled)
+  INHERIT_MAP_OR_CUSTOM(m_LatencyEqualizerMaxDelay, m_LatencyEqualizerMaxDelay, m_LatencyEqualizerMaxDelay)
 
   INHERIT_MAP_OR_CUSTOM(m_EnableLagScreen, m_EnableLagScreen, m_EnableLagScreen)
   INHERIT_CUSTOM(m_SyncNormalize, m_SyncNormalize)
-  INHERIT_MAP_OR_CUSTOM(m_SyncLimit, m_LatencyMaxFrames, m_LatencyMaxFrames)
-  INHERIT_MAP_OR_CUSTOM(m_SyncLimitSafe, m_LatencySafeFrames, m_LatencySafeFrames)
 
   INHERIT(m_PerfThreshold)
   INHERIT(m_LacksMapKickDelay)

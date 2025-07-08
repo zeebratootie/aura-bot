@@ -392,6 +392,9 @@ namespace GameUser
     inline void SetPinnedMessage(const std::string nPinnedMessage) { m_PinnedMessage = nPinnedMessage; }
     inline void ClearPinnedMessage() { m_PinnedMessage.clear(); }
 
+    [[nodiscard]] bool GetIsSyncCounterStartLagging() const;
+    [[nodiscard]] bool GetIsSyncCounterStopLag() const;
+
     void RefreshUID();
     inline void SetSelfReportedGameResult(const uint8_t result) { m_SelfGameResult = result; }
     inline void SetFinalGameResult(const uint8_t result) { m_FinalGameResult = result; }

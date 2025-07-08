@@ -42,6 +42,7 @@
 
 struct CGameConfig
 {
+  bool                             m_Valid;
   uint8_t                          m_VoteKickPercentage;         // percentage of players required to vote yes for a votekick to pass
   uint8_t                          m_NumPlayersToStartGameOver;  // when this player count is reached, the game over timer will start
   uint8_t                          m_MaxPlayersLoopback;
@@ -76,20 +77,33 @@ struct CGameConfig
 
   bool                             m_SaveGameAllowed;
 
-  uint16_t                         m_LatencyMin;                   // the minimum configurable game refresh latency
-  uint16_t                         m_LatencyMax;                   // the maximum configurable game refresh latency
-  uint16_t                         m_LatencyDriftMax;              // the maximum allowed frame drift in ms
-  uint32_t                         m_SyncLimitMaxMilliSeconds;     // constraint for configurable parameters m_SyncLimit * m_Latency
-  uint32_t                         m_SyncLimitSafeMinMilliSeconds; // constraint for configurable parameters m_SyncLimitSafe * m_Latency
+  uint16_t                         m_LatencyDriftMax;                           // the maximum allowed frame drift in ms
 
+  uint16_t                         m_LatencyMin;                                // the minimum configurable game refresh latency
+  uint16_t                         m_LatencyMax;                                // the maximum configurable game refresh latency
   uint16_t                         m_Latency;                    // the game refresh latency (by default)
+
+  uint32_t                         m_LagStartMinControllerSyncMilliSeconds;     // constraint
+  uint32_t                         m_LagStartMaxControllerSyncMilliSeconds;     // constraint
+  uint32_t                         m_LagStartDefaultControllerSyncMilliSeconds; // editable with !latency, CMap, CGameSetup
+
+  uint32_t                         m_LagStopMinControllerSyncMilliSeconds;      // constraint
+  uint32_t                         m_LagStopMaxControllerSyncMilliSeconds;      // constraint
+  uint32_t                         m_LagStopDefaultControllerSyncMilliSeconds;  // editable with !latency, CMap, CGameSetup
+
+  uint32_t                         m_LagStartMinObserverSyncMilliSeconds;       // constraint
+  uint32_t                         m_LagStartMaxObserverSyncMilliSeconds;       // constraint
+  uint32_t                         m_LagStartDefaultObserverSyncMilliSeconds;   // editable with !latency, CMap, CGameSetup
+
+  uint32_t                         m_LagStopMinObserverSyncMilliSeconds;        // constraint
+  uint32_t                         m_LagStopMaxObserverSyncMilliSeconds;        // constraint
+  uint32_t                         m_LagStopDefaultObserverSyncMilliSeconds;    // editable with !latency, CMap, CGameSetup
+
   bool                             m_LatencyEqualizerEnabled;    // whether to add a minimum delay proportional to m_Latency to all actions sent by players
-  uint8_t                          m_LatencyEqualizerFrames;     // how many frames should the latency equalizer use
+  uint16_t                         m_LatencyEqualizerMaxDelay;   // how many ms can we add to players' latencies
 
   bool                             m_EnableLagScreen;            // whether to pause the game with a lag screen whenever a player falls behind
   bool                             m_SyncNormalize;              // before 3-minute mark, try to keep players in the game
-  uint32_t                         m_SyncLimit;                  // the maximum number of packets a user can fall out of sync before starting the lag screen (by default)
-  uint32_t                         m_SyncLimitSafe;              // the maximum number of packets a user can fall out of sync before starting the lag screen (by default)
 
   int64_t                          m_PerfThreshold;              // the max expected delay between updates - if exceeded it means performance is suffering
   uint32_t                         m_LacksMapKickDelay;

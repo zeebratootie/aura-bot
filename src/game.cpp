@@ -153,13 +153,19 @@ CGame::CGame(CAura* nAura, shared_ptr<CGameSetup> nGameSetup)
     m_MapGameStartTime(0),
     m_EffectiveTicks(0),
     m_LatencyTicks(0),
+    m_NextLatencyTicks(0),
     m_LastActionSentTicks(0),
     m_LastActionLateBy(0),
     m_LastPausedTicks(0),
     m_PausedTicksDeltaSum(0),
     m_StartedLaggingTime(0),
     m_LastLagScreenTime(0),
+    m_LastLagStartCheckTime(APP_MIN_TICKS),
     m_PingReportedSinceLagTimes(0),
+    m_LagStartMinPlayersFrames(0),
+    m_LagStopMaxPlayersFrames(0),
+    m_LagStartMinObserversFrames(0),
+    m_LagStopMaxObserversFrames(0),
     m_LastUserSeen(GetTicks()),
     m_LastOwnerSeen(GetTicks()),
     m_StartedKickVoteTime(0),
@@ -171,7 +177,8 @@ CGame::CGame(CAura* nAura, shared_ptr<CGameSetup> nGameSetup)
     m_EntryKey(nGameSetup->GetEntryKey()),
     m_SyncCounter(0),
     m_SyncCounterChecked(0),
-    m_MaxPingEqualizerDelayFrames(0),
+    m_PingEqualizerMaxFrames(1),
+    m_PingEqualizerActiveDelayFrames(0),
     m_LastPingEqualizerGameTicks(0),
     m_CountDownCounter(0),
     m_StartPlayers(0),
@@ -234,6 +241,11 @@ CGame::CGame(CAura* nAura, shared_ptr<CGameSetup> nGameSetup)
     m_GameDiscoveryInfoVersionOffset(0),
     m_GameDiscoveryInfoDynamicOffset(0)
 {
+  if (!m_Config.m_Valid) {
+    m_Exiting = true;
+    return;
+  }
+
   SetSupportedGameVersion(GetVersion());
   bool canCrossPlay = !(
     (m_Config.m_CrossPlayMode == CrossPlayMode::kNone) ||
@@ -275,7 +287,7 @@ CGame::CGame(CAura* nAura, shared_ptr<CGameSetup> nGameSetup)
   }
 
   m_GameFlags = CalcGameFlags();
-  m_LatencyTicks = m_Config.m_Latency;
+  m_LatencyTicks = m_NextLatencyTicks;
 
   if (!nGameSetup->GetIsMirror()) {
     for (const auto& userName : nGameSetup->m_Reservations) {
@@ -283,6 +295,8 @@ CGame::CGame(CAura* nAura, shared_ptr<CGameSetup> nGameSetup)
     }
 
     m_RandomSeed = GetRandomUInt32();
+
+    ResetLatency();
 
     // wait time of 1 minute  = 0 empty actions required
     // wait time of 2 minutes = 1 empty action required...
@@ -1521,13 +1535,13 @@ void CGame::UpdateLoaded()
   // we consider a user to have started lagging if they're more than m_SyncLimit keepalives behind
 
   if (!m_IsLagging) {
-    if (m_Config.m_EnableLagScreen) {
+    if (m_Config.m_EnableLagScreen && m_Aura->GetTicksIsAfterDelay(m_LastLagStartCheckTime, 1000)) {
       string LaggingString;
       bool startedLagging = false;
-      vector<uint32_t> framesBehind = GetPlayersFramesBehind();
+      vector<uint32_t> framesBehind = GetUsersFramesBehind();
       uint8_t i = static_cast<uint8_t>(m_Users.size());
       while (i--) {
-        if (framesBehind[i] > GetSyncLimit() && !m_Users[i]->GetDisconnectedUnrecoverably()) {
+        if (framesBehind[i] > GetSyncLimit(m_Users[i]->GetIsObserver()) && !m_Users[i]->GetDisconnectedUnrecoverably()) {
           startedLagging = true;
           break;
         }
@@ -1540,7 +1554,7 @@ void CGame::UpdateLoaded()
         UserList laggingPlayers;
         i = static_cast<uint8_t>(m_Users.size());
         while (i--) {
-          if (framesBehind[i] > GetSyncLimitSafe() && !m_Users[i]->GetDisconnectedUnrecoverably()) {
+          if (framesBehind[i] > GetSyncLimitSafe(m_Users[i]->GetIsObserver()) && !m_Users[i]->GetDisconnectedUnrecoverably()) {
             m_Users[i]->SetLagging(true);
             m_Users[i]->SetStartedLaggingTicks(Ticks);
             m_Users[i]->ClearStalePings();
@@ -1580,6 +1594,7 @@ void CGame::UpdateLoaded()
           }
         }
       }
+      m_LastLagStartCheckTime = m_Aura->GetLoopTicks();
     }
   } else if (!m_Users.empty()) { // m_IsLagging == true (context: CGame::UpdateLoaded())
     pair<int64_t, int64_t> waitTicks = GetReconnectWaitTicks();
@@ -1640,7 +1655,7 @@ void CGame::UpdateLoaded()
         DLOG_APP_IF(LogLevel::kTrace, "global lagger update (-" + user->GetName() + ")")
         SendAll(GameProtocol::SEND_W3GS_STOP_LAG(user, m_Aura->GetLoopTicks()));
         LOG_APP_IF(LogLevel::kInfo, "lagging user disconnected [" + user->GetName() + "]")
-      } else if (user->GetIsBehindFramesNormal(GetSyncLimitSafe())) {
+      } else if (!user->GetIsSyncCounterStopLag()) {
         ++playersLaggingCounter;
       } else {
         DLOG_APP_IF(LogLevel::kTrace, "global lagger update (-" + user->GetName() + ")")
@@ -1968,12 +1983,12 @@ void CGame::RunActionsScheduler()
     }
   }
 
-  uint8_t maxOldEqualizerOffset = m_MaxPingEqualizerDelayFrames;
+  uint8_t maxOldEqualizerOffset = m_PingEqualizerActiveDelayFrames;
   if (CheckUpdatePingEqualizer()) {
-    m_MaxPingEqualizerDelayFrames = UpdatePingEqualizer();
+    m_PingEqualizerActiveDelayFrames = UpdatePingEqualizer();
   }
 
-  RunActionsSchedulerInner(newLatency, m_MaxPingEqualizerDelayFrames, oldLatency, maxOldEqualizerOffset, actionLateBy);
+  RunActionsSchedulerInner(newLatency, m_PingEqualizerActiveDelayFrames, oldLatency, maxOldEqualizerOffset, actionLateBy);
 }
 
 void CGame::RunActionsSchedulerInner(const int64_t newLatency, const uint8_t maxNewEqualizerOffset, const int64_t oldLatency, const uint8_t maxOldEqualizerOffset, const int64_t actionLateBy)
@@ -4160,7 +4175,7 @@ uint8_t CGame::UpdatePingEqualizer()
     uint32_t framesAheadNow;
     if (framesAheadNowDiscriminator > framesAheadBefore) {
       framesAheadNow = framesAheadBefore + 1;
-      if (!addedFrame && m_MaxPingEqualizerDelayFrames < framesAheadNow && framesAheadNow < m_Config.m_LatencyEqualizerFrames) {
+      if (!addedFrame && m_PingEqualizerActiveDelayFrames < framesAheadNow && framesAheadNow < m_PingEqualizerMaxFrames) {
         m_Actions.emplaceAfter(GetLastActionFrameNode());
         addedFrame = true;
       }
@@ -7263,6 +7278,10 @@ void CGame::Remake()
   m_StartedLaggingTime = 0;
   m_LastLagScreenTime = 0;
   m_PingReportedSinceLagTimes = 0;
+  m_LagStartMinPlayersFrames = 0;
+  m_LagStopMaxPlayersFrames = 0;
+  m_LagStartMinObserversFrames = 0;
+  m_LagStopMaxObserversFrames = 0;
   m_LastUserSeen = Ticks;
   m_LastOwnerSeen = Ticks;
   m_StartedKickVoteTime = 0;
@@ -7273,7 +7292,8 @@ void CGame::Remake()
   m_LastLagScreenResetTime = 0;
   m_SyncCounter = 0;
   m_SyncCounterChecked = 0;
-  m_MaxPingEqualizerDelayFrames = 0;
+  m_PingEqualizerMaxFrames = 0;
+  m_PingEqualizerActiveDelayFrames = 0;
   m_LastPingEqualizerGameTicks = 0;
 
   m_CountDownCounter = 0;
@@ -9307,6 +9327,19 @@ vector<uint32_t> CGame::GetPlayersFramesBehind() const
   return framesBehind;
 }
 
+vector<uint32_t> CGame::GetUsersFramesBehind() const
+{
+  uint8_t i = static_cast<uint8_t>(m_Users.size());
+  vector<uint32_t> framesBehind(i, 0);
+  while (i--) {
+    if (m_SyncCounter <= m_Users[i]->GetNormalSyncCounter()) {
+      continue;
+    }
+    framesBehind[i] = static_cast<uint32_t>(m_SyncCounter - m_Users[i]->GetNormalSyncCounter());
+  }
+  return framesBehind;
+}
+
 UserList CGame::GetLaggingUsers() const
 {
   UserList laggingPlayers;
@@ -9346,7 +9379,7 @@ UserList CGame::CalculateNewLaggingPlayers() const
     }
     if (!user->GetFinishedLoading()) {
       laggingPlayers.push_back(user);
-    } else if (m_Config.m_EnableLagScreen && user->GetIsBehindFramesNormal(GetSyncLimitSafe())) {
+    } else if (m_Config.m_EnableLagScreen && !user->GetIsSyncCounterStopLag()) {
       laggingPlayers.push_back(user);
     }
   }
@@ -9423,21 +9456,57 @@ void CGame::ResetLagScreen()
   m_LastLagScreenResetTime = GetTime();
 }
 
-bool CGame::SetupLatency(double latency, uint16_t syncLimit, uint16_t syncLimitSafe)
+pair<double, double> CGame::GetLagDetectionRangeMilliSeconds(bool isObserver)
 {
-  if (syncLimitSafe >= syncLimit) return false;
-  if (latency <= 0 || latency > 0xFFFF) return false;
-  m_Config.m_Latency = static_cast<uint16_t>(latency);
-  m_Config.m_SyncLimit = syncLimit;
-  m_Config.m_SyncLimitSafe = syncLimitSafe;
+  if (isObserver) {
+    return make_pair<double, double>((double)m_LagStopMaxObserversFrames * (double)m_NextLatencyTicks, (double)m_LagStartMinObserversFrames * (double)m_NextLatencyTicks);
+  } else {
+    return make_pair<double, double>((double)m_LagStopMaxPlayersFrames * (double)m_NextLatencyTicks, (double)m_LagStartMinPlayersFrames * (double)m_NextLatencyTicks);
+  }
+}
+
+bool CGame::TrySetupLatency(uint16_t latency, optional<RangeSizeType> playerSyncRange, optional<RangeSizeType> observerSyncRange)
+{
+  if (latency <= 0) return false;
+  if (playerSyncRange.has_value()) {
+    // ensure stopMax < startMin
+    size_t stopMax = playerSyncRange->first / (size_t)latency;
+    size_t startMin = playerSyncRange->second / (size_t)latency;
+    if (startMin <= stopMax) return false;
+  }
+  if (observerSyncRange.has_value()) {
+    // ensure stopMax < startMin
+    size_t stopMax = observerSyncRange->first / (size_t)latency;
+    size_t startMin = observerSyncRange->second / (size_t)latency;
+    if (startMin <= stopMax) return false;
+  }
+  SetupLatency(latency, playerSyncRange, observerSyncRange);
   return true;
+}
+
+void CGame::SetupLatency(uint16_t latency, optional<RangeSizeType> playerSyncRange, optional<RangeSizeType> observerSyncRange)
+{
+  m_NextLatencyTicks = static_cast<int64_t>(latency);
+  if (playerSyncRange.has_value()) {
+    m_LagStopMaxPlayersFrames = playerSyncRange->first / (size_t)latency;
+    m_LagStartMinPlayersFrames = playerSyncRange->second / (size_t)latency;
+  }
+  if (observerSyncRange.has_value()) {
+    m_LagStopMaxObserversFrames = observerSyncRange->first / (size_t)latency;
+    m_LagStartMinObserversFrames = observerSyncRange->second / (size_t)latency;
+  }
+  int64_t maxFrames = ((int64_t)m_Config.m_LatencyEqualizerMaxDelay / m_NextLatencyTicks) + 1;
+  m_PingEqualizerMaxFrames = maxFrames > 0xFF ? 0xFF : static_cast<uint8_t>(maxFrames);
 }
 
 void CGame::ResetLatency()
 {
-  m_Config.m_Latency = m_Aura->m_GameDefaultConfig->m_Latency;
-  m_Config.m_SyncLimit = m_Aura->m_GameDefaultConfig->m_SyncLimit;
-  m_Config.m_SyncLimitSafe = m_Aura->m_GameDefaultConfig->m_SyncLimitSafe;
+  SetupLatency(
+    m_Config.m_Latency,
+    RangeSizeType{(size_t)m_Config.m_LagStopDefaultControllerSyncMilliSeconds, (size_t)m_Config.m_LagStartDefaultControllerSyncMilliSeconds},
+    RangeSizeType{(size_t)m_Config.m_LagStopDefaultObserverSyncMilliSeconds, (size_t)m_Config.m_LagStartDefaultObserverSyncMilliSeconds}
+  );
+
   for (auto& user : m_Users)  {
     user->ResetSyncCounterOffset();
   }
@@ -10737,8 +10806,8 @@ int64_t CGame::GetActiveLatency() const
 
 int64_t CGame::GetNextLatency(int64_t frameDrift) const
 {
-  if (frameDrift <= m_Config.m_LatencyDriftMax) return static_cast<int64_t>(m_Config.m_Latency);
-  int64_t latency = static_cast<int64_t>(m_Config.m_Latency) + 2 * frameDrift;
+  if (frameDrift <= m_Config.m_LatencyDriftMax) return static_cast<int64_t>(m_NextLatencyTicks);
+  int64_t latency = m_NextLatencyTicks + 2 * frameDrift;
   int64_t maxLatency = static_cast<int64_t>(m_Config.m_LatencyMax);
   return min(latency, maxLatency);
 }
@@ -10751,14 +10820,14 @@ int64_t CGame::GetLastActionLateBy(int64_t oldLatency) const
   return actualSendInterval - expectedSendInterval;
 }
 
-uint32_t CGame::GetSyncLimit() const
+uint32_t CGame::GetSyncLimit(bool isObserver) const
 {
-  return m_Config.m_SyncLimit;
+  return isObserver ? m_LagStartMinObserversFrames : m_LagStartMinPlayersFrames;
 }
 
-uint32_t CGame::GetSyncLimitSafe() const
+uint32_t CGame::GetSyncLimitSafe(bool isObserver) const
 {
-  return m_Config.m_SyncLimitSafe;
+  return isObserver ? m_LagStopMaxObserversFrames : m_LagStopMaxPlayersFrames;
 }
 
 GamePlayerResult CGame::ResolveUndecidedComputerOrVirtualAuto(CGameController* controllerData, const GameResultConstraints& constraints, const GameResultTeamAnalysis& teamAnalysis)

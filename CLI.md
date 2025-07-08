@@ -1165,10 +1165,14 @@ This option is equivalent to ``<bot.latency>`` in `config.ini`
 
 This option is equivalent to ``<map.bot.latency>`` in map configuration
 
-## \`--latency-equalizer-frames\`
+## \`--latency-equalizer-max-delay \<VALUE\>\`
 
 When the latency equalizer feature is enabled, this parameter specifies the maximum delay that can be added
-to players' actions, measured in game ticks.
+to players' actions, measured in milliseconds.
+
+This option is equivalent to ``<hosting.latency.equalizer.max_delay>`` in `config.ini`
+
+This option is equivalent to ``<map.hosting.latency.equalizer.max_delay>`` in map configuration
 
 ## \`--latency-max-frames \<VALUE\>\`
 

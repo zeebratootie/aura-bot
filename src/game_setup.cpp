@@ -1705,10 +1705,13 @@ void CGameSetup::AcquireCLISimple(const CCLI* nCLI)
 
   WriteOpt(m_EnableLagScreen) << nCLI->m_GameEnableLagScreen;
   WriteOpt(m_LatencyAverage) << nCLI->m_GameLatencyAverage;
-  WriteOpt(m_LatencyMaxFrames) << nCLI->m_GameLatencyMaxFrames;
-  WriteOpt(m_LatencySafeFrames) << nCLI->m_GameLatencySafeFrames;
+  WriteOpt(m_StartLagPlayersMinMs) << nCLI->m_GameStartLagPlayersMinMs;
+  WriteOpt(m_StopLagPlayersMaxMs) << nCLI->m_GameStopLagPlayersMaxMs;
+  WriteOpt(m_StartLagObserversMinMs) << nCLI->m_GameStartLagObserversMinMs;
+  WriteOpt(m_StopLagObserversMaxMs) << nCLI->m_GameStopLagObserversMaxMs;
+
   WriteOpt(m_LatencyEqualizerEnabled) << nCLI->m_GameLatencyEqualizerEnabled;
-  WriteOpt(m_LatencyEqualizerFrames) << nCLI->m_GameLatencyEqualizerFrames;
+  WriteOpt(m_LatencyEqualizerMaxDelay) << nCLI->m_GameLatencyEqualizerMaxDelay;
 
   WriteOpt(m_HCL) << nCLI->m_GameHCL;
 
