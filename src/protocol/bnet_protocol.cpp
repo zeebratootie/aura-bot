@@ -963,8 +963,22 @@ namespace BNETProtocol
     packet.push_back(0);                        // Null terminator
     //AppendByteArray(packet, GamePassword, 0); // Game Password
     packet.push_back(0);                        // Null terminator
-    //AppendByteArray(packet, GameStats, 0);    // Game Stats
+    //AppendByteArray(packet, GameStats, 0);    // Game Stats (unsupported by PvPGN)
     packet.push_back(0);                        // Null terminator
+    AssignLength(packet);
+    return packet;
+  }
+
+  vector<uint8_t> SEND_SID_GETADVLISTEX(const string& gameName, const string& gamePassword)
+  {
+    vector<uint8_t> packet = {BNETProtocol::Magic::BNET_HEADER, BNETProtocol::Magic::GETADVLISTEX, 0, 0, /* short */ 0, 0, /* short */ 0, 0, /* unknown */ 0, 0, 0, 0, /* unknown */  0, 0, 0, 0};
+    const uint8_t MaxGames[] = {255, 255, 255, 255};
+    //const uint8_t GameStats[] = {};
+    AppendByteArray(packet, MaxGames, 4);
+    AppendByteArrayString(packet, gameName, true);         // Game Name
+    AppendByteArrayString(packet, gamePassword, true);     // Game Password
+    //AppendByteArray(packet, GameStats, 0);               // Game Stats (unsupported by PvPGN)
+    packet.push_back(0);                                   // Null terminator
     AssignLength(packet);
     return packet;
   }

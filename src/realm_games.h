@@ -42,6 +42,8 @@ struct GameSearchQuery
 
   [[nodiscard]] bool GetIsMatch(const Version& gameVersion, const NetworkGameInfo& networkGameInfo) const;
   [[nodiscard]] bool EventMatch(const NetworkGameInfo& networkGameInfo);
+  [[nodiscard]] const std::string& GetGameName() const { return m_GameName; }
+  [[nodiscard]] const std::string& GetHostName() const { return m_HostName; }
   void SetCallback(const GameSearchQueryCallback callbackType, std::shared_ptr<CGameSetup> callbackTarget);
 };
 

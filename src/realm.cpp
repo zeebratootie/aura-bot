@@ -514,7 +514,7 @@ void CRealm::UpdateConnected(fd_set* fd, fd_set* send_fd)
     m_LastGameRefreshTime = Time;
   }
 
-  if (m_LastGameListTime + 90 <= Time) {
+  if (m_LastGameListTime + (m_GameBroadcast.expired() ? 90 : 20) <= Time) {
     TrySendGetGamesList();
     m_LastGameListTime = GetTime();
   }
@@ -1065,12 +1065,16 @@ void CRealm::SendGetClanList()
 
 void CRealm::SendGetGamesList()
 {
-  Send(BNETProtocol::SEND_SID_GETADVLISTEX());
+  if (m_GameSearchQuery) {
+    Send(BNETProtocol::SEND_SID_GETADVLISTEX(m_GameSearchQuery->GetGameName(), string()));
+  } else {
+    Send(BNETProtocol::SEND_SID_GETADVLISTEX());
+  }
 }
 
 void CRealm::TrySendGetGamesList()
 {
-  if (m_Config.m_QueryGameLists) {
+  if (m_Config.m_QueryGameLists || m_GameSearchQuery) {
     SendGetGamesList();
   }
 }

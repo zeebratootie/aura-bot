@@ -353,6 +353,7 @@ namespace BNETProtocol
   [[nodiscard]] std::vector<uint8_t> SEND_SID_ZERO();
   [[nodiscard]] std::vector<uint8_t> SEND_SID_STOPADV();
   [[nodiscard]] std::vector<uint8_t> SEND_SID_GETADVLISTEX();
+  [[nodiscard]] std::vector<uint8_t> SEND_SID_GETADVLISTEX(const std::string& gameName, const std::string& gamePassword);
   [[nodiscard]] std::vector<uint8_t> SEND_SID_ENTERCHAT();
   [[nodiscard]] std::vector<uint8_t> SEND_SID_JOINCHANNEL(const std::string& channel);
   [[nodiscard]] std::vector<uint8_t> SEND_SID_CHAT_PUBLIC(const std::string& message);
