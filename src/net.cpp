@@ -44,6 +44,7 @@
 #include "proxy/gproxy_server.h"
 #include "game_seeker.h"
 #include "game_user.h"
+#include "async_observer.h"
 #include "realm.h"
 #include "socket.h"
 #include "aura.h"
@@ -671,8 +672,8 @@ void CNet::UpdateBeforeGames(fd_set* fd, fd_set* send_fd)
   for (auto& serverConnections : m_GameObservers) {
     for (auto i = begin(serverConnections.second); i != end(serverConnections.second);) {
       // *i is a pointer to a CAsyncObserver
-      uint8_t result = (*i)->Update(fd, send_fd, GAME_USER_TIMEOUT_VANILLA);
-      if (result == ASYNC_OBSERVER_OK) {
+      AsyncObserverStatus result = (*i)->Update(fd, send_fd, GAME_USER_TIMEOUT_VANILLA);
+      if (result == AsyncObserverStatus::kOk) {
         ++i;
         continue;
       }

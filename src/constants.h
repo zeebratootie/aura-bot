@@ -809,11 +809,8 @@ enum class GProxyExtendedClientResult : uint8_t {
 
 // game_async_observer.h
 
-constexpr uint8_t ASYNC_OBSERVER_GOAL_OBSERVER = 0u;
-constexpr uint8_t ASYNC_OBSERVER_GOAL_PLAYER = 1u;
-
 enum class AsyncObserverGoal : uint8_t {
-  kObserver = 0,
+  kSpectator = 0,
   kPlayer = 1,
   LAST = 2,
 };
@@ -824,13 +821,6 @@ constexpr uint8_t ASYNC_OBSERVER_PROMOTED = 2u;
 
 constexpr size_t MAXIMUM_TIMESTAMPS_COUNT = 20;
 constexpr int TIMESTAMPS_SAMPLE_RATE = 10;
-
-enum class AsyncObserver : uint8_t {
-  kOk = 0,
-  kDestroy = 1,
-  kPromoted = 2,
-  LAST = 3,
-};
 
 // game_setup.h
 

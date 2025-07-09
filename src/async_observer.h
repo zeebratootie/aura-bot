@@ -37,6 +37,13 @@
 #include "realm.h"
 #include "protocol/game_protocol.h"
 
+enum class AsyncObserverStatus : uint8_t {
+  kOk = 0,
+  kDestroy = 1,
+  kPromoted = 2,
+  LAST = 3,
+};
+
 struct UniformFrameSampler
 {
   std::mt19937 rng;
@@ -73,7 +80,7 @@ public:
   bool                                                          m_TimeSynchronized;
   bool                                                          m_TimeLiveSynchronized;
   size_t                                                        m_Offset;
-  uint8_t                                                       m_Goal;
+  AsyncObserverGoal                                             m_Goal;
   uint8_t                                                       m_UID;
   uint8_t                                                       m_SID;
   uint8_t                                                       m_Color;
@@ -120,7 +127,7 @@ public:
 
   bool CloseConnection(bool recoverable = false);
   void Init();
-  [[nodiscard]] uint8_t Update(fd_set* fd, fd_set* send_fd, int64_t timeout);
+  [[nodiscard]] AsyncObserverStatus Update(fd_set* fd, fd_set* send_fd, int64_t timeout);
 
   [[nodiscard]] inline MapTransfer&             GetMapTransfer() { return m_MapTransfer; }
   [[nodiscard]] inline const MapTransfer&       InspectMapTransfer() const { return m_MapTransfer; }
@@ -187,6 +194,7 @@ public:
   [[nodiscard]] double                          GetClientFrameRate() const;
   [[nodiscard]] uint8_t                         GetClientMissingLog() const;
   void                                          SendProgressReport();
+  size_t                                        GetGoalActionFrames() const;
   std::string                                   GetLogPrefix() const;
 
   [[nodiscard]] inline bool static SortObserversByDownloadProgressAscending(const CAsyncObserver* a, const CAsyncObserver* b) {

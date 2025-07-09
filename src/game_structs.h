@@ -141,27 +141,30 @@ struct GameHistory
 
   inline void AddCheckSum(const uint32_t checkSum) { m_CheckSums.push_back(checkSum); }
   [[nodiscard]] inline uint32_t GetCheckSum(const size_t index) { return m_CheckSums[index]; }
-  [[nodiscard]] inline size_t GetNumCheckSums() { return m_CheckSums.size(); }
+  [[nodiscard]] inline size_t GetNumCheckSums() const { return m_CheckSums.size(); }
   inline void SetDesynchronized(const bool nDesynchronized = true) { m_Desynchronized = nDesynchronized; }
-  [[nodiscard]] inline bool GetDesynchronized() { return m_Desynchronized; }
+  [[nodiscard]] inline bool GetDesynchronized() const { return m_Desynchronized; }
   inline void SetSoftDesynchronized(const bool nSoftDesynchronized = true) { m_SoftDesynchronized = nSoftDesynchronized; }
-  [[nodiscard]] inline bool GetSoftDesynchronized() { return m_SoftDesynchronized; }
+  [[nodiscard]] inline bool GetSoftDesynchronized() const { return m_SoftDesynchronized; }
   inline void SetDefaultLatency(const int64_t nLatency) { m_DefaultLatency = static_cast<uint16_t>(nLatency); }
-  [[nodiscard]] inline uint16_t GetDefaultLatency() { return m_DefaultLatency; }
+  [[nodiscard]] inline uint16_t GetDefaultLatency() const { return m_DefaultLatency; }
   inline void SetActiveLatency(const int64_t nLatency) { m_ActiveLatency = static_cast<uint16_t>(nLatency); }
-  [[nodiscard]] inline int64_t GetActiveLatency() { return m_ActiveLatency; }
+  [[nodiscard]] inline int64_t GetActiveLatency() const { return m_ActiveLatency; }
   inline void SetSpectatorActiveLatency(const int64_t nLatency) { m_SpectatorActiveLatency = static_cast<uint16_t>(nLatency); }
-  [[nodiscard]] inline int64_t GetSpectatorActiveLatency() { return m_SpectatorActiveLatency; }
+  [[nodiscard]] inline int64_t GetSpectatorActiveLatency() const { return m_SpectatorActiveLatency; }
   inline void SetGProxyEmptyActions(const uint8_t nCount) { m_GProxyEmptyActions = nCount; }
-  [[nodiscard]] inline uint32_t GetGProxyEmptyActions() { return m_GProxyEmptyActions; }
-  [[nodiscard]] inline bool GetIsFinished() { return m_Finished; }
+  [[nodiscard]] inline uint32_t GetGProxyEmptyActions() const { return m_GProxyEmptyActions; }
+  [[nodiscard]] inline bool GetIsFinished() const { return m_Finished; }
   inline void SetIsFinished(const bool nFinished) { m_Finished = nFinished; }
-  [[nodiscard]] inline size_t GetNumActionFrames() { return m_NumActionFrames; }
-  [[nodiscard]] inline size_t GetNumSpectatorActionFrames() { return m_NumSpectatorActionFrames; }
-  [[nodiscard]] inline size_t GetSpectatorOffset() { return m_SpectatorOffset; }
+  [[nodiscard]] inline size_t GetNumActionFrames() const { return m_NumActionFrames; }
+  [[nodiscard]] inline size_t GetNumSpectatorActionFrames() const { return m_NumSpectatorActionFrames; }
+  [[nodiscard]] inline size_t GetSpectatorOffset() const { return m_SpectatorOffset; }
   inline void SetStartedTicks(const int64_t nStartedTicks) { m_StartedTicks = nStartedTicks; }
-  [[nodiscard]] inline bool GetIsStarted() { return m_StartedTicks.has_value();}
-  [[nodiscard]] inline int64_t GetStartedTicks() { return m_StartedTicks.value(); }
+  [[nodiscard]] inline bool GetIsStarted() const { return m_StartedTicks.has_value();}
+  [[nodiscard]] inline int64_t GetStartedTicks() const { return m_StartedTicks.value(); }
+  [[nodiscard]] inline int64_t GetDuration() const { return m_Duration; }
+  [[nodiscard]] inline int64_t GetSpectatorDuration() const { return m_SpectatorDuration; }
+  [[nodiscard]] inline int64_t GetSpectatorDelay() const { return m_Duration - m_SpectatorDuration; }
 
   void EventActionFramePushed();
   void UpdateSpectatorActions(int64_t SpectatorDelaySeconds);

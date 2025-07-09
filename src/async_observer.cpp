@@ -57,7 +57,7 @@ CAsyncObserver::CAsyncObserver(shared_ptr<CGame> nGame, CConnection* nConnection
     m_TimeSynchronized(false),
     m_TimeLiveSynchronized(false),
     m_Offset(0),
-    m_Goal(ASYNC_OBSERVER_GOAL_OBSERVER),
+    m_Goal(AsyncObserverGoal::kSpectator),
     m_UID(nUID),
     m_SID(nGame->GetSIDFromUID(nUID)),
     m_Color(nGame->GetColorFromUID(nUID)),
@@ -126,26 +126,26 @@ void CAsyncObserver::Init()
 {
 }
 
-uint8_t CAsyncObserver::Update(fd_set* fd, fd_set* send_fd, int64_t timeout)
+AsyncObserverStatus CAsyncObserver::Update(fd_set* fd, fd_set* send_fd, int64_t timeout)
 {
   if (!m_Socket || m_Socket->HasError()) {
-    return ASYNC_OBSERVER_DESTROY;
+    return AsyncObserverStatus::kDestroy;
   }
 
   if (m_DeleteMe) {
     m_Socket->ClearRecvBuffer(); // in case there are pending bytes from a previous recv
     m_Socket->Discard(fd);
-    return ASYNC_OBSERVER_DESTROY;
+    return AsyncObserverStatus::kDestroy;
   }
 
   const int64_t Time = GetTime(), Ticks = GetTicks();
 
   if (m_TimeoutTicks.has_value() && m_TimeoutTicks.value() < Ticks) {
     SetLeftReasonGeneric("observer timeout");
-    return ASYNC_OBSERVER_DESTROY;
+    return AsyncObserverStatus::kDestroy;
   }
 
-  uint8_t result = ASYNC_OBSERVER_OK;
+  AsyncObserverStatus result = AsyncObserverStatus::kOk;
   bool Abort = false;
   if (m_Type == INCON_TYPE_KICKED_PLAYER) {
     m_Socket->Discard(fd);
@@ -302,20 +302,20 @@ uint8_t CAsyncObserver::Update(fd_set* fd, fd_set* send_fd, int64_t timeout)
       Bytes = std::vector<uint8_t>(begin(Bytes) + Length, end(Bytes));
     }
 
-    if (Abort && result != ASYNC_OBSERVER_PROMOTED) {
-      result = ASYNC_OBSERVER_DESTROY;
+    if (Abort && result != AsyncObserverStatus::kPromoted) {
+      result = AsyncObserverStatus::kDestroy;
       RecvBuffer->clear();
     } else if (LengthProcessed > 0) {
       *RecvBuffer = RecvBuffer->substr(LengthProcessed);
     }
   } else if (Ticks >= m_Socket->GetLastRecv() + timeout) {
     SetLeftReasonGeneric("connection timed out");
-    return ASYNC_OBSERVER_DESTROY;
+    return AsyncObserverStatus::kDestroy;
   }
 
   if (m_DeleteMe || !m_Socket->GetConnected() || m_Socket->HasError() || m_Socket->HasFin()) {
     SetLeftReasonGeneric("observer decomissioned");
-    return ASYNC_OBSERVER_DESTROY;
+    return AsyncObserverStatus::kDestroy;
   }
 
   if (!m_StartedLoading) {
@@ -380,7 +380,7 @@ void CAsyncObserver::CheckPlayBackOver()
 
 int64_t CAsyncObserver::GetNextTimedActionByTicks() const
 {
-  if (m_GameHistory->GetNumSpectatorActionFrames() <= m_ActionFrameCounter) {
+  if (GetGoalActionFrames() <= m_ActionFrameCounter) {
     return APP_MAX_TICKS;
   }
   return m_LastFrameTicks + m_Latency / m_FrameRate;
@@ -400,11 +400,11 @@ bool CAsyncObserver::PushGameFrames(bool isFlush)
     // Fast path for the common case (there will never be a GAME_FRAME_TYPE_LATENCY hanging)
     return false;
   }
-  if (!isFlush && m_ActionFrameCounter >= m_GameHistory->GetNumSpectatorActionFrames()) {
+  if (!isFlush && m_ActionFrameCounter >= GetGoalActionFrames()) {
     if (!m_TimeSynchronized) {
       if (m_FrameRate > 1) m_FrameRate = 1;
       m_TimeSynchronized = true;
-      m_TimeLiveSynchronized = m_ActionFrameCounter >= m_GameHistory->GetNumActionFrames();
+      m_TimeLiveSynchronized = GetClientFrameClamped() >= m_GameHistory->GetNumActionFrames();
       if (m_TimeLiveSynchronized) {
         SendChat("You are now synchronized with the live game.");
       } else {
@@ -581,7 +581,7 @@ void CAsyncObserver::EventMapReady()
 bool CAsyncObserver::CheckStartLoading()
 {
   if (!m_MapReady || m_StartedLoading) return false;
-  if (m_GameHistory->GetNumSpectatorActionFrames() == 0) {
+  if (GetGoalActionFrames() == 0) {
     return false;
   }
   StartLoading();
@@ -794,11 +794,11 @@ void CAsyncObserver::SendGameLoadedReport()
   hh = mm / 60;
   mm = mm % 60;
 
-  if (!m_Game.expired() && !m_Game.lock()->GetIsGameOver()) {
-    SendChat("Running spectator mode (delay is " + ToDurationString(hh, mm, ss) + ")");
-  } else {
+  if (GetIsGameOver()) {
     SendChat("Watching replay");
-    SendChat("Game was played " + ToFormattedTimeStamp(hh, mm, ss) + " ago");
+    SendChat("Game was played " + ToFormattedTimeStamp(hh, mm, ss) + " ago. Duration: " + ToDurationString(m_GameHistory->GetDuration() / 1000));
+  } else {
+    SendChat("Running spectator mode (delay is " + ToDurationString(m_GameHistory->GetSpectatorDelay() / 1000) + ")");
   }
   if (m_FrameRate > 1) {
     SendChat("Use !sync to watch at 1x, !ff to fast-forward");
@@ -835,12 +835,17 @@ uint8_t CAsyncObserver::GetClientMissingLog() const
   return static_cast<uint8_t>(missingLog);
 }
 
+size_t CAsyncObserver::GetGoalActionFrames() const
+{
+  return m_Goal == AsyncObserverGoal::kSpectator ? m_GameHistory->GetNumSpectatorActionFrames() : m_GameHistory->GetNumActionFrames();
+}
+
 void CAsyncObserver::SendProgressReport()
 {
   constexpr double epsilon = numeric_limits<double>::epsilon();
   size_t clientFrame = GetClientFrameClamped();
   double clientFrameRate = GetClientFrameRate();
-  double progress = (double)clientFrame / (double)m_GameHistory->GetNumActionFrames();
+  double progress = (double)clientFrame / (double)GetGoalActionFrames();
 
   double catchUpFrameRate = clientFrameRate;
   if (!GetIsGameOver()) catchUpFrameRate = max(0.0, catchUpFrameRate - 1.0);
@@ -850,7 +855,7 @@ void CAsyncObserver::SendProgressReport()
     SendChat(rateFragment);
   } else {
     // Estimate time for catching up with live (or finished) game, assuming that latency will be constant.
-    double etaSeconds = (double)m_Latency * (double)(m_GameHistory->GetNumActionFrames() - clientFrame) / catchUpFrameRate / 1000.0;
+    double etaSeconds = (double)m_Latency * ((double)GetGoalActionFrames() - (double)clientFrame) / catchUpFrameRate / (double)1000.0;
     // Let it fit in chat log (F12)
     SendChat(rateFragment + " - ETA " + ToDurationString((int64_t)etaSeconds));
   }
