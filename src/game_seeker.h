@@ -45,8 +45,8 @@ class CGameSeeker final : public CConnection
 public:
   std::optional<Version> m_GameVersion;
 
-  CGameSeeker(CAura* nAura, uint16_t nPort, uint8_t nType, CStreamIOSocket* nSocket);
-  CGameSeeker(CConnection* nConnection, uint8_t nType);
+  CGameSeeker(CAura* nAura, uint16_t nPort, IncomingConnectionType nType, CStreamIOSocket* nSocket);
+  CGameSeeker(CConnection* nConnection, IncomingConnectionType nType);
   ~CGameSeeker();
 
   inline bool HasGameVersion() const { return m_GameVersion.has_value(); }

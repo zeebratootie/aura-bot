@@ -260,7 +260,7 @@ bool CNet::GetIsOutgoingThrottled(const NetworkHost& host) const
     return false;
   }
   const int64_t dueTime = throttled.first + ((int64_t) NET_BASE_RECONNECT_DELAY << (int64_t)throttled.second);
-  return GetTime() < dueTime;
+  return m_Aura->GetLoopTime() < dueTime;
 }
 
 void CNet::ResetOutgoingThrottled(const NetworkHost& host)
@@ -284,11 +284,11 @@ void CNet::OnThrottledConnectionError(const NetworkHost& host)
   m_OutgoingPendingConnections.erase(host);
   auto it = m_OutgoingThrottles.find(host);
   if (it == m_OutgoingThrottles.end()) {
-    m_OutgoingThrottles[host] = TimedUint8(GetTime(), 0);
+    m_OutgoingThrottles[host] = TimedUint8(m_Aura->GetLoopTime(), 0);
     return;
   }
   TimedUint8& throttled = it->second;
-  throttled.first = GetTime();
+  throttled.first = m_Aura->GetLoopTime();
   if (throttled.second < NET_RECONNECT_MAX_BACKOFF) {
     // Max delay 45 << 12 seconds ~ 2 days
     throttled.second = throttled.second + 1;
@@ -620,8 +620,8 @@ void CNet::UpdateBeforeGames(fd_set* fd, fd_set* send_fd)
     int64_t timeout = (int64_t)LinearInterpolation((float)serverConnections.second.size(), (float)1., (float)MAX_INCOMING_CONNECTIONS, (float)GAME_USER_CONNECTION_MAX_TIMEOUT, (float)GAME_USER_CONNECTION_MIN_TIMEOUT);
     for (auto i = begin(serverConnections.second); i != end(serverConnections.second);) {
       // *i is a pointer to a CConnection
-      uint8_t result = (*i)->Update(fd, send_fd, timeout);
-      if (result == INCON_UPDATE_OK) {
+      IncomingConnectionStatus result = (*i)->Update(fd, send_fd, timeout);
+      if (result == IncomingConnectionStatus::kOk) {
         ++i;
         continue;
       }
@@ -1206,7 +1206,7 @@ uint8_t CNet::RequestUPnP(const NetProtocol protocolCode, const uint16_t externa
       protocol = "TCP";
       if (!ignoreCache) {
         auto cacheEntry = m_UPnPTCPCache.find(make_pair(externalPort, internalPort));
-        if (cacheEntry != m_UPnPTCPCache.end() && GetTime() < cacheEntry->second.first + 10800) {
+        if (cacheEntry != m_UPnPTCPCache.end() && !m_Aura->GetTimeIsAfterDelay(cacheEntry->second.first, 10800)) {
           return cacheEntry->second.second;
         }
       }
@@ -1216,7 +1216,7 @@ uint8_t CNet::RequestUPnP(const NetProtocol protocolCode, const uint16_t externa
       protocol = "UDP";
       if (!ignoreCache) {
         auto cacheEntry = m_UPnPUDPCache.find(make_pair(externalPort, internalPort));
-        if (cacheEntry != m_UPnPUDPCache.end() && GetTime() < cacheEntry->second.first+ 10800) {
+        if (cacheEntry != m_UPnPUDPCache.end() && !m_Aura->GetTimeIsAfterDelay(cacheEntry->second.first, 10800)) {
           return cacheEntry->second.second;
         }
       }
@@ -1306,11 +1306,11 @@ uint8_t CNet::RequestUPnP(const NetProtocol protocolCode, const uint16_t externa
 
   switch (protocolCode) {
     case NetProtocol::kTCP: {
-      m_UPnPTCPCache[make_pair(externalPort, internalPort)] = TimedUint8(GetTime(), success);
+      m_UPnPTCPCache[make_pair(externalPort, internalPort)] = TimedUint8(m_Aura->GetLoopTime(), success);
       break;
     }
     case NetProtocol::kUDP: {
-      m_UPnPUDPCache[make_pair(externalPort, internalPort)] = TimedUint8(GetTime(), success);
+      m_UPnPUDPCache[make_pair(externalPort, internalPort)] = TimedUint8(m_Aura->GetLoopTime(), success);
       break;
     }
     IGNORE_ENUM_LAST(NetProtocol)
@@ -1960,7 +1960,7 @@ void CNet::OnUserKicked(GameUser::CGameUser* user, bool deferred)
   if (!socket) return;
   socket->ClearRecvBuffer();
   CConnection* connection = new CConnection(*user);
-  connection->SetType(INCON_TYPE_KICKED_PLAYER);
+  connection->SetType(IncomingConnectionType::kKickedPlayer);
   connection->SetTimeout(2000);
   if (deferred) {
     m_DownGradedConnections.push(make_pair(connection->GetPort(), connection));
@@ -1979,7 +1979,7 @@ void CNet::RegisterGameProxy(CConnection* connection, shared_ptr<CGame> game)
   connection->SetSocket(nullptr);
 }
 
-void CNet::RegisterGameSeeker(CConnection* connection, uint8_t nType)
+void CNet::RegisterGameSeeker(CConnection* connection, IncomingConnectionType nType)
 {
   CStreamIOSocket* socket = connection->GetSocket();
   if (!socket) return;
@@ -2029,7 +2029,7 @@ void CNet::GracefulExit()
 
   for (auto& serverConnections : m_IncomingConnections) {
     for (auto& connection : serverConnections.second) {
-      connection->SetType(INCON_TYPE_KICKED_PLAYER);
+      connection->SetType(IncomingConnectionType::kKickedPlayer);
       connection->SetTimeout(2000);
       connection->GetSocket()->ClearRecvBuffer();
     }
@@ -2050,7 +2050,7 @@ void CNet::GracefulExit()
 
   for (auto& serverConnections : m_GameSeekers) {
     for (auto& connection : serverConnections.second) {
-      connection->SetType(INCON_TYPE_KICKED_PLAYER);
+      connection->SetType(IncomingConnectionType::kKickedPlayer);
       connection->SetTimeout(2000);
       connection->GetSocket()->ClearRecvBuffer();
     }
@@ -2058,7 +2058,7 @@ void CNet::GracefulExit()
 
   for (auto& serverConnections : m_GameObservers) {
     for (auto& connection : serverConnections.second) {
-      connection->SetType(INCON_TYPE_KICKED_PLAYER);
+      connection->SetType(IncomingConnectionType::kKickedPlayer);
       connection->SetTimeout(2000);
       connection->GetSocket()->ClearRecvBuffer();
     }

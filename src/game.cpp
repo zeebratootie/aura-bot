@@ -142,12 +142,12 @@ CGame::CGame(CAura* nAura, shared_ptr<CGameSetup> nGameSetup)
     m_RealmsExcluded(nGameSetup->m_RealmsExcluded),
     m_MapPath(nGameSetup->m_Map->GetClientPath()),
     m_MapSiteURL(nGameSetup->m_Map->GetMapSiteURL()),
-    m_CreationTime(GetTime()),
+    m_CreationTime(nAura->GetLoopTime()),
     m_LastPingTicks(APP_MIN_TICKS),
     m_LastCheckActionsTicks(APP_MIN_TICKS),
-    m_LastRefreshTime(GetTime()),
-    m_LastDownloadCounterResetTicks(GetTicks()),
-    m_LastCountDownTicks(0),
+    m_LastRefreshTime(nAura->GetLoopTime()),
+    m_LastDownloadCounterResetTicks(nAura->GetLoopTicks()),
+    m_LastCountDownTicks(APP_MIN_TICKS),
     m_StartedLoadingTicks(0),
     m_FinishedLoadingTicks(0),
     m_MapGameStartTime(0),
@@ -166,8 +166,8 @@ CGame::CGame(CAura* nAura, shared_ptr<CGameSetup> nGameSetup)
     m_LagStopMaxPlayersFrames(0),
     m_LagStartMinObserversFrames(0),
     m_LagStopMaxObserversFrames(0),
-    m_LastUserSeen(GetTicks()),
-    m_LastOwnerSeen(GetTicks()),
+    m_LastUserSeenTicks(nAura->GetLoopTicks()),
+    m_LastOwnerSeenTicks(nAura->GetLoopTicks()),
     m_StartedKickVoteTime(0),
     m_LastStatsUpdateTime(0),
     m_GameOver(GAME_ONGOING),
@@ -317,9 +317,9 @@ CGame::CGame(CAura* nAura, shared_ptr<CGameSetup> nGameSetup)
     if (m_Map->GetMapFileIsFromManagedFolder()) {
       auto it = m_Aura->m_MapFilesTimedBusyLocks.find(m_Map->GetServerPath());
       if (it == m_Aura->m_MapFilesTimedBusyLocks.end()) {
-        m_Aura->m_MapFilesTimedBusyLocks[m_Map->GetServerPath()] = make_pair<int64_t, uint16_t>(GetTicks(), (uint16_t)0u);
+        m_Aura->m_MapFilesTimedBusyLocks[m_Map->GetServerPath()] = make_pair<int64_t, uint16_t>(m_Aura->GetLoopTicks(), (uint16_t)0u);
       } else {
-        it->second.first = GetTicks();
+        it->second.first = m_Aura->GetLoopTicks();
         it->second.second++;
       }
     }
@@ -625,6 +625,7 @@ void CGame::Reset()
   for (auto& realm : m_Aura->m_Realms) {
     realm->ResetGameChatAnnouncement();
   }
+  ResetLatency();
 }
 
 CGameController* CGame::GetGameControllerFromColor(uint8_t colour) const
@@ -787,7 +788,7 @@ void CGame::TrySaveStats() const
   // store the CDBGamePlayers in the database
   // add non-dota stats
   if (!m_GameControllers.empty()) {
-    int64_t Ticks = GetTicks();
+    const int64_t hiResTicks = GetTicks();
     LOG_APP_IF(LogLevel::kDebug, "[STATS] saving game end player data to database")
     if (m_Aura->m_DB->Begin()) {
       for (auto& controllerData : m_GameControllers) {
@@ -796,7 +797,7 @@ void CGame::TrySaveStats() const
       if (!m_Aura->m_DB->Commit()) {
         LOG_APP_IF(LogLevel::kWarning, "[STATS] failed to commit game end player data")
       } else {
-        LOG_APP_IF(LogLevel::kDebug, "[STATS] commited game end player data in " + to_string(GetTicks() - Ticks) + " ms")
+        LOG_APP_IF(LogLevel::kDebug, "[STATS] commited game end player data in " + to_string(GetTicks() - hiResTicks) + " ms")
       }
     } else {
       LOG_APP_IF(LogLevel::kWarning, "[STATS] failed to begin transaction game end player data")
@@ -839,7 +840,7 @@ void CGame::ReleaseMapBusyTimedLock() const
     return;
   }
 
-  it->second.first = GetTicks();
+  it->second.first = m_Aura->GetLoopTicks();
   if (--it->second.second > 0) {
     return;
   }
@@ -861,7 +862,7 @@ void CGame::StartGameOverTimer(bool isMMD)
 {
   m_ExitingSoon = true;
   m_GameOver = isMMD ? GAME_OVER_MMD : GAME_OVER_TRUSTED;
-  m_GameOverTime = GetTime();
+  m_GameOverTime = m_Aura->GetLoopTime();
   if (isMMD) {
     m_GameOverTolerance = 300;
   } else {
@@ -977,6 +978,7 @@ void CGame::UpdateSelectBlockTime(int64_t& usecBlockTime) const
   if (!m_GameLoaded || m_IsLagging || usecBlockTime == 0)
     return;
 
+  // hi-res ticks for actions scheduler
   const int64_t ticksSinceLastUpdate = GetTicks() - m_LastActionSentTicks;
 
   if (ticksSinceLastUpdate > m_LatencyTicks - m_LastActionLateBy) {
@@ -1263,7 +1265,7 @@ string CGame::GetStatusDescription() const
   if (m_GameLoading || m_GameLoaded)
     Description += " : " + to_string((m_EffectiveTicks / 1000) / 60) + "min";
   else
-    Description += " : " + to_string((GetTime() - m_CreationTime) / 60) + "min";
+    Description += " : " + to_string((m_Aura->GetLoopTime() - m_CreationTime) / 60) + "min";
 
   return Description;
 }
@@ -1293,7 +1295,7 @@ string CGame::GetEndDescription(shared_ptr<const CRealm> realm) const
   if (m_GameLoading || m_GameLoaded)
     Description += " : " + to_string((m_EffectiveTicks / 1000) / 60) + "min";
   else
-    Description += " : " + to_string((GetTime() - m_CreationTime) / 60) + "min";
+    Description += " : " + to_string((m_Aura->GetLoopTime() - m_CreationTime) / 60) + "min";
 
   return Description;
 }
@@ -1372,6 +1374,13 @@ ImmutableUserList CGame::GetWaitingReconnectPlayers() const
   return players;
 }
 
+uint32_t CGame::GetUptime() const
+{
+  const int64_t loopTime = m_Aura->GetLoopTime();
+  if (loopTime < m_CreationTime) return 0;
+  return (uint32_t)(loopTime - m_CreationTime);
+}
+
 uint32_t CGame::SetFD(fd_set* fd, fd_set* send_fd, int32_t* nfds) const
 {
   uint32_t NumFDs = 0;
@@ -1387,11 +1396,9 @@ uint32_t CGame::SetFD(fd_set* fd, fd_set* send_fd, int32_t* nfds) const
 
 void CGame::UpdateJoinable()
 {
-  const int64_t Time = GetTime(), Ticks = GetTicks();
-
   // refresh metadata every 10 seconds
 
-  if (m_LastRefreshTime + 10 <= Time) {
+  if (m_Aura->GetTimeIsAfterDelay(m_LastRefreshTime, 10)) {
     // send a game refresh packet to each battle.net connection
 
     if (m_Aura->m_StartedGames.empty()) {
@@ -1399,7 +1406,7 @@ void CGame::UpdateJoinable()
       m_Aura->UpdateMetaData();
     }
 
-    m_LastRefreshTime = Time;
+    m_LastRefreshTime = m_Aura->GetLoopTime();
   }
 
   if (m_IsMirror) {
@@ -1408,7 +1415,7 @@ void CGame::UpdateJoinable()
 
   // update map download progression indicators
 
-  if (Ticks - m_LastDownloadCounterResetTicks >= 1000) {
+  if (m_Aura->GetTicksIsAfterDelay(m_LastDownloadCounterResetTicks, 1000)) {
     // hackhack: another timer hijack is in progress here
     // since the download counter is reset once per second it's a great place to update the slot info if necessary
 
@@ -1418,14 +1425,12 @@ void CGame::UpdateJoinable()
       m_SlotInfoChanged &= ~SLOTS_DOWNLOAD_PROGRESS_CHANGED;
     }
 
-    m_LastDownloadCounterResetTicks = Ticks;
+    m_LastDownloadCounterResetTicks = m_Aura->GetLoopTicks();
   }
 }
 
 bool CGame::UpdateLobby()
 {
-  const int64_t Ticks = GetTicks();
-
   if (m_SlotInfoChanged & SLOTS_ALIGNMENT_CHANGED) {
     SendAllSlotInfo();
     UpdateReadyCounters();
@@ -1438,15 +1443,15 @@ bool CGame::UpdateLobby()
   }
 
   if (!m_Users.empty()) {
-    m_LastUserSeen = Ticks;
+    m_LastUserSeenTicks = m_Aura->GetLoopTicks();
     if (HasOwnerInGame()) {
-      m_LastOwnerSeen = Ticks;
+      m_LastOwnerSeenTicks = m_LastUserSeenTicks;
     }
   }
 
   // countdown every m_LobbyCountDownInterval ms (default 500 ms)
 
-  if (m_CountDownStarted && Ticks - m_LastCountDownTicks >= m_Config.m_LobbyCountDownInterval) {
+  if (m_CountDownStarted && m_Aura->GetTicksIsAfterDelay(m_LastCountDownTicks, m_Config.m_LobbyCountDownInterval)) {
     bool shouldStartLoading = false;
     if (m_CountDownCounter > 0) {
       // we use a countdown counter rather than a "finish countdown time" here because it might alternately round up or down the count
@@ -1464,7 +1469,7 @@ bool CGame::UpdateLobby()
       StopCountDown();
     }
 
-    m_LastCountDownTicks = Ticks;
+    m_LastCountDownTicks = m_Aura->GetLoopTicks();
     if (shouldStartLoading) {
       EventGameStartedLoading();
       return true;
@@ -1492,8 +1497,6 @@ bool CGame::UpdateLobby()
 
 void CGame::UpdateLoading()
 {
-  const int64_t Time = GetTime(), Ticks = GetTicks();
-
   bool finishedLoading = true;
   bool anyLoaded = false;
   for (auto& user : m_Users) {
@@ -1515,13 +1518,13 @@ void CGame::UpdateLoading()
     }
   } else {
     if (m_Config.m_LoadingTimeoutMode == GameLoadingTimeoutMode::kStrict) {
-      if (Ticks - m_StartedLoadingTicks > static_cast<int64_t>(m_Config.m_LoadingTimeout)) {
+      if (m_Aura->GetTicksIsAfterDelay(m_StartedLoadingTicks, (int64_t)m_Config.m_LoadingTimeout)) {
         StopLoadPending("was automatically dropped after " + to_string(m_Config.m_LoadingTimeout / 1000) + " seconds");
       }
     }
 
     // Warcraft III disconnects if it doesn't receive an action packet for more than ~65 seconds
-    if (m_Config.m_LoadInGame && anyLoaded && Time - m_LastLagScreenResetTime >= 60 ) {
+    if (m_Config.m_LoadInGame && anyLoaded && m_Aura->GetTimeIsAfterDelay(m_LastLagScreenResetTime, 60)) {
       ResetLagScreen();
     }
   }
@@ -1529,7 +1532,7 @@ void CGame::UpdateLoading()
 
 void CGame::UpdateLoaded()
 {
-  const int64_t Time = GetTime(), Ticks = GetTicks();
+  const int64_t hiResTicks = GetTicks();
 
   // check if anyone has started lagging
   // we consider a user to have started lagging if they're more than m_SyncLimit keepalives behind
@@ -1556,7 +1559,7 @@ void CGame::UpdateLoaded()
         while (i--) {
           if (framesBehind[i] > GetSyncLimitSafe(m_Users[i]->GetIsObserver()) && !m_Users[i]->GetDisconnectedUnrecoverably()) {
             m_Users[i]->SetLagging(true);
-            m_Users[i]->SetStartedLaggingTicks(Ticks);
+            m_Users[i]->SetStartedLaggingTicks(m_Aura->GetLoopTicks());
             m_Users[i]->ClearStalePings();
             laggingPlayers.push_back(m_Users[i]);
             if (framesBehind[i] > worstLaggerFrames) {
@@ -1583,8 +1586,8 @@ void CGame::UpdateLoaded()
           ResetDropVotes();
 
           m_IsLagging = true;
-          m_StartedLaggingTime = Time;
-          m_LastLagScreenResetTime = Time;
+          m_StartedLaggingTime = m_Aura->GetLoopTime();
+          m_LastLagScreenResetTime = m_Aura->GetLoopTime();
 
           // print debug information
           double worstLaggerSeconds = static_cast<double>(worstLaggerFrames) * static_cast<double>(m_LatencyTicks) / static_cast<double>(1000.);
@@ -1605,17 +1608,17 @@ void CGame::UpdateLoaded()
       }
       bool timeExceeded = false;
       if (user->GetDisconnected() && user->GetGProxy()->GetIsExtended()) {
-        timeExceeded = Ticks - user->GetStartedLaggingTicks() > waitTicks.second;
+        timeExceeded = m_Aura->GetTicksIsAfterDelay(user->GetStartedLaggingTicks(), waitTicks.second);
       } else if (user->GetDisconnected() && user->GetCanReconnect()) {
-        timeExceeded = Ticks - user->GetStartedLaggingTicks() > waitTicks.first;
+        timeExceeded = m_Aura->GetTicksIsAfterDelay(user->GetStartedLaggingTicks(), waitTicks.first);
       } else {
-        timeExceeded = Ticks - user->GetStartedLaggingTicks() > 60000;
+        timeExceeded = m_Aura->GetTicksIsAfterDelay(user->GetStartedLaggingTicks(), 60000);
       }
       if (timeExceeded) {
         if (user->GetDisconnected()) {
-          StopLagger(user, "failed to reconnect within " + to_string((Ticks - user->GetStartedLaggingTicks()) / 1000) + " seconds");
+          StopLagger(user, "failed to reconnect within " + to_string((m_Aura->GetLoopTicks() - user->GetStartedLaggingTicks()) / 1000) + " seconds");
         } else {
-          StopLagger(user, "was automatically dropped after " + to_string((Ticks - user->GetStartedLaggingTicks()) / 1000) + " seconds");
+          StopLagger(user, "was automatically dropped after " + to_string((m_Aura->GetLoopTicks() - user->GetStartedLaggingTicks()) / 1000) + " seconds");
         }
         droppedUsers.push_back(user);
       }
@@ -1630,7 +1633,7 @@ void CGame::UpdateLoaded()
     }
 
     // Warcraft III disconnects if it doesn't receive an action packet for more than ~65 seconds
-    if (Time - m_LastLagScreenResetTime >= 60) {
+    if (m_Aura->GetTimeIsAfterDelay(m_LastLagScreenResetTime, 60)) {
       ResetLagScreen();
     }
 
@@ -1668,29 +1671,30 @@ void CGame::UpdateLoaded()
 
     if (playersLaggingCounter == 0) {
       m_IsLagging = false;
-      m_LastActionSentTicks = Ticks - m_LatencyTicks;
+      m_LastActionSentTicks = hiResTicks - m_LatencyTicks;
       m_LastActionLateBy = 0;
       m_PingReportedSinceLagTimes = 0;
-      LOG_APP_IF(LogLevel::kInfo, "stopped lagging after " + ToFormattedString(static_cast<double>(Time - m_StartedLaggingTime)) + " seconds")
+      LOG_APP_IF(LogLevel::kInfo, "stopped lagging after " + ToFormattedString(static_cast<double>(m_Aura->GetLoopTime() - m_StartedLaggingTime)) + " seconds")
     }
   }
 
   if (m_IsLagging) {
     // reset m_LastActionSentTicks because we want the game to stop running while the lag screen is up
-    m_LastActionSentTicks = Ticks;
+    // exact timing is relevant for scheduler
+    m_LastActionSentTicks = hiResTicks;
 
     // keep track of the last lag screen time so we can avoid timing out users
-    m_LastLagScreenTime = Time;
+    m_LastLagScreenTime = m_Aura->GetLoopTime();
 
     // every 17 seconds, report most recent lag data
-    if (Time - m_StartedLaggingTime >= m_PingReportedSinceLagTimes * 17) {
+    if (m_Aura->GetTimeIsAfterDelay(m_StartedLaggingTime, m_PingReportedSinceLagTimes * 17)) {
       ReportAllPings();
       ++m_PingReportedSinceLagTimes;
     }
     if (m_Config.m_SyncNormalize) {
-      if (m_PingReportedSinceLagTimes == 2 && Ticks - m_FinishedLoadingTicks < 60000) {
+      if (m_PingReportedSinceLagTimes == 2 && !m_Aura->GetTicksIsAfterDelay(m_FinishedLoadingTicks, 60000)) {
         NormalizeSyncCounters();
-      } else if (m_PingReportedSinceLagTimes == 3 && Ticks - m_FinishedLoadingTicks < 180000) {
+      } else if (m_PingReportedSinceLagTimes == 3 && !m_Aura->GetTicksIsAfterDelay(m_FinishedLoadingTicks, 180000)) {
         NormalizeSyncCounters();
       }
     }
@@ -1701,7 +1705,7 @@ void CGame::UpdateLoaded()
       break;
     case GamePlayingTimeoutMode::kDry:
     case GamePlayingTimeoutMode::kStrict:
-      if (Ticks - m_FinishedLoadingTicks > static_cast<int64_t>(m_Config.m_PlayingTimeout)) {
+      if (m_Aura->GetTicksIsAfterDelay(m_FinishedLoadingTicks, (int64_t)m_Config.m_PlayingTimeout)) {
         if (m_Config.m_PlayingTimeoutMode == GamePlayingTimeoutMode::kStrict) {
           m_GameOverTolerance = 0;
           StartGameOverTimer();
@@ -1740,18 +1744,19 @@ void CGame::UpdateLoaded()
 
 bool CGame::Update(fd_set* fd, fd_set* send_fd)
 {
-  const int64_t Time = GetTime(), Ticks = GetTicks();
+  const int64_t loopTicks = m_Aura->GetLoopTicks();
+  const int64_t hiResTicks = GetTicks();
 
   // ping every 5 seconds
   // changed this to ping during game loading as well to hopefully fix some problems with people disconnecting during loading
   // changed this to ping during the game as well
 
-  if (!m_LobbyLoading && (Ticks >= m_LastPingTicks + 5000)) {
+  if (!m_LobbyLoading && m_Aura->GetTicksIsAfterDelay(m_LastPingTicks, 5000)) {
     // we must send pings to users who are downloading the map because
     // Warcraft III disconnects from the lobby if it doesn't receive a ping every ~90 seconds
     // so if the user takes longer than 90 seconds to download the map they would be disconnected unless we keep sending pings
 
-    vector<uint8_t> pingPacket = GameProtocol::SEND_W3GS_PING_FROM_HOST(m_Aura->GetLoopTicks());
+    vector<uint8_t> pingPacket = GameProtocol::SEND_W3GS_PING_FROM_HOST(loopTicks);
     for (auto& user : m_Users) {
       // Avoid ping-spamming GProxy-reconnected players
       if (!user->GetDisconnected()) {
@@ -1774,7 +1779,7 @@ bool CGame::Update(fd_set* fd, fd_set* send_fd)
       m_GameDiscoveryInfoChanged &= ~GAME_DISCOVERY_CHANGED_SLOTS;
     }
 
-    m_LastPingTicks = Ticks;
+    m_LastPingTicks = loopTicks;
   }
 
   if (m_GameLoaded && (m_EffectiveTicks >= m_LastCheckActionsTicks + 5000)) {
@@ -1838,7 +1843,7 @@ bool CGame::Update(fd_set* fd, fd_set* send_fd)
   // actions are at the heart of every Warcraft 3 game but luckily we don't need to know their contents to relay them
   // we queue user actions in EventUserIncomingAction then just resend them in batches to all users here
 
-  if (m_GameLoaded && !m_IsLagging && Ticks - m_LastActionSentTicks >= m_LatencyTicks - m_LastActionLateBy)
+  if (m_GameLoaded && !m_IsLagging && hiResTicks - m_LastActionSentTicks >= m_LatencyTicks - m_LastActionLateBy)
     SendAllActions();
 
   UpdateLogs();
@@ -1858,7 +1863,7 @@ bool CGame::Update(fd_set* fd, fd_set* send_fd)
   }
 
   // expire the votekick
-  if (!m_KickVotePlayer.empty() && Time - m_StartedKickVoteTime >= 60) {
+  if (!m_KickVotePlayer.empty() && m_Aura->GetTimeIsAfterDelay(m_StartedKickVoteTime, 60)) {
     LOG_APP_IF(LogLevel::kDebug, "votekick against user [" + m_KickVotePlayer + "] expired")
     SendAllChat("A votekick against user [" + m_KickVotePlayer + "] has expired");
     m_KickVotePlayer.clear();
@@ -1880,7 +1885,7 @@ bool CGame::Update(fd_set* fd, fd_set* send_fd)
   }
 
   // finish the gameover timer
-  if (GetIsGameOver() && m_GameOverTime.value() + m_GameOverTolerance.value_or(60) < Time) {
+  if (GetIsGameOver() && m_Aura->GetTimeIsAfterDelay(m_GameOverTime.value(), m_GameOverTolerance.value_or(60))) {
     // Disconnect the user socket, destroy it, but do not send W3GS_PLAYERLEAVE
     // Sending it would force them to actually quit the game, and go to the scorescreen.
     if (m_GameLoading || m_GameLoaded) {
@@ -1890,12 +1895,12 @@ bool CGame::Update(fd_set* fd, fd_set* send_fd)
     }
   }
 
-  if (Time - m_LastStatsUpdateTime >= 30) {
+  if (m_Aura->GetTimeIsAfterDelay(m_LastStatsUpdateTime, 30)) {
     if (!UpdateStatsQueue() && !GetIsGameOver() && m_Map->GetMMDUseGameOver()) {
       Log("gameover timer started (stats reported game over)");
       StartGameOverTimer(true);
     }
-    m_LastStatsUpdateTime = Time;
+    m_LastStatsUpdateTime = m_Aura->GetLoopTime();
   }
 
   if (GetIsStageAcceptingJoins()) {
@@ -1932,12 +1937,12 @@ void CGame::CheckLobbyTimeouts()
       case LobbyOwnerTimeoutMode::kNever:
         break;
       case LobbyOwnerTimeoutMode::kAbsent:
-        if (m_LastOwnerSeen + static_cast<int64_t>(m_Config.m_LobbyOwnerTimeout) < GetTicks()) {
+        if (m_Aura->GetTicksIsAfterDelay(m_LastOwnerSeenTicks, static_cast<int64_t>(m_Config.m_LobbyOwnerTimeout))) {
           ReleaseOwner();
         }
         break;
       case LobbyOwnerTimeoutMode::kStrict:
-        if (m_LastOwnerAssigned + static_cast<int64_t>(m_Config.m_LobbyOwnerTimeout) < GetTicks()) {
+        if (m_Aura->GetTicksIsAfterDelay(m_LastOwnerAssignedTicks, static_cast<int64_t>(m_Config.m_LobbyOwnerTimeout))) {
           ReleaseOwner();
         }
         break;
@@ -1951,13 +1956,13 @@ void CGame::CheckLobbyTimeouts()
       case LobbyTimeoutMode::kNever:
         break;
       case LobbyTimeoutMode::kEmpty:
-        timedOut = m_LastUserSeen + static_cast<int64_t>(m_Config.m_LobbyTimeout) < GetTicks();
+        timedOut = m_Aura->GetTicksIsAfterDelay(m_LastUserSeenTicks, static_cast<int64_t>(m_Config.m_LobbyTimeout));
         break;
       case LobbyTimeoutMode::kOwnerMissing:
-        timedOut = m_LastOwnerSeen + static_cast<int64_t>(m_Config.m_LobbyTimeout) < GetTicks();
+        timedOut = m_Aura->GetTicksIsAfterDelay(m_LastOwnerSeenTicks, static_cast<int64_t>(m_Config.m_LobbyTimeout));
         break;
       case LobbyTimeoutMode::kStrict:
-        timedOut = m_CreationTime + (static_cast<int64_t>(m_Config.m_LobbyTimeout) / 1000) < GetTime();
+        timedOut = m_Aura->GetTimeIsAfterDelay(m_CreationTime, static_cast<int64_t>(m_Config.m_LobbyTimeout) / 1000);
         break;
       IGNORE_ENUM_LAST(LobbyTimeoutMode)
     }
@@ -1993,14 +1998,14 @@ void CGame::RunActionsScheduler()
 
 void CGame::RunActionsSchedulerInner(const int64_t newLatency, const uint8_t maxNewEqualizerOffset, const int64_t oldLatency, const uint8_t maxOldEqualizerOffset, const int64_t actionLateBy)
 {
-  const int64_t Ticks = GetTicks();
+  const int64_t hiResTicks = GetTicks();
   if (m_LastActionSentTicks != 0) {
     if (actionLateBy > m_Config.m_PerfThreshold && !m_IsSinglePlayer) {
       m_Aura->LogPerformanceWarning(TaskType::kGameFrame, this, actionLateBy, oldLatency, newLatency);
     }
     m_LastActionLateBy = actionLateBy;
   }
-  m_LastActionSentTicks = Ticks;
+  m_LastActionSentTicks = hiResTicks;
 
   if (maxNewEqualizerOffset < maxOldEqualizerOffset) {
     // No longer are that many frames needed.
@@ -2142,7 +2147,7 @@ void CGame::SendAll(const std::vector<uint8_t>& data) const
 
 void CGame::SendAsChat(CConnection* user, const std::vector<uint8_t>& data) const
 {
-  if (user->GetType() == INCON_TYPE_PLAYER && static_cast<const GameUser::CGameUser*>(user)->GetIsInLoadingScreen()) {
+  if (user->GetType() == IncomingConnectionType::kPlayer && static_cast<const GameUser::CGameUser*>(user)->GetIsInLoadingScreen()) {
     return;
   }
   user->Send(data);
@@ -3152,9 +3157,8 @@ bool CGame::GetIsAutoStartDue() const
     return false;
   }
 
-  const int64_t Time = GetTime();
   for (const auto& requirement : m_AutoStartRequirements) {
-    if (requirement.first <= m_ControllersReadyCount && requirement.second <= Time) {
+    if (requirement.first <= m_ControllersReadyCount && m_Aura->GetTimeIsAfter(requirement.second)) {
       return GetCanStartGracefulCountDown();
     }
   }
@@ -3168,17 +3172,16 @@ string CGame::GetAutoStartText() const
     return "Autostart is not set.";
   }
 
-  int64_t Time = GetTime();
   vector<string> fragments; 
   for (const auto& requirement : m_AutoStartRequirements) {
-    if (requirement.first == 0 && requirement.second <= Time) {
+    if (requirement.first == 0 && m_Aura->GetTimeIsAfter(requirement.second)) {
       fragments.push_back("now");
     } else if (requirement.first == 0) {
-      fragments.push_back("in " + DurationLeftToString(requirement.second - Time));
-    } else if (requirement.second <= Time) {
+      fragments.push_back("in " + DurationLeftToString(requirement.second - m_Aura->GetLoopTime()));
+    } else if (m_Aura->GetTimeIsAfter(requirement.second)) {
       fragments.push_back("with " + to_string(requirement.first) + " players");
     } else {
-      fragments.push_back("with " + to_string(requirement.first) + "+ players after " + DurationLeftToString(requirement.second - Time));
+      fragments.push_back("with " + to_string(requirement.first) + "+ players after " + DurationLeftToString(requirement.second - m_Aura->GetLoopTime()));
     }
   }
 
@@ -3713,7 +3716,7 @@ void CGame::EventOutgoingAtomicAction(const uint8_t UID, const uint8_t* actionSt
               int64_t timeout = user->GetAntiAbuseTimeout();
               if (!user->GetAntiShareKicked()) {
                 user->AddKickReason(GameUser::KickReason::ANTISHARE);
-                user->KickAtLatest(GetTicks() + timeout);
+                user->KickAtLatest(m_Aura->GetLoopTicks() + timeout);
                 user->AddAbuseCounter();
               }
               user->SetLeftCode(PLAYERLEAVE_LOST);
@@ -3754,7 +3757,7 @@ void CGame::SendAllActionsCallback()
     case ON_SEND_ACTIONS_PAUSE:
       m_IsPaused = true;
       m_PauseUser = GetUserFromUID(frame.pauseUID);
-      m_LastPausedTicks = GetTicks();
+      m_LastPausedTicks = m_Aura->GetLoopTicks();
       break;
     case ON_SEND_ACTIONS_RESUME:
       m_IsPaused = false;
@@ -4483,7 +4486,7 @@ void CGame::EventUserDeleted(GameUser::CGameUser* user, fd_set* /*fd*/, fd_set* 
   }
 
   if (!user->GetIsObserver()) {
-    m_LastPlayerLeaveTicks = GetTicks();
+    m_LastPlayerLeaveTicks = m_Aura->GetLoopTicks();
     m_LastPingEqualizerGameTicks = 0;
   }
 
@@ -4674,7 +4677,7 @@ bool CGame::GetCanDropOwnerMissing() const
   if (GetLockedOwnerLess()) {
     return false;
   }
-  return m_StartedLaggingTime + 20 < GetTime();
+  return m_Aura->GetTimeIsAfterDelay(m_StartedLaggingTime, 20);
 }
 
 void CGame::ResetDropVotes()
@@ -4686,20 +4689,21 @@ void CGame::ResetDropVotes()
 
 void CGame::ResetOwnerSeen()
 {
-  m_LastOwnerSeen = GetTicks();
+  m_LastOwnerSeenTicks = m_Aura->GetLoopTicks();
 }
 
 void CGame::SetLaggingPlayerAndUpdate(GameUser::CGameUser* user)
 {
-  int64_t Time = GetTime(), Ticks = GetTicks();
+  const int64_t loopTime = m_Aura->GetLoopTime();
+  const int64_t loopTicks = m_Aura->GetLoopTicks();
   if (!user->GetIsLagging()) {
     ResetDropVotes();
 
     if (!GetIsLagging()) {
       m_IsLagging = true;
-      m_StartedLaggingTime = Time;
-      m_LastLagScreenResetTime = Time;
-      m_LastLagScreenTime = Time;
+      m_StartedLaggingTime = loopTime;
+      m_LastLagScreenResetTime = loopTime;
+      m_LastLagScreenTime = loopTime;
     }
 
     // Report lagging users:
@@ -4712,11 +4716,11 @@ void CGame::SetLaggingPlayerAndUpdate(GameUser::CGameUser* user)
     laggingPlayers.push_back(user);
     for (auto& laggingPlayer : laggingPlayers) {
       laggingPlayer->SetLagging(true);
-      laggingPlayer->SetStartedLaggingTicks(Ticks);
+      laggingPlayer->SetStartedLaggingTicks(loopTicks);
       laggingPlayer->ClearStalePings();
     }
     DLOG_APP_IF(LogLevel::kTrace, "global lagger update (+" + ToNameListSentence(laggingPlayers) + ")")
-    SendAll(GameProtocol::SEND_W3GS_START_LAG(laggingPlayers, m_Aura->GetLoopTicks()));
+    SendAll(GameProtocol::SEND_W3GS_START_LAG(laggingPlayers, loopTicks));
   }
 }
 
@@ -4725,18 +4729,19 @@ void CGame::SetEveryoneLagging()
   if (GetIsLagging()) {
     return;
   }
-  int64_t Time = GetTime(), Ticks = GetTicks();
+  const int64_t loopTime = m_Aura->GetLoopTime();
+  const int64_t loopTicks = m_Aura->GetLoopTicks();
 
   ResetDropVotes();
 
   m_IsLagging = true;
-  m_StartedLaggingTime = Time;
-  m_LastLagScreenResetTime = Time;
-  m_LastLagScreenTime = Time;
+  m_StartedLaggingTime = loopTime;
+  m_LastLagScreenResetTime = loopTime;
+  m_LastLagScreenTime = loopTime;
 
   for (auto& user : m_Users) {
     user->SetLagging(true);
-    user->SetStartedLaggingTicks(Ticks);
+    user->SetStartedLaggingTicks(loopTicks);
     user->ClearStalePings();
   }
 }
@@ -4827,7 +4832,7 @@ void CGame::EventUserDisconnectTimedOut(GameUser::CGameUser* user)
   // this is because Warcraft 3 stops sending packets during the lag screen
   // so when the lag screen finishes we would immediately disconnect everyone if we didn't give them some extra time
 
-  if (GetTime() - m_LastLagScreenTime >= 10) {
+  if (m_Aura->GetTimeIsAfterDelay(m_LastLagScreenTime, 10)) {
     if (!user->HasLeftReason()) {
       user->SetLeftReason("has lost the connection (timed out)");
       user->SetLeftCode(PLAYERLEAVE_DISCONNECT);
@@ -5364,7 +5369,6 @@ void CGame::JoinObserver(CConnection* connection, const CIncomingJoinRequest& jo
 
 void CGame::EventObserverMapSize(CAsyncObserver* user, const CIncomingMapFileSize& clientMap)
 {
-  int64_t Ticks = GetTicks();
   const bool isFirstCheck = !user->GetMapChecked();
 
   user->SetMapChecked(true);
@@ -5386,7 +5390,7 @@ void CGame::EventObserverMapSize(CAsyncObserver* user, const CIncomingMapFileSiz
         mapTransfer.SetLastAck(clientMap.GetFileSize());
       }
     } else if (isFirstCheck) {
-      user->SetTimeoutAtLatest(Ticks + m_Config.m_LacksMapKickDelay);
+      user->SetTimeoutAtLatest(m_Aura->GetLoopTicks() + m_Config.m_LacksMapKickDelay);
 
       if (GetMapSiteURL().empty()) {
         user->SendChat("Spectator [" + user->GetName() + "], please download the map before joining. (Kick in " + to_string(m_Config.m_LacksMapKickDelay / 1000) + " seconds...)");
@@ -5421,7 +5425,7 @@ void CGame::EventObserverMapSize(CAsyncObserver* user, const CIncomingMapFileSiz
     }
   } else if (user->GetMapTransfer().GetStarted()) {
     // calculate download rate
-    const double seconds = static_cast<double>(Ticks - user->GetMapTransfer().GetStartedTicks()) / 1000.f;
+    const double seconds = static_cast<double>(m_Aura->GetLoopTicks() - user->GetMapTransfer().GetStartedTicks()) / 1000.f;
     LOG_APP_IF(LogLevel::kDebug, "map download finished for observer [" + user->GetName() + "] in " + ToFormattedString(seconds) + " seconds")
     user->SendChat("You downloaded the map in " + ToFormattedString(seconds) + " seconds"/* (" + ToFormattedString(Rate) + " KB/sec)"*/);
     user->GetMapTransfer().Finish();
@@ -6493,7 +6497,6 @@ void CGame::EventUserDropRequest(GameUser::CGameUser* user)
 
 void CGame::EventUserMapSize(GameUser::CGameUser* user, const CIncomingMapFileSize& clientMap)
 {
-  int64_t Ticks = GetTicks();
   bool isFirstCheck = !user->GetMapChecked();
 
   user->SetMapChecked(true);
@@ -6529,7 +6532,7 @@ void CGame::EventUserMapSize(GameUser::CGameUser* user, const CIncomingMapFileSi
 
       if (willKick) {
         user->AddKickReason(GameUser::KickReason::MAP_MISSING);
-        user->KickAtLatest(Ticks + m_Config.m_LacksMapKickDelay);
+        user->KickAtLatest(m_Aura->GetLoopTicks() + m_Config.m_LacksMapKickDelay);
 
         if (!user->HasLeftReason()) {
           string reason;
@@ -6559,7 +6562,7 @@ void CGame::EventUserMapSize(GameUser::CGameUser* user, const CIncomingMapFileSi
     }
   } else if (user->GetMapTransfer().GetStarted()) {
     // calculate download rate
-    const double seconds = static_cast<double>(Ticks - user->GetMapTransfer().GetStartedTicks()) / 1000.f;
+    const double seconds = static_cast<double>(m_Aura->GetLoopTicks() - user->GetMapTransfer().GetStartedTicks()) / 1000.f;
     //const double Rate    = static_cast<double>(expectedMapSize) / 1024.f / seconds;
     LOG_APP_IF(LogLevel::kDebug, "map download finished for user [" + user->GetName() + "] in " + ToFormattedString(seconds) + " seconds")
     SendAllChat("Player [" + user->GetDisplayName() + "] downloaded the map in " + ToFormattedString(seconds) + " seconds"/* (" + ToFormattedString(Rate) + " KB/sec)"*/);
@@ -6616,7 +6619,7 @@ void CGame::EventUserPongToHost(GameUser::CGameUser* user)
         user->SetLeftReason("autokicked - excessive ping of " + to_string(LatencyMilliseconds) + "ms");
       }
       user->AddKickReason(GameUser::KickReason::HIGH_PING);
-      user->KickAtLatest(GetTicks() + HIGH_PING_KICK_DELAY);
+      user->KickAtLatest(m_Aura->GetLoopTicks() + HIGH_PING_KICK_DELAY);
       if (!user->GetHasHighPing()) {
         SendAllChat("Player [" + user->GetDisplayName() + "] has an excessive ping of " + to_string(LatencyMilliseconds) + "ms. Autokicking...");
         user->SetHasHighPing(true);
@@ -6657,8 +6660,8 @@ void CGame::EventUserMapReady(GameUser::CGameUser* user)
 // keyword: EventGameLoading
 void CGame::EventGameStartedLoading()
 {
-  m_StartedLoadingTicks    = GetTicks();
-  m_LastLagScreenResetTime = GetTime();
+  m_StartedLoadingTicks = m_Aura->GetLoopTicks();
+  m_LastLagScreenResetTime = m_Aura->GetLoopTime();
 
   // Remove the virtual host user to ensure consistent game state and networking.
   DeleteVirtualHost();
@@ -7051,10 +7054,8 @@ void CGame::EventGameBeforeLoaded()
 
 void CGame::EventGameLoaded()
 {
-  const int64_t Ticks = GetTicks();
-
-  m_LastActionSentTicks = Ticks;
-  m_FinishedLoadingTicks = Ticks;
+  m_LastActionSentTicks = GetTicks(); // high-res ticks for actions scheduler
+  m_FinishedLoadingTicks = m_Aura->GetLoopTicks();
   m_MapGameStartTime = CGameInteractiveHost::GetMapTime();
   m_GameLoading = false;
   m_GameLoaded = true;
@@ -7208,7 +7209,7 @@ void CGame::HandleGameLoadedStats()
     }
   }
 
-  int64_t Ticks = GetTicks();
+  const int64_t hiResTicks = GetTicks();
   if (!m_Aura->m_DB->Begin()) {
     LOG_APP_IF(LogLevel::kWarning, "[STATS] failed to begin transaction for game loaded data")
     return;
@@ -7233,7 +7234,7 @@ void CGame::HandleGameLoadedStats()
   if (!m_Aura->m_DB->Commit()) {
     LOG_APP_IF(LogLevel::kWarning, "[STATS] failed to commit transaction for game loaded data")
   } else {
-    LOG_APP_IF(LogLevel::kDebug, "[STATS] commited game loaded data in " + to_string(GetTicks() - Ticks) + " ms")
+    LOG_APP_IF(LogLevel::kDebug, "[STATS] commited game loaded data in " + to_string(GetTicks() - hiResTicks) + " ms")
   }
 }
 
@@ -7258,16 +7259,16 @@ void CGame::Remake()
   m_Aura->EventGameReset(shared_from_this());
   Reset();
 
-  int64_t Time = GetTime();
-  int64_t Ticks = GetTicks();
+  const int64_t loopTime = m_Aura->GetLoopTime();
+  const int64_t loopTicks = m_Aura->GetLoopTicks();
 
   m_FromAutoReHost = false;
   m_EffectiveTicks = 0;
-  m_CreationTime = Time;
-  m_LastPingTicks = Ticks;
-  m_LastRefreshTime = Time;
-  m_LastDownloadCounterResetTicks = Ticks;
-  m_LastCountDownTicks = 0;
+  m_CreationTime = loopTime;
+  m_LastPingTicks = loopTicks;
+  m_LastRefreshTime = loopTime;
+  m_LastDownloadCounterResetTicks = loopTicks;
+  m_LastCountDownTicks = APP_MIN_TICKS;
   m_StartedLoadingTicks = 0;
   m_FinishedLoadingTicks = 0;
   m_MapGameStartTime = 0;
@@ -7278,12 +7279,8 @@ void CGame::Remake()
   m_StartedLaggingTime = 0;
   m_LastLagScreenTime = 0;
   m_PingReportedSinceLagTimes = 0;
-  m_LagStartMinPlayersFrames = 0;
-  m_LagStopMaxPlayersFrames = 0;
-  m_LagStartMinObserversFrames = 0;
-  m_LagStopMaxObserversFrames = 0;
-  m_LastUserSeen = Ticks;
-  m_LastOwnerSeen = Ticks;
+  m_LastUserSeenTicks = loopTicks;
+  m_LastOwnerSeenTicks = loopTicks;
   m_StartedKickVoteTime = 0;
   m_LastStatsUpdateTime = 0;
   m_GameOver = GAME_ONGOING;
@@ -9453,7 +9450,7 @@ void CGame::ResetLagScreen()
     }
   }
 
-  m_LastLagScreenResetTime = GetTime();
+  m_LastLagScreenResetTime = m_Aura->GetLoopTime();
 }
 
 pair<double, double> CGame::GetLagDetectionRangeMilliSeconds(bool isObserver)
@@ -9565,7 +9562,7 @@ void CGame::SetOwner(const string& name, const string& realm)
 {
   m_OwnerName = name;
   m_OwnerRealm = realm;
-  m_LastOwnerAssigned = GetTicks();
+  m_LastOwnerAssignedTicks = m_Aura->GetLoopTicks();
 
   UncacheOwner();
 
@@ -9725,11 +9722,7 @@ bool CGame::GetCanStartGracefulCountDown() const
     }
   }
 
-  if (m_LastPlayerLeaveTicks.has_value() && GetTicks() < m_LastPlayerLeaveTicks.value() + 2000) {
-    return false;
-  }
-
-  return true;
+  return m_Aura->GetTicksIsFirstOrAfterDelay(m_LastPlayerLeaveTicks, 2000);
 }
 
 void CGame::StartCountDown(bool fromUser, bool force)
@@ -9873,7 +9866,7 @@ void CGame::StartCountDown(bool fromUser, bool force)
       SendAllChat("Players NOT verified (whisper sc): " + ToNameListSentence(unverifiedUsers));
       ChecksPassed = false;
     }
-    if (m_LastPlayerLeaveTicks.has_value() && GetTicks() < m_LastPlayerLeaveTicks.value() + 2000) {
+    if (!m_Aura->GetTicksIsFirstOrAfterDelay(m_LastPlayerLeaveTicks, 2000)) {
       SendAllChat("Someone left the game less than two seconds ago!");
       ChecksPassed = false;
     }
@@ -10290,7 +10283,7 @@ bool CGame::TrySaveOnDisconnect(GameUser::CGameUser* user, const bool isVoluntar
       // but only if users want so by using !save enable.
       // Sadly, that's not the case in this branch, so no save for you.
       return false;
-    } else if (GetTicks() < m_FinishedLoadingTicks + 420000) {
+    } else if (!m_Aura->GetTicksIsAfterDelay(m_FinishedLoadingTicks, 420000)) {
       // By default, leaves before the 7th minute do not autosave.
       return false;
     }

@@ -462,6 +462,7 @@ CAura::CAura(CConfig& CFG, const CCLI& nCLI)
 
     m_LogLevel(LogLevel::kDebug),
     m_LoopTicks(APP_MIN_TICKS),
+    m_LoopTime(APP_MIN_TICKS),
     m_LastPerformanceWarningTicks(APP_MIN_TICKS),
     m_StartedFastPollingTicks(APP_MIN_TICKS),
     m_SupportsModernSlots(false),
@@ -1125,6 +1126,7 @@ int64_t CAura::GetSelectBlockTime() const
 bool CAura::Update()
 {
   m_LoopTicks = GetTicks();
+  m_LoopTime = GetTime();
   if (gGracefulExit == 1 || m_ExitingSoon) {
     // Intentionally execute on every loop turn after graceful exit is flagged.
     GracefulExit();
@@ -1246,6 +1248,7 @@ bool CAura::Update()
   }
 
   m_LoopTicks = GetTicks();
+  m_LoopTime = GetTime();
 
   // update map downloads
   if (m_GameSetup) {

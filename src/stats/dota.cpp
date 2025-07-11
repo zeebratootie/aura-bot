@@ -6841,7 +6841,7 @@ bool CDotaStats::EventGameCacheInteger(const uint8_t fromUID, const std::string&
 
       case HashCode("GameStart"): {
         if (cacheValue == 1) {
-          //m_Game.get().SetCreepSpawnTime(GetTime());
+          //m_Game.get().SetCreepSpawnTime(m_Game.get().m_Aura->GetLoopTime());
           LogMetaData(m_Game.get().GetEffectiveTicks(), "creeps spawned");
         }
         break;

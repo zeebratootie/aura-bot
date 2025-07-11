@@ -29,6 +29,25 @@
 #include "includes.h"
 #include "socket.h"
 
+enum class IncomingConnectionStatus : uint8_t {
+  kOk = 0,
+  kDestroy = 1,
+  kPromoted = 2,
+  kPromotedPassThrough = 3,
+  kReconnected = 4,
+  LAST = 5,
+};
+
+enum class IncomingConnectionType : uint8_t {
+  kNone = 0,
+  kUDPTunnel = 1,
+  kPlayer = 2,
+  kKickedPlayer = 3,
+  kVLAN = 4,
+  kObserver = 5,
+  LAST = 6,
+};
+
 //
 // CConnection
 //
@@ -38,7 +57,7 @@ class CConnection
 public:
   CAura*                  m_Aura;
   uint16_t                m_Port;
-  uint8_t                 m_Type;
+  IncomingConnectionType  m_Type;
   std::optional<int64_t>  m_TimeoutTicks;
   CStreamIOSocket*        m_Socket;
   bool                    m_DeleteMe;
@@ -53,15 +72,15 @@ public:
   [[nodiscard]] inline std::string                GetIPString() const { return m_Socket->GetIPString(); }
   [[nodiscard]] inline std::string                GetIPStringStrict() const { return m_Socket->GetIPStringStrict(); }
   [[nodiscard]] inline sockaddr_storage*          GetRemoteAddress() const { return &(m_Socket->m_RemoteHost); }
-  [[nodiscard]] inline bool                       GetIsUDPTunnel() const { return m_Type == INCON_TYPE_UDP_TUNNEL; }
-  [[nodiscard]] inline bool                       GetIsVLAN() const { return m_Type == INCON_TYPE_VLAN; }
-  [[nodiscard]] inline bool                       GetIsGameSeeker() const { return m_Type == INCON_TYPE_UDP_TUNNEL || m_Type == INCON_TYPE_VLAN; }
-  [[nodiscard]] inline uint8_t                    GetType() const { return m_Type; }
+  [[nodiscard]] inline bool                       GetIsUDPTunnel() const { return m_Type == IncomingConnectionType::kUDPTunnel; }
+  [[nodiscard]] inline bool                       GetIsVLAN() const { return m_Type == IncomingConnectionType::kVLAN; }
+  [[nodiscard]] inline bool                       GetIsGameSeeker() const { return m_Type == IncomingConnectionType::kUDPTunnel || m_Type == IncomingConnectionType::kVLAN; }
+  [[nodiscard]] inline IncomingConnectionType     GetType() const { return m_Type; }
   [[nodiscard]] inline uint16_t                   GetPort() const { return m_Port; }
   [[nodiscard]] inline bool                       GetDeleteMe() const { return m_DeleteMe; }
 
   inline void SetSocket(CStreamIOSocket* nSocket) { m_Socket = nSocket; }
-  inline void SetType(const uint8_t nType) { m_Type = nType; }
+  inline void SetType(const IncomingConnectionType nType) { m_Type = nType; }
   inline void SetDeleteMe(bool nDeleteMe) { m_DeleteMe = nDeleteMe; }
 
   // processing functions
@@ -70,7 +89,7 @@ public:
   void SetTimeout(const int64_t nTicks);
 
   bool CloseConnection();
-  [[nodiscard]] uint8_t Update(fd_set* fd, fd_set* send_fd, int64_t timeout);
+  [[nodiscard]] IncomingConnectionStatus Update(fd_set* fd, fd_set* send_fd, int64_t timeout);
 
   // other functions
 

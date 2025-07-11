@@ -53,8 +53,6 @@ public:
 #else
   void*                             m_Client;
 #endif
-  int64_t                           m_LastPacketTime;
-  int64_t                           m_LastAntiIdleTime;
   int64_t                           m_PendingCallbackCount;
   bool                              m_WaitingToConnect;
   std::string                       m_NickName;

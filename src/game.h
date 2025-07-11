@@ -147,9 +147,9 @@ protected:
   size_t                                                 m_LagStopMaxPlayersFrames;       // the maximum number of packets a player behind sync will stop the lag screen
   size_t                                                 m_LagStartMinObserversFrames;    // the minimum number of packets an observer falling out of sync will start the lag screen
   size_t                                                 m_LagStopMaxObserversFrames;     // the minimum number of packets an observer falling out of sync will start the lag screen
-  int64_t                                                m_LastUserSeen;                  // GetTicks when any user was last seen in the lobby
-  int64_t                                                m_LastOwnerSeen;                 // GetTicks when the game owner was last seen in the lobby
-  int64_t                                                m_LastOwnerAssigned;             // GetTicks when the game owner was assigned
+  int64_t                                                m_LastUserSeenTicks;                  // GetTicks when any user was last seen in the lobby
+  int64_t                                                m_LastOwnerSeenTicks;                 // GetTicks when the game owner was last seen in the lobby
+  int64_t                                                m_LastOwnerAssignedTicks;             // GetTicks when the game owner was assigned
   int64_t                                                m_StartedKickVoteTime;           // GetTime when the kick vote was started
   int64_t                                                m_LastStatsUpdateTime;
   int64_t                                                m_LastDynamicLatencyTicks;
@@ -442,11 +442,7 @@ public:
   inline void                                            UpdateGameDiscovery() { m_GameDiscoveryInfoChanged = GAME_DISCOVERY_CHANGED_MAJOR; }
 
   inline int64_t                                         GetCreationTime() const { return m_CreationTime; }
-  inline uint32_t                                        GetUptime() const {
-    int64_t time = GetTime();
-    if (time < m_CreationTime) return 0;
-    return static_cast<uint32_t>(time - m_CreationTime);
-  }
+  [[nodiscard]] uint32_t                                 GetUptime() const;
 
   // processing functions
 

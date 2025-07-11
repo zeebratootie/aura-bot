@@ -166,7 +166,7 @@ CGameUser::CGameUser(shared_ptr<CGame> nGame, CConnection* connection, uint8_t n
   m_RecentActionCounter.fill(0);
   m_RTTValues.reserve(MAXIMUM_PINGS_COUNT);
   m_Socket->SetLogErrors(true);
-  m_Type = INCON_TYPE_PLAYER;
+  m_Type = IncomingConnectionType::kPlayer;
 }
 
 CGameUser::~CGameUser()
@@ -508,7 +508,7 @@ bool CGameUser::Update(fd_set* fd, int64_t timeout)
     return m_DeleteMe;
   }
 
-  const int64_t Ticks = GetTicks();
+  const int64_t loopTicks = m_Aura->GetLoopTicks();
 
   bool Abort = false;
   if (m_Socket->DoRecv(fd)) {
@@ -626,10 +626,10 @@ bool CGameUser::Update(fd_set* fd, int64_t timeout)
 
             // discard pong values when anyone else is downloading if we're configured to do so
             if (!bufferBloatForbidden) {
-              if (useSystemRTT && (!m_MeasuredRTT.has_value() || m_MeasuredRTT.value().first + SYSTEM_RTT_POLLING_PERIOD < Ticks)) {
+              if (useSystemRTT && (!m_MeasuredRTT.has_value() || m_Aura->GetTicksIsAfterDelay(m_MeasuredRTT->first, SYSTEM_RTT_POLLING_PERIOD))) {
                 optional<uint32_t> rtt = m_Socket->GetRTT();
                 if (rtt.has_value()) {
-                  m_MeasuredRTT = make_pair(Ticks, useLiteralRTT ? rtt.value() : (rtt.value() / 2));
+                  m_MeasuredRTT = make_pair(m_Aura->GetLoopTicks(), useLiteralRTT ? rtt.value() : (rtt.value() / 2));
                   m_RTTValues.clear();
                 } else {
                   useSystemRTT = false;
@@ -739,7 +739,7 @@ bool CGameUser::Update(fd_set* fd, int64_t timeout)
     } else if (LengthProcessed > 0) {
       *RecvBuffer = RecvBuffer->substr(LengthProcessed);
     }
-  } else if (Ticks - m_Socket->GetLastRecv() >= timeout) {
+  } else if (m_Aura->GetTicksIsAfterDelay(m_Socket->GetLastRecv(), timeout)) {
     // check for socket timeouts
     // if we don't receive anything from a player for 70 seconds (20 seconds if reconnectable) we can assume they've dropped
     // this works because in the lobby we send pings every 5 seconds and expect a response to each one
@@ -763,16 +763,16 @@ bool CGameUser::Update(fd_set* fd, int64_t timeout)
       m_Game.get().EventUserDisconnectSocketError(this);
     } else if (m_Socket->HasFin() || !m_Socket->GetConnected()) {
       m_Game.get().EventUserDisconnectConnectionClosed(this);
-    } else if (m_KickByTicks.has_value() && m_KickByTicks.value() < Ticks) {
+    } else if (m_KickByTicks.has_value() && m_Aura->GetTicksIsAfter(m_KickByTicks.value())) {
       m_Game.get().EventUserKickHandleQueued(this);
-    } else if (!m_Verified && m_RealmInternalId >= 0x10 && Ticks - m_JoinTicks >= GAME_USER_UNVERIFIED_KICK_TICKS && m_Game.get().GetIsLobbyStrict()) {
+    } else if (!m_Verified && m_RealmInternalId >= 0x10 && m_Aura->GetTicksIsAfterDelay(m_JoinTicks, GAME_USER_UNVERIFIED_KICK_TICKS) && m_Game.get().GetIsLobbyStrict()) {
       shared_ptr<CRealm> Realm = GetRealm(false);
       if (Realm && Realm->GetUnverifiedAutoKickedFromLobby()) {
         m_Game.get().EventUserKickUnverified(this);
       }
     }
 
-    if (!m_StatusMessageSent && m_CheckStatusByTicks < Ticks) {
+    if (!m_StatusMessageSent && m_Aura->GetTicksIsAfter(m_CheckStatusByTicks)) {
       m_Game.get().EventUserCheckStatus(this);
     }
   }
@@ -782,7 +782,7 @@ bool CGameUser::Update(fd_set* fd, int64_t timeout)
 
     // wait 5 seconds after joining before sending the /whois or /w
     // if we send the /whois too early battle.net may not have caught up with where the player is and return erroneous results
-    if (m_WhoisShouldBeSent && !m_Verified && !m_WhoisSent && !m_RealmHostName.empty() && Ticks - m_JoinTicks >= AUTO_REALM_VERIFY_LATENCY) {
+    if (m_WhoisShouldBeSent && !m_Verified && !m_WhoisSent && !m_RealmHostName.empty() && m_Aura->GetTicksIsAfterDelay(m_JoinTicks, AUTO_REALM_VERIFY_LATENCY)) {
       shared_ptr<CRealm> Realm = GetRealm(false);
       if (Realm) {
         if (m_Game.get().GetDisplayMode() == GAME_DISPLAY_PUBLIC || Realm->GetIsPvPGN()) {

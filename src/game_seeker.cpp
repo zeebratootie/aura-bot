@@ -45,13 +45,13 @@ using namespace std;
 // CGameSeeker
 //
 
-CGameSeeker::CGameSeeker(CAura* nAura, uint16_t nPort, uint8_t nType, CStreamIOSocket* nSocket)
+CGameSeeker::CGameSeeker(CAura* nAura, uint16_t nPort, IncomingConnectionType nType, CStreamIOSocket* nSocket)
   : CConnection(nAura, nPort, nSocket)
 {
   m_Type = nType;
 }
 
-CGameSeeker::CGameSeeker(CConnection* nConnection, uint8_t nType)
+CGameSeeker::CGameSeeker(CConnection* nConnection, IncomingConnectionType nType)
   : CConnection(*nConnection)
 {
   m_Type = nType;
@@ -63,7 +63,7 @@ CGameSeeker::~CGameSeeker()
 
 void CGameSeeker::SetTimeout(const int64_t delta)
 {
-  m_TimeoutTicks = GetTicks() + delta;
+  m_TimeoutTicks = m_Aura->GetLoopTicks() + delta;
 }
 
 bool CGameSeeker::CloseConnection()
@@ -76,12 +76,12 @@ bool CGameSeeker::CloseConnection()
 void CGameSeeker::Init()
 {
   switch (m_Type) {
-    case INCON_TYPE_UDP_TUNNEL: {
+    case IncomingConnectionType::kUDPTunnel: {
       vector<uint8_t> packet = {GPSProtocol::Magic::GPS_HEADER, GPSProtocol::Magic::UDPACK, 4, 0};
       m_Socket->PutBytes(packet);
       break;
     }
-    case INCON_TYPE_VLAN: {
+    case IncomingConnectionType::kVLAN: {
       // do nothing - client should send VLAN_SEARCHGAME
       break;
     }
@@ -94,15 +94,13 @@ GameSeekerStatus CGameSeeker::Update(fd_set* fd, fd_set* send_fd, int64_t timeou
     return GameSeekerStatus::kDestroy;
   }
 
-  const int64_t Ticks = GetTicks();
-
-  if (m_TimeoutTicks.has_value() && m_TimeoutTicks.value() < Ticks) {
+  if (m_TimeoutTicks.has_value() && m_Aura->GetTicksIsAfter(m_TimeoutTicks.value())) {
     return GameSeekerStatus::kDestroy;
   }
 
   GameSeekerStatus result = GameSeekerStatus::kOk;
   bool Abort = false;
-  if (m_Type == INCON_TYPE_KICKED_PLAYER) {
+  if (m_Type == IncomingConnectionType::kKickedPlayer) {
     m_Socket->Discard(fd);
   } else if (m_Socket->DoRecv(fd)) {
     // extract as many packets as possible from the socket's receive buffer and process them
@@ -124,7 +122,7 @@ GameSeekerStatus CGameSeeker::Update(fd_set* fd, fd_set* send_fd, int64_t timeou
 
       switch (Bytes[0]) {
         case GameProtocol::Magic::W3GS_HEADER:
-          if (m_Type != INCON_TYPE_UDP_TUNNEL || !m_Aura->m_Net.m_Config.m_EnableTCPWrapUDP) {
+          if (m_Type != IncomingConnectionType::kUDPTunnel || !m_Aura->m_Net.m_Config.m_EnableTCPWrapUDP) {
             Abort = true;
             break;
           }
@@ -141,7 +139,7 @@ GameSeekerStatus CGameSeeker::Update(fd_set* fd, fd_set* send_fd, int64_t timeou
             joinRequest.UpdateCensored(targetLobby->m_Config.m_UnsafeNameHandler, targetLobby->m_Config.m_PipeConsideredHarmful);
             if (targetLobby->EventRequestJoin(this, joinRequest)) {
               result = GameSeekerStatus::kPromoted;
-              m_Type = INCON_TYPE_PLAYER;
+              m_Type = IncomingConnectionType::kPlayer;
               m_Socket = nullptr;
             }
           } else if (GameProtocol::Magic::SEARCHGAME <= Bytes[1] && Bytes[1] <= GameProtocol::Magic::DECREATEGAME) {
@@ -162,7 +160,7 @@ GameSeekerStatus CGameSeeker::Update(fd_set* fd, fd_set* send_fd, int64_t timeou
           break;
 
         case VLANProtocol::Magic::VLAN_HEADER: {
-          if (m_Type != INCON_TYPE_VLAN || !m_Aura->m_Net.m_Config.m_VLANEnabled) {
+          if (m_Type != IncomingConnectionType::kVLAN || !m_Aura->m_Net.m_Config.m_VLANEnabled) {
             Abort = true;
             break;
           }
@@ -200,7 +198,7 @@ GameSeekerStatus CGameSeeker::Update(fd_set* fd, fd_set* send_fd, int64_t timeou
     } else if (LengthProcessed > 0) {
       *RecvBuffer = RecvBuffer->substr(LengthProcessed);
     }
-  } else if (Ticks - m_Socket->GetLastRecv() >= timeout) {
+  } else if (m_Aura->GetTicksIsAfterDelay(m_Socket->GetLastRecv(), timeout)) {
     PRINT_IF(LogLevel::kDebug, "Game seeker timed out after " + to_string(timeout) + " ms")
     return GameSeekerStatus::kDestroy;
   }

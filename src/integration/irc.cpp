@@ -66,9 +66,9 @@ using namespace std;
 CIRC::CIRC(CConfig& nCFG)
   : m_Aura(nullptr),
     m_Socket(new CTCPClient(AF_INET, "IRC")),
-    m_LastConnectionAttemptTime(0),
-    m_LastPacketTime(GetTime()),
-    m_LastAntiIdleTime(GetTime()),
+    m_LastConnectionAttemptTime(APP_MIN_TICKS),
+    m_LastPacketTime(APP_MIN_TICKS),
+    m_LastAntiIdleTime(APP_MIN_TICKS),
     m_WaitingToConnect(true),
     m_LoggedIn(false),
     m_NickName(string()),
@@ -129,8 +129,6 @@ void CIRC::Update(fd_set* fd, fd_set* send_fd)
     return;
   }
 
-  const int64_t Time = GetTime();
-
   if (m_Socket->HasError() || m_Socket->HasFin())
   {
     if (m_Socket->HasError()) {
@@ -142,7 +140,7 @@ void CIRC::Update(fd_set* fd, fd_set* send_fd)
     }
     Print("[IRC: " + m_Config.m_HostName + "] waiting 60 seconds to reconnect");
     ResetConnection();
-    m_LastConnectionAttemptTime = Time;
+    m_LastConnectionAttemptTime = m_Aura->GetLoopTime();
     return;
   }
 
@@ -150,17 +148,17 @@ void CIRC::Update(fd_set* fd, fd_set* send_fd)
   {
     // the socket is connected and everything appears to be working properly
 
-    if (Time - m_LastPacketTime > 210)
+    if (m_Aura->GetTimeIsAfterDelay(m_LastPacketTime, 210))
     {
       Print("[IRC: " + m_Config.m_HostName + "] ping timeout, reconnecting...");
       ResetConnection();
       return;
     }
 
-    if (Time - m_LastAntiIdleTime > 60)
+    if (m_Aura->GetTimeIsAfterDelay(m_LastAntiIdleTime, 60))
     {
       Send("TIME");
-      m_LastAntiIdleTime = Time;
+      m_LastAntiIdleTime = m_Aura->GetLoopTime();
     }
 
     if (m_Socket->DoRecv(fd)) {
@@ -179,7 +177,7 @@ void CIRC::Update(fd_set* fd, fd_set* send_fd)
 
     Print("[IRC: " + m_Config.m_HostName + "] disconnected, waiting 60 seconds to reconnect");
     ResetConnection();
-    m_LastConnectionAttemptTime = Time;
+    m_LastConnectionAttemptTime = m_Aura->GetLoopTime();
     return;
   }
 
@@ -205,22 +203,22 @@ void CIRC::Update(fd_set* fd, fd_set* send_fd)
       m_LoggedIn = true;
       Print("[IRC: " + m_Config.m_HostName + "] connected");
 
-      m_LastPacketTime = Time;
+      m_LastPacketTime = m_Aura->GetLoopTime();
 
       return;
     }
-    else if (Time - m_LastConnectionAttemptTime > 15)
+    else if (m_Aura->GetTimeIsAfterDelay(m_LastConnectionAttemptTime, 15))
     {
       // the connection attempt timed out (15 seconds)
 
       Print("[IRC: " + m_Config.m_HostName + "] connect timed out, waiting 60 seconds to reconnect");
       ResetConnection();
-      m_LastConnectionAttemptTime = Time;
+      m_LastConnectionAttemptTime = m_Aura->GetLoopTime();
       return;
     }
   }
 
-  if (!m_Socket->GetConnecting() && !m_Socket->GetConnected() && (Time - m_LastConnectionAttemptTime > 60)) {
+  if (!m_Socket->GetConnecting() && !m_Socket->GetConnected() && m_Aura->GetTimeIsAfterDelay(m_LastConnectionAttemptTime, 60)) {
     // attempt to connect to irc
 
     Print("[IRC: " + m_Config.m_HostName + "] connecting to server [" + m_Config.m_HostName + "] on port " + to_string(m_Config.m_Port));
@@ -232,7 +230,7 @@ void CIRC::Update(fd_set* fd, fd_set* send_fd)
       m_Socket->m_HasError = true;
     }
     m_WaitingToConnect          = false;
-    m_LastConnectionAttemptTime = Time;
+    m_LastConnectionAttemptTime = m_Aura->GetLoopTime();
   }
 
   return;
@@ -240,7 +238,7 @@ void CIRC::Update(fd_set* fd, fd_set* send_fd)
 
 void CIRC::ExtractPackets()
 {
-  const int64_t Time = GetTime();
+  const int64_t loopTime = m_Aura->GetLoopTime();
   string*       Recv = m_Socket->GetBytes();
 
   // separate packets using the CRLF delimiter
@@ -258,7 +256,7 @@ void CIRC::ExtractPackets()
 
     // track timeouts
 
-    m_LastPacketTime = Time;
+    m_LastPacketTime = loopTime;
 
     // ping packet
     // in:  PING :2748459196

@@ -731,38 +731,6 @@ enum class JoinResult : uint8_t {
   LAST = 3,
 };
 
-constexpr uint8_t INCON_UPDATE_OK = 0u;
-constexpr uint8_t INCON_UPDATE_DESTROY = 1u;
-constexpr uint8_t INCON_UPDATE_PROMOTED = 2u;
-constexpr uint8_t INCON_UPDATE_PROMOTED_PASSTHROUGH = 3u;
-constexpr uint8_t INCON_UPDATE_RECONNECTED = 4u;
-
-enum class InconUpdate : uint8_t {
-  kOk = 0,
-  kDestroy = 1,
-  kPromoted = 2,
-  kPromotedPassThrough = 3,
-  kReconnected = 4,
-  LAST = 5,
-};
-
-constexpr uint8_t INCON_TYPE_NONE = 0u;
-constexpr uint8_t INCON_TYPE_UDP_TUNNEL = 1u;
-constexpr uint8_t INCON_TYPE_PLAYER = 2u;
-constexpr uint8_t INCON_TYPE_KICKED_PLAYER = 3u;
-constexpr uint8_t INCON_TYPE_VLAN = 4u;
-constexpr uint8_t INCON_TYPE_OBSERVER = 5u;
-
-enum class InconType : uint8_t {
-  kNone = 0,
-  kUDPTunnel = 1,
-  kPlayer = 2,
-  kKickedPlayer = 3,
-  kVLAN = 4,
-  kObserver = 5,
-  LAST = 6,
-};
-
 // game_user.h
 
 constexpr uint8_t CONSISTENT_PINGS_COUNT = 3u;
@@ -1492,8 +1460,8 @@ constexpr uint8_t NET_RECONNECT_MAX_BACKOFF = 12;
 // realm.h
 
 constexpr uint32_t REALM_TCP_KEEPALIVE_IDLE_TIME = 900;
-constexpr int64_t REALM_APP_KEEPALIVE_IDLE_TIME = 180;
-constexpr int64_t REALM_APP_KEEPALIVE_INTERVAL = 30;
+constexpr int64_t REALM_APP_KEEPALIVE_IDLE_TICKS = 180000;
+constexpr int64_t REALM_APP_KEEPALIVE_INTERVAL = 30000;
 constexpr int64_t REALM_APP_KEEPALIVE_MAX_MISSED = 4;
 
 // realm_chat.h

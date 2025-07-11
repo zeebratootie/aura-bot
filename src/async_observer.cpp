@@ -105,7 +105,7 @@ CAsyncObserver::~CAsyncObserver()
 
 void CAsyncObserver::SetTimeout(const int64_t delta)
 {
-  m_TimeoutTicks = GetTicks() + delta;
+  m_TimeoutTicks = m_Aura->GetLoopTicks() + delta;
 }
 
 void CAsyncObserver::SetTimeoutAtLatest(const int64_t atLatestTicks)
@@ -138,16 +138,14 @@ AsyncObserverStatus CAsyncObserver::Update(fd_set* fd, fd_set* send_fd, int64_t 
     return AsyncObserverStatus::kDestroy;
   }
 
-  const int64_t Time = GetTime(), Ticks = GetTicks();
-
-  if (m_TimeoutTicks.has_value() && m_TimeoutTicks.value() < Ticks) {
+  if (m_TimeoutTicks.has_value() && m_Aura->GetTicksIsAfter(m_TimeoutTicks.value())) {
     SetLeftReasonGeneric("observer timeout");
     return AsyncObserverStatus::kDestroy;
   }
 
   AsyncObserverStatus result = AsyncObserverStatus::kOk;
   bool Abort = false;
-  if (m_Type == INCON_TYPE_KICKED_PLAYER) {
+  if (m_Type == IncomingConnectionType::kKickedPlayer) {
     m_Socket->Discard(fd);
   } else if (m_Socket->DoRecv(fd)) {
     // extract as many packets as possible from the socket's receive buffer and process them
@@ -187,7 +185,7 @@ AsyncObserverStatus CAsyncObserver::Update(fd_set* fd, fd_set* send_fd, int64_t 
               if (GameProtocol::RECEIVE_W3GS_GAMELOADED_SELF(Data)) {
                 if (m_StartedLoading && !m_FinishedLoading) {
                   m_FinishedLoading      = true;
-                  m_FinishedLoadingTicks = GetTicks();
+                  m_FinishedLoadingTicks = m_Aura->GetLoopTicks();
                   m_LastFrameTicks = m_FinishedLoadingTicks;
                   EventGameLoaded();
                 }
@@ -308,7 +306,7 @@ AsyncObserverStatus CAsyncObserver::Update(fd_set* fd, fd_set* send_fd, int64_t 
     } else if (LengthProcessed > 0) {
       *RecvBuffer = RecvBuffer->substr(LengthProcessed);
     }
-  } else if (Ticks >= m_Socket->GetLastRecv() + timeout) {
+  } else if (m_Aura->GetTicksIsAfterDelay(m_Socket->GetLastRecv(), timeout)) {
     SetLeftReasonGeneric("connection timed out");
     return AsyncObserverStatus::kDestroy;
   }
@@ -322,7 +320,7 @@ AsyncObserverStatus CAsyncObserver::Update(fd_set* fd, fd_set* send_fd, int64_t 
     CheckStartLoading();
   } else if (m_FinishedLoading && !m_PlaybackEnded) {
     // If we don't wait a few seconds, the message gets lost to the F12 Chat Log ??
-    const bool canSendChat =  m_FinishedLoadingTicks + 3000 <= Ticks;
+    const bool canSendChat =  m_Aura->GetTicksIsAfterDelay(m_FinishedLoadingTicks, 3000);
     if (!m_SentGameLoadedReport && canSendChat) {
       // Grace period so that chat messages are visible
       SendGameLoadedReport();
@@ -334,10 +332,10 @@ AsyncObserverStatus CAsyncObserver::Update(fd_set* fd, fd_set* send_fd, int64_t 
       if (beforeCounter <= 50 || delta > 1) Print(GetLogPrefix() + "pushed " + to_string(delta) + " action frames");
       //*/
       if (m_FrameRate > 1 && canSendChat) {
-        if ((m_LastProgressReportTime + 30 <= Time && Ticks <= m_FinishedLoadingTicks + 120000) || m_LastProgressReportTime + 75 <= Time) {
+        if (m_Aura->GetTimeIsAfterDelay(m_LastProgressReportTime, m_Aura->GetTicksIsAfterDelay(m_FinishedLoadingTicks, 120000) ? 75 : 30)) {
           SendProgressReport();
           m_MissingLog = GetClientMissingLog();
-        } else if (m_LastProgressReportTime + 5 <= Time) {
+        } else if (m_Aura->GetTimeIsAfterDelay(m_LastProgressReportTime, 5)) {
           uint8_t missingLog = GetClientMissingLog();
           if (m_MissingLog < missingLog) {
             // Ensure progress reports around 75% 87.5% 91.25% ...
@@ -350,9 +348,9 @@ AsyncObserverStatus CAsyncObserver::Update(fd_set* fd, fd_set* send_fd, int64_t 
     CheckPlayBackOver();
   }
 
-  if (m_LastPingTicks + 5000 <= Ticks) {
+  if (m_Aura->GetTicksIsAfterDelay(m_LastPingTicks, 5000)) {
     Send(GameProtocol::SEND_W3GS_PING_FROM_HOST(m_Aura->GetLoopTicks()));
-    m_LastPingTicks = Ticks;
+    m_LastPingTicks = m_Aura->GetLoopTicks();
   }
 
   m_Socket->DoSend(send_fd);
@@ -374,7 +372,7 @@ void CAsyncObserver::CheckPlayBackOver()
     SendChat("Playback ended. Game will exit automatically in 10 seconds.");
 
     // Kick after 10 seconds
-    SetTimeoutAtLatest(GetTicks() + 10000);
+    SetTimeoutAtLatest(m_Aura->GetLoopTicks() + 10000);
   }
 }
 
@@ -393,9 +391,9 @@ bool CAsyncObserver::GetClientIsBehindFrames(const uint32_t limit) const
 
 bool CAsyncObserver::PushGameFrames(bool isFlush)
 {
-  int64_t Ticks = GetTicks();
+  const int64_t hiResTicks = GetTicks();
   // Note: Actually, each frame may have its own custom latency.
-  int64_t gameDurationWanted = m_FrameRate * (Ticks - m_LastFrameTicks);
+  int64_t gameDurationWanted = m_FrameRate * (hiResTicks - m_LastFrameTicks);
   if (gameDurationWanted < m_Latency) {
     // Fast path for the common case (there will never be a GAME_FRAME_TYPE_LATENCY hanging)
     return false;
@@ -435,7 +433,7 @@ bool CAsyncObserver::PushGameFrames(bool isFlush)
         // falls through
       case GAME_FRAME_TYPE_PAUSED:
         success = true;
-        m_LastFrameTicks = Ticks;
+        m_LastFrameTicks = hiResTicks;
         ++m_ActionFrameCounter;
         Send(it->GetBytes());
         break;
@@ -787,7 +785,7 @@ void CAsyncObserver::SendChat(const string& message)
 void CAsyncObserver::SendGameLoadedReport()
 {
   int64_t ss, mm, hh;
-  ss = (GetTicks() - m_GameHistory->GetStartedTicks()) / 1000;
+  ss = (m_Aura->GetLoopTicks() - m_GameHistory->GetStartedTicks()) / 1000;
 
   mm = ss / 60;
   ss = ss % 60;
@@ -861,7 +859,7 @@ void CAsyncObserver::SendProgressReport()
   }
 
   if (!m_CheckSumsTimeStamps.empty() || (clientFrameRate - 6.) < epsilon /* 6x or slower can be trusted */) {
-    m_LastProgressReportTime = GetTime();
+    m_LastProgressReportTime = m_Aura->GetLoopTime();
   }
 }
 

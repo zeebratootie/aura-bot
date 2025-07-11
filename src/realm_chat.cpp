@@ -45,7 +45,7 @@ using namespace std;
 
 CQueuedChatMessage::CQueuedChatMessage(shared_ptr<CRealm> nRealm, shared_ptr<CCommandContext> nCtx, const bool isProxy)
   : m_Realm(ref(*nRealm)),
-    m_QueuedTime(0),
+    m_QueuedTime(0), // FIXME: m_QueuedTime not implemented
     m_ReceiverSelector(0),
     m_MessageValue(0),
 
@@ -99,7 +99,7 @@ void CQueuedChatMessage::SetCallback(const uint8_t type, const uint32_t data)
 
 int64_t CQueuedChatMessage::GetQueuedDuration() const
 {
-  return GetTime() - m_QueuedTime;
+  return m_Realm.get().m_Aura->GetLoopTime() - m_QueuedTime;
 }
 
 bool CQueuedChatMessage::GetIsStale() const

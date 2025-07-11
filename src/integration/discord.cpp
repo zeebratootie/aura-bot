@@ -48,8 +48,6 @@ using namespace std;
 CDiscord::CDiscord(CConfig& nCFG)
   : m_Aura(nullptr),
     m_Client(nullptr),
-    m_LastPacketTime(GetTime()),
-    m_LastAntiIdleTime(GetTime()),
     m_PendingCallbackCount(0),
     m_WaitingToConnect(true),
     m_NickName(string()),
