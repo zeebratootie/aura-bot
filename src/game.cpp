@@ -7071,7 +7071,7 @@ void CGame::EventGameLoaded()
   const GameUser::CGameUser* Shortest = nullptr;
   const GameUser::CGameUser* Longest  = nullptr;
 
-  uint8_t majorityThreshold = static_cast<uint8_t>(m_Users.size() / 2);
+  size_t majorityThreshold = m_Users.size() / 2;
   ImmutableUserList DesyncedPlayers;
   if (m_Users.size() >= 2) {
     for (const auto& user : m_Users) {
@@ -9991,7 +9991,7 @@ void CGame::ResetDropVotes() const
 
 void CGame::StopDesynchronized(const string& reason)
 {
-  uint8_t majorityThreshold = static_cast<uint8_t>(m_Users.size() / 2);
+  size_t majorityThreshold = m_Users.size() / 2;
   for (GameUser::CGameUser* user : m_Users) {
     auto it = m_SyncPlayers.find(static_cast<const GameUser::CGameUser*>(user));
     if (it == m_SyncPlayers.end()) {
