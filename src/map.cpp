@@ -1811,17 +1811,18 @@ void CMap::Load(CConfig* CFG)
 
   if (!CFG->GetSuccess()) {
     m_Valid = false;
-    if (m_ErrorMessage.empty()) m_ErrorMessage = "invalid map config file";
-    Print("[MAP] " + m_ErrorMessage);
-  } else {
-    string ErrorMessage = CheckProblems();
-    if (!ErrorMessage.empty()) {
-      Print("[MAP] " + ErrorMessage);
-    } else if (m_MapLoaderIsPartial) {
+  }
+  if (m_ErrorMessage.empty()) {
+    m_ErrorMessage = CheckProblems();
+  }
+  if (m_Valid) {
+    if (m_MapLoaderIsPartial) {
       CFG->Delete("map.cfg.partial");
       CGameSetup::DeleteTemporaryFromMap(CFG);
       m_MapLoaderIsPartial = false;
     }
+  } else {
+    Print("[MAP] " + m_ErrorMessage);
   }
 
   //ClearMapFileContents();
@@ -2042,7 +2043,7 @@ bool CMap::UnlinkFile()
 
 string CMap::CheckProblems()
 {
-  if (!m_Valid) {
+  if (!m_Valid && !m_ErrorMessage.empty()) {
     return m_ErrorMessage;
   }
 
@@ -2160,7 +2161,7 @@ string CMap::CheckProblems()
   }
 
   if (!m_Valid) {
-    return m_ErrorMessage;
+    return "invalid map config file";
   }
 
   return string();
@@ -2440,7 +2441,7 @@ void CMap::LoadMapSpecificConfig(CConfig& CFG)
     // Custom observer-team (one-based)
     m_MapCustomizableObserverTeam = CFG.GetUint8("map.custom_forces.observer_team", m_MapCustomizableObserverTeam);
     if (m_MapCustomizableObserverTeam == 0 || (m_MapNumTeams < m_MapCustomizableObserverTeam  && m_MapCustomizableObserverTeam != m_MapVersionMaxSlots + 1)) {
-      Print("[MAP] <map.custom_forces.observer_team> invalid team number");
+      m_ErrorMessage = "<map.custom_forces.observer_team> invalid team number";
       CFG.SetFailed();
     }
   }
@@ -2482,7 +2483,7 @@ void CMap::LoadMapSpecificConfig(CConfig& CFG)
 
   if (!m_HCL.defaultValue.empty()) {
     if (!m_HCL.supported) {
-      Print("[MAP] HCL cannot be enabled - map does not support it.");
+      m_ErrorMessage = "HCL cannot be enabled - map does not support it.";
       CFG.SetFailed();
     }
 
@@ -2490,12 +2491,12 @@ void CMap::LoadMapSpecificConfig(CConfig& CFG)
       if (!CheckIsValidHCLSmall(m_HCL.defaultValue).empty()) {
         // short HCL may be a misnomer
         // the charset is short, which means we need longer strings for the same amount of information
-        Print("[MAP] HCL string [" + m_HCL.defaultValue + "] is not valid virtual HCL (hexadecimal or in -\" \\).");
+        m_ErrorMessage = "HCL string [" + m_HCL.defaultValue + "] is not valid virtual HCL (hexadecimal or in -\" \\).";
         CFG.SetFailed();
       }
     } else {
       if (!CheckIsValidHCLStandard(m_HCL.defaultValue).empty()) {
-        Print("[MAP] HCL string [" + m_HCL.defaultValue + "] is not valid standard HCL (alphanumeric or in -= .,).");
+        m_ErrorMessage = "HCL string [" + m_HCL.defaultValue + "] is not valid standard HCL (alphanumeric or in -= .,).";
         CFG.SetFailed();
       }
     }
@@ -2543,7 +2544,7 @@ void CMap::LoadMapSpecificConfig(CConfig& CFG)
 
   if (m_MMD.enabled) {
     if (!m_MMD.supported) {
-      Print("[MAP] W3MMD cannot be enabled - map does not support it.");
+      m_ErrorMessage = "[MAP] W3MMD cannot be enabled - map does not support it.";
       CFG.SetFailed();
     }
   }
@@ -2564,15 +2565,15 @@ void CMap::LoadMapSpecificConfig(CConfig& CFG)
 
   if (m_HMC.toggle != MAP_FEATURE_TOGGLE_DISABLED) {
     if (!m_HMC.supported) {
-      Print("[MAP] W3HMC cannot be enabled - map does not support it.");
+      m_ErrorMessage = "W3HMC cannot be enabled - map does not support it.";
       CFG.SetFailed();
     } else if (m_HMC.slot == 0xFF || m_MapVersionMaxSlots <= m_HMC.slot) {
       // We want a slot specified even if custom forces is not set,
       // in order to solve conflicts with other virtual-player systems.
-      Print("[MAP] <map.w3hmc.slot> is not properly configured.");
+      m_ErrorMessage = "<map.w3hmc.slot> is not properly configured.";
       CFG.SetFailed();
     } else if ((m_MapOptions & MAPOPT_CUSTOMFORCES) && (m_Slots.size() <= m_HMC.slot || m_Slots[m_HMC.slot].GetTeam() == m_MapVersionMaxSlots)) {
-      Print("[MAP] <map.w3hmc.slot> cannot use an observer slot.");
+      m_ErrorMessage = "<map.w3hmc.slot> cannot use an observer slot.";
       CFG.SetFailed();
     }
   }
@@ -2591,15 +2592,15 @@ void CMap::LoadMapSpecificConfig(CConfig& CFG)
 
   if (m_AHCL.toggle != MAP_FEATURE_TOGGLE_DISABLED) {
     if (!m_AHCL.supported) {
-      Print("[MAP] AHCL cannot be enabled - map does not support it.");
+      m_ErrorMessage = "AHCL cannot be enabled - map does not support it.";
       CFG.SetFailed();
     } else if (m_AHCL.slot == 0xFF || m_MapVersionMaxSlots <= m_AHCL.slot) {
       // We want a slot specified even if custom forces is not set,
       // in order to solve conflicts with other virtual-player systems.
-      Print("[MAP] <map.ahcl.slot> is not properly configured.");
+      m_ErrorMessage = "<map.ahcl.slot> is not properly configured.";
       CFG.SetFailed();
     } else if ((m_MapOptions & MAPOPT_CUSTOMFORCES) && (m_Slots.size() <= m_AHCL.slot || m_Slots[m_AHCL.slot].GetTeam() == m_MapVersionMaxSlots)) {
-      Print("[MAP] <map.ahcl.slot> cannot use an observer slot.");
+      m_ErrorMessage = "<map.ahcl.slot> cannot use an observer slot.";
       CFG.SetFailed();
     }
   }
