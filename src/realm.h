@@ -86,10 +86,10 @@ private:
   uint32_t                         m_InternalServerID;          // internal server ID, maps 1:1 to CRealmConfig::m_InputID
   uint8_t                          m_ServerIndex;               // one-based
   uint8_t                          m_PublicServerID;            // for building host counters, which allows matching game join requests to a realm (or none)
-  int64_t                          m_LastDisconnectedTime;      // GetTime when we were last disconnected from battle.net
-  int64_t                          m_LastConnectionAttemptTime; // GetTime when we last attempted to connect to battle.net
-  int64_t                          m_LastGameRefreshTime;       // GetTime when we last sent SEND_SID_STARTADVEX3 (game advertisement)
-  int64_t                          m_LastGameListTime;          // GetTime when we last sent SEND_SID_GETADVLISTEX (game list request)
+  int64_t                          m_LastDisconnectedTime;      // when we were last disconnected from battle.net
+  int64_t                          m_LastConnectionAttemptTime; // when we last attempted to connect to battle.net
+  int64_t                          m_LastGameRefreshTime;       // when we last sent SEND_SID_STARTADVEX3 (game advertisement)
+  int64_t                          m_LastGameListTime;          // when we last sent SEND_SID_GETADVLISTEX (game list request)
   int64_t                          m_MinReconnectDelay;
   int64_t                          m_BaseReconnectDelay;        // interval between two consecutive connect attempts
   uint32_t                         m_SessionID;                 // reconnection counter

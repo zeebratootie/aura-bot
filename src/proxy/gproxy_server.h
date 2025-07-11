@@ -50,7 +50,7 @@ public:
   size_t                                            m_BufferSize;
   size_t                                            m_TotalRecvPackets;
   size_t                                            m_TotalSentPackets;
-  std::optional<int64_t>                            m_LastAckTicks;           // GetTime when we last acknowledged GProxy packet
+  std::optional<int64_t>                            m_LastAckTicks;           // when we last acknowledged GProxy packet
   std::queue<GameProtocol::PacketWrapper>           m_Buffer;                 // buffer with data used with GProxy
 
   CGProxyServer(CConnection* nConnection);

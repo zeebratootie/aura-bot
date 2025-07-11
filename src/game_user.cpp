@@ -114,7 +114,7 @@ CGameUser::CGameUser(shared_ptr<CGame> nGame, CConnection* connection, uint8_t n
     m_PongCounter(0),
     m_SyncCounterOffset(0),
     m_SyncCounter(0),
-    m_JoinTicks(GetTicks()),
+    m_JoinTicks(nGame->m_Aura->GetLoopTicks()),
     m_FinishedLoadingTicks(0),
     m_HandicapTicks(0),
     m_StartedLaggingTicks(0),
@@ -147,7 +147,7 @@ CGameUser::CGameUser(shared_ptr<CGame> nGame, CConnection* connection, uint8_t n
     m_LeftMessageSent(false),
     m_StatusMessageSent(false),
     m_LatencySent(false),
-    m_CheckStatusByTicks(GetTicks() + CHECK_STATUS_LATENCY),
+    m_CheckStatusByTicks(nGame->m_Aura->GetLoopTicks() + CHECK_STATUS_LATENCY),
     m_MuteEndTicks(0),
 
     m_Disconnected(false),
@@ -410,7 +410,7 @@ bool CGameUser::CheckMuted()
   if (!GetIsMuted()) {
     return false;
   }
-  if (GetMuteEndTicks() < GetTicks()) {
+  if (m_Aura->GetTicksIsAfter(GetMuteEndTicks())) {
     UnMute();
     return false;
   }
@@ -556,7 +556,7 @@ bool CGameUser::Update(fd_set* fd, int64_t timeout)
             if (GameProtocol::RECEIVE_W3GS_GAMELOADED_SELF(Data)) {
               if (m_Game.get().GetGameLoading() && !m_FinishedLoading) {
                 m_FinishedLoading      = true;
-                m_FinishedLoadingTicks = GetTicks();
+                m_FinishedLoadingTicks = m_Aura->GetLoopTicks();
                 m_Game.get().EventUserLoaded(this);
               }
             }
@@ -641,11 +641,11 @@ bool CGameUser::Update(fd_set* fd, int64_t timeout)
                 // the client sends one of these when connecting plus we return 1 on error to kill two birds with one stone
                 // we also discard pong values when we're downloading because they're almost certainly inaccurate
                 // this statement also gives the player a 8 second grace period after downloading the map to allow queued (i.e. delayed) ping packets to be ignored
-                if (!m_MapTransfer.GetStarted() || (m_MapTransfer.GetFinished() && GetTicks() - m_MapTransfer.GetFinishedTicks() >= 8000)) {
+                if (!m_MapTransfer.GetStarted() || (m_MapTransfer.GetFinished() && m_Aura->GetTicksIsAfterDelay(m_MapTransfer.GetFinishedTicks(), 8000))) {
                   if (m_RTTValues.size() == MAXIMUM_PINGS_COUNT) {
                     m_RTTValues.erase(begin(m_RTTValues));
                   }
-                  m_RTTValues.push_back(useLiteralRTT ? (static_cast<uint32_t>(GetTicks()) - Pong) : ((static_cast<uint32_t>(GetTicks()) - Pong) / 2));
+                  m_RTTValues.push_back(useLiteralRTT ? (static_cast<uint32_t>(m_Aura->GetLoopTicks()) - Pong) : ((static_cast<uint32_t>(m_Aura->GetLoopTicks()) - Pong) / 2));
                 }
               }
 
@@ -937,7 +937,7 @@ void CGameUser::EventGProxyReconnect(CConnection* connection, const uint32_t las
   DCHECK((m_GProxy->UnqueuePackets(lastPacket)), ("EventGProxyReconnect() triggered with an old lastPacket"));
   m_GProxy->SynchronizeFromBuffer();
   m_Disconnected = false;
-  m_StartedLaggingTicks = GetTicks();
+  m_StartedLaggingTicks = m_Aura->GetLoopTicks();
   m_DisconnectNoticeSent = false;
   m_LastDisconnectRepeatNoticeTicks.reset();
   if (m_LastDisconnectTicks.has_value()) {
@@ -1062,7 +1062,7 @@ bool CGameUser::GetCanUsePublicChat() const
 
 bool CGameUser::Mute(const int64_t seconds)
 {
-  int64_t muteEndTicks = GetTicks() + (seconds * 1000);
+  int64_t muteEndTicks = m_Aura->GetLoopTicks() + (seconds * 1000);
   if (m_Muted && m_MuteEndTicks >= muteEndTicks) return false;
   m_Muted = true;
   m_MuteEndTicks = muteEndTicks;
@@ -1134,10 +1134,10 @@ void CGameUser::DisableReconnect()
 
 bool CGameUser::GetReadyReminderIsDue() const
 {
-  return !m_ReadyReminderLastTicks.has_value() || m_ReadyReminderLastTicks.value() + READY_REMINDER_PERIOD < GetTicks();
+  return m_Aura->GetTicksIsFirstOrAfterDelay(m_ReadyReminderLastTicks, READY_REMINDER_PERIOD);
 }
 
 void CGameUser::SetReadyReminded()
 {
-  m_ReadyReminderLastTicks = GetTicks();
+  m_ReadyReminderLastTicks = m_Aura->GetLoopTicks();
 }

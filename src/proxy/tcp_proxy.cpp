@@ -61,7 +61,7 @@ CTCPProxy::~CTCPProxy()
 
 void CTCPProxy::SetTimeout(const int64_t delta)
 {
-  m_TimeoutTicks = GetTicks() + delta;
+  m_TimeoutTicks = m_Aura->GetLoopTicks() + delta;
 }
 
 bool CTCPProxy::CloseConnection()

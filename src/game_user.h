@@ -99,10 +99,10 @@ namespace GameUser
     uint32_t                         m_PongCounter;
     size_t                           m_SyncCounterOffset;            // missed keepalive packets we are gonna ignore
     size_t                           m_SyncCounter;                  // the number of keepalive packets received from this player
-    int64_t                          m_JoinTicks;                    // GetTime when the player joined the game (used to delay sending the /whois a few seconds to allow for some lag)
-    int64_t                          m_FinishedLoadingTicks;         // GetTicks when the player finished loading the game
+    int64_t                          m_JoinTicks;                    // when the player joined the game (used to delay sending the /whois a few seconds to allow for some lag)
+    int64_t                          m_FinishedLoadingTicks;         // when the player finished loading the game
     int64_t                          m_HandicapTicks;
-    int64_t                          m_StartedLaggingTicks;          // GetTicks when the player started laggin
+    int64_t                          m_StartedLaggingTicks;          // when the player started laggin
     std::optional<int64_t>           m_KickByTicks;
     uint8_t                          m_SID;                          // the player's SID - this is well defined only after the game starts loading
     uint8_t                          m_UID;                          // the player's UID

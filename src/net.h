@@ -60,8 +60,8 @@ public:
   std::string                 m_Name;
   std::optional<bool>         m_Passed;
   std::optional<bool>         m_CanConnect;
-  int64_t                     m_Timeout;
-  int64_t                     m_LastConnectionFailure;
+  int64_t                     m_TimeoutTicks;
+  int64_t                     m_LastConnectionFailureTicks;
   bool                        m_SentJoinRequest;
 };
 
@@ -82,8 +82,8 @@ public:
   std::string                       m_HostName;
   std::optional<sockaddr_storage>   m_Result;
   std::optional<bool>               m_CanConnect;
-  int64_t                           m_Timeout;
-  int64_t                           m_LastConnectionFailure;
+  int64_t                           m_TimeoutTicks;
+  int64_t                           m_LastConnectionFailureTicks;
   bool                              m_SentQuery;
 };
 
@@ -148,7 +148,7 @@ public:
   bool                                                        m_IPAddressFetchInProgress;
   uint16_t                                                    m_LastHostPort;               // the port of the last hosted game
 
-  int64_t                                                     m_LastDownloadTicks;             // GetTicks when the last map download cycle was performed
+  int64_t                                                     m_LastDownloadTicks;             // when the last map download cycle was performed
   uint64_t                                                    m_TransferredMapBytesThisUpdate;
 
   void InitPersistentConfig();

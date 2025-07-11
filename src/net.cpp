@@ -63,8 +63,8 @@ CGameTestConnection::CGameTestConnection(CAura* nAura, shared_ptr<CRealm> nRealm
     m_Socket(new CTCPClient(static_cast<uint8_t>(nTargetHost.ss_family), nName)),
     m_Type(nType),
     m_Name(nName),
-    m_Timeout(0),
-    m_LastConnectionFailure(0),
+    m_TimeoutTicks(0),
+    m_LastConnectionFailureTicks(0),
     m_SentJoinRequest(false)
 {
 }
@@ -162,12 +162,11 @@ bool CGameTestConnection::Update(fd_set* fd, fd_set* send_fd)
     return false;
   }
 
-  const int64_t Ticks = GetTicks();
   if (m_Socket->HasError()) {
     if (!m_CanConnect.has_value()) m_CanConnect = false;
-    m_LastConnectionFailure = Ticks;
+    m_LastConnectionFailureTicks = m_Aura->GetLoopTicks();
     m_Socket->Reset();
-  } else if (m_Socket->GetConnected() && Ticks < m_Timeout) {
+  } else if (m_Socket->GetConnected() && !m_Aura->GetTicksIsAfter(m_TimeoutTicks)) {
     bool gotJoinedMessage = false;
     if (m_Socket->DoRecv(fd)) {
       string* RecvBuffer = m_Socket->GetBytes();
@@ -185,15 +184,15 @@ bool CGameTestConnection::Update(fd_set* fd, fd_set* send_fd)
     }
   } else if (m_Socket->GetConnecting() && m_Socket->CheckConnect()) {
     m_CanConnect = true;
-  } else if (m_Timeout <= Ticks && (m_Socket->GetConnecting() || m_CanConnect.has_value())) {
+  } else if (m_Aura->GetTicksIsAfter(m_TimeoutTicks) && (m_Socket->GetConnecting() || m_CanConnect.has_value())) {
     if (!m_CanConnect.has_value()) m_CanConnect = false;
     m_Passed = false;
-    m_LastConnectionFailure = Ticks;
+    m_LastConnectionFailureTicks = m_Aura->GetLoopTicks();
     m_Socket->Reset();
     m_Socket->Disconnect();
-  } else if (!m_Socket->GetConnecting() && !m_CanConnect.has_value() && (Ticks - m_LastConnectionFailure > 900)) {
+  } else if (!m_Socket->GetConnecting() && !m_CanConnect.has_value() && m_Aura->GetTicksIsAfterDelay(m_LastConnectionFailureTicks, 900)) {
     m_Socket->Connect(emptyBindAddress, m_TargetHost);
-    m_Timeout = Ticks + GAME_TEST_TIMEOUT;
+    m_TimeoutTicks = m_Aura->GetLoopTicks() + GAME_TEST_TIMEOUT;
   }
 
   return !m_Passed.has_value();
@@ -209,8 +208,8 @@ CIPAddressAPIConnection::CIPAddressAPIConnection(CAura* nAura, const sockaddr_st
     m_Socket(new CTCPClient(static_cast<uint8_t>(nTargetHost.ss_family), nTargetHost.ss_family == AF_INET6 ? "IPv6 Address" : "IPv4 Address")),
     m_EndPoint(nEndPoint),
     m_HostName(nHostName),
-    m_Timeout(0),
-    m_LastConnectionFailure(0),
+    m_TimeoutTicks(0),
+    m_LastConnectionFailureTicks(0),
     m_SentQuery(false)
 {
 }
@@ -326,12 +325,11 @@ bool CIPAddressAPIConnection::Update(fd_set* fd, fd_set* send_fd)
     return false;
   }
 
-  const int64_t Ticks = GetTicks();
   if (m_Socket->HasError()) {
     if (!m_CanConnect.has_value()) m_CanConnect = false;
-    m_LastConnectionFailure = Ticks;
+    m_LastConnectionFailureTicks = m_Aura->GetLoopTicks();
     m_Socket->Reset();
-  } else if (m_Socket->GetConnected() && Ticks < m_Timeout) {
+  } else if (m_Socket->GetConnected() && !m_Aura->GetTicksIsAfter(m_TimeoutTicks)) {
     bool gotAddress = false;
     if (m_Socket->DoRecv(fd)) {
       string* RecvBuffer = m_Socket->GetBytes();
@@ -369,14 +367,14 @@ bool CIPAddressAPIConnection::Update(fd_set* fd, fd_set* send_fd)
     }
   } else if (m_Socket->GetConnecting() && m_Socket->CheckConnect()) {
     m_CanConnect = true;
-  } else if (m_Timeout <= Ticks && (m_Socket->GetConnecting() || m_CanConnect.has_value())) {
+  } else if (m_Aura->GetTicksIsAfter(m_TimeoutTicks) && (m_Socket->GetConnecting() || m_CanConnect.has_value())) {
     if (!m_CanConnect.has_value()) m_CanConnect = false;
-    m_LastConnectionFailure = Ticks;
+    m_LastConnectionFailureTicks = m_Aura->GetLoopTicks();
     m_Socket->Reset();
     m_Socket->Disconnect();
-  } else if (!m_Socket->GetConnecting() && !m_CanConnect.has_value() && (Ticks - m_LastConnectionFailure > 900)) {
+  } else if (!m_Socket->GetConnecting() && !m_CanConnect.has_value() && m_Aura->GetTicksIsAfterDelay(m_LastConnectionFailureTicks, 900)) {
     m_Socket->Connect(emptyBindAddress, m_TargetHost);
-    m_Timeout = Ticks + IP_ADDRESS_API_TIMEOUT;
+    m_TimeoutTicks = m_Aura->GetLoopTicks() + IP_ADDRESS_API_TIMEOUT;
   }
 
   return !m_Result.has_value();
@@ -731,8 +729,7 @@ void CNet::UpdateAfterGames(fd_set* fd, fd_set* send_fd)
 
 void CNet::UpdateMapTransfers()
 {
-  const int64_t Ticks = GetTicks();
-  if (Ticks < m_LastDownloadTicks + 100) {
+  if (!m_Aura->GetTicksIsAfterDelay(m_LastDownloadTicks, 100)) {
     return;
   }
 
@@ -840,7 +837,7 @@ void CNet::UpdateMapTransfers()
     }
   }
 
-  m_LastDownloadTicks = Ticks;
+  m_LastDownloadTicks = m_Aura->GetLoopTicks();
 
   for (auto& game : m_Aura->GetJoinableGames()) {
     if (downloadersCountByGame.find(game) == downloadersCountByGame.end()) {
@@ -1691,12 +1688,12 @@ void CNet::UpdateSelectBlockTime(int64_t& usecBlockTime) const
     return;
   }
 
-  const int64_t ticks = GetTicks();
+  const int64_t hiResTicks = GetTicks();
   int64_t byTicks = APP_MAX_TICKS;
   for (const auto& serverConnections : m_GameObservers) {
     for (const auto& connection : serverConnections.second) {
       const int64_t thisByTicks = connection->GetNextTimedActionByTicks();
-      if (thisByTicks <= ticks) {
+      if (thisByTicks <= hiResTicks) {
         usecBlockTime = 0;
         return;
       }
@@ -1706,7 +1703,7 @@ void CNet::UpdateSelectBlockTime(int64_t& usecBlockTime) const
     }
   }
   if (byTicks != APP_MAX_TICKS) { // avoid overflow
-    int64_t maybeBlockTime = (byTicks - ticks) * 1000;
+    int64_t maybeBlockTime = (byTicks - hiResTicks) * 1000;
     if (maybeBlockTime < usecBlockTime) {
       usecBlockTime = maybeBlockTime;
     }

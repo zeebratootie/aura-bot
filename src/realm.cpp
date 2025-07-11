@@ -509,7 +509,7 @@ void CRealm::UpdateConnected(fd_set* fd, fd_set* send_fd)
     if (auto game = GetGameBroadcast()) {
       TrySendGameRefresh(game);
     }
-    m_LastGameRefreshTime = m_Aura->GetLoopTicks();
+    m_LastGameRefreshTime = m_Aura->GetLoopTime();
   }
 
   if (m_Aura->GetTimeIsAfterDelay(m_LastGameListTime, m_GameBroadcast.expired() ? 90 : 20)) {
@@ -737,7 +737,7 @@ void CRealm::ProcessChatEvent(const uint32_t eventType, const string& fromUser, 
 uint8_t CRealm::CountChatQuota()
 {
   if (m_ChatQuotaInUse.empty()) return 0;
-  int64_t minTicks = GetTicks() - static_cast<int64_t>(m_Config.m_FloodQuotaTime) * 1000 - 300; // 300 ms hardcoded latency
+  int64_t minTicks = m_Aura->GetLoopTicks() - static_cast<int64_t>(m_Config.m_FloodQuotaTime) * 1000 - 300; // 300 ms hardcoded latency
   uint16_t spentQuota = 0;
   for (auto it = begin(m_ChatQuotaInUse); it != end(m_ChatQuotaInUse);) {
     if ((*it).first < minTicks) {
@@ -799,7 +799,7 @@ bool CRealm::SendQueuedMessage(CQueuedChatMessage* message)
   }
   if (!m_Config.m_FloodImmune) {
     uint8_t extraQuota = message->GetVirtualSize(m_Config.m_VirtualLineLength, selectType);
-    m_ChatQuotaInUse.push_back(make_pair(GetTicks(), extraQuota));
+    m_ChatQuotaInUse.push_back(make_pair(m_Aura->GetLoopTicks(), extraQuota));
   }
 
   switch (message->GetCallback()) {
@@ -1606,15 +1606,14 @@ bool CRealm::SendGameRefresh(shared_ptr<CGame> game)
   if (!changedAny) {
     DPRINT_IF(LogLevel::kTrace2, GetLogPrefix() + "game refreshed")
   } else {
-    int64_t Ticks = GetTicks();
-    if (!m_Config.m_IsHostOften && m_GameBroadcastStartTicks.has_value() && Ticks < m_GameBroadcastStartTicks.value() + static_cast<int64_t>(REALM_HOST_COOLDOWN_TICKS)) {
+    if (!m_Config.m_IsHostOften && !m_Aura->GetTicksIsFirstOrAfterDelay(m_GameBroadcastStartTicks, static_cast<int64_t>(REALM_HOST_COOLDOWN_TICKS))) {
       // Still in cooldown
       DPRINT_IF(LogLevel::kTrace, GetLogPrefix() + "not registering game... still in cooldown")
       return false;
     }
     PRINT_IF(LogLevel::kDebug, GetLogPrefix() + "registering game...")
     m_LastGameHostCounter = hostCounter;
-    m_GameBroadcastStartTicks = Ticks;
+    m_GameBroadcastStartTicks = m_Aura->GetLoopTicks();
   }
 
   Version version = GetGameVersion();
