@@ -1074,8 +1074,9 @@ void CConfig::SetString(const string& key, const string& value)
 {
   if (!utf8::is_valid(value.begin(), value.end())) return;
   string trimmedValue = TrimString(value);
+  if (trimmedValue.empty()) return;
   if (CConfig::GetIsEnvVar(trimmedValue)) return;
-  m_CFG[key] = value;
+  m_CFG[key] = trimmedValue;
 }
 
 void CConfig::SetString(const std::string& key, const char* start, const std::string::size_type& size)

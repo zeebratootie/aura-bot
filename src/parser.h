@@ -93,7 +93,7 @@
     return result;
   }
   std::string lowerInput = ToLowerCase(input);
-  switch (HashCode(input)) {
+  switch (HashCode(lowerInput)) {
     case HashCode("0"):
     case HashCode("no"):
     case HashCode("false"):
