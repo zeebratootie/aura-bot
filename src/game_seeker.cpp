@@ -85,6 +85,14 @@ void CGameSeeker::Init()
       // do nothing - client should send VLAN_SEARCHGAME
       break;
     }
+    case IncomingConnectionType::kNone:
+    case IncomingConnectionType::kPlayer:
+    case IncomingConnectionType::kKickedPlayer:
+    case IncomingConnectionType::kObserver: {
+      UNREACHABLE();
+      break;
+    }
+    IGNORE_ENUM_LAST(IncomingConnectionType)
   }
 }
 

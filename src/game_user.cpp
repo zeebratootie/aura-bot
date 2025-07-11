@@ -508,8 +508,6 @@ bool CGameUser::Update(fd_set* fd, int64_t timeout)
     return m_DeleteMe;
   }
 
-  const int64_t loopTicks = m_Aura->GetLoopTicks();
-
   bool Abort = false;
   if (m_Socket->DoRecv(fd)) {
     // extract as many packets as possible from the socket's receive buffer and process them

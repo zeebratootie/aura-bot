@@ -1446,7 +1446,7 @@ void RangeEnsureMinMaxSorted(size_t* minValue, size_t* maxValue)
   if (*maxValue < *minValue) {
     size_t temp = *minValue;
     *minValue = *maxValue;
-    *maxValue = *minValue;
+    *maxValue = temp;
   }
 }
 
