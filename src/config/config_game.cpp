@@ -371,15 +371,15 @@ CGameConfig::CGameConfig(CGameConfig* nRootConfig, shared_ptr<CMap> nMap, shared
     m_Valid = false;
   }
 
+  INHERIT_MAP_OR_CUSTOM(m_LatencyEqualizerEnabled, m_LatencyEqualizerEnabled, m_LatencyEqualizerEnabled)
+  INHERIT_MAP_OR_CUSTOM(m_LatencyEqualizerMaxDelay, m_LatencyEqualizerMaxDelay, m_LatencyEqualizerMaxDelay)
+
   if (m_LatencyEqualizerEnabled && m_LatencyEqualizerMaxDelay < m_Latency) {
     Print(
       "[CONFIG] Error - <hosting.latency.equalizer.max_delay> cannot be lower than <hosting.latency.default>"
     );
     m_Valid = false;
   }
-
-  INHERIT_MAP_OR_CUSTOM(m_LatencyEqualizerEnabled, m_LatencyEqualizerEnabled, m_LatencyEqualizerEnabled)
-  INHERIT_MAP_OR_CUSTOM(m_LatencyEqualizerMaxDelay, m_LatencyEqualizerMaxDelay, m_LatencyEqualizerMaxDelay)
 
   INHERIT_MAP_OR_CUSTOM(m_EnableLagScreen, m_EnableLagScreen, m_EnableLagScreen)
   INHERIT_CUSTOM(m_SyncNormalize, m_SyncNormalize)
