@@ -252,11 +252,11 @@ void GameHistory::UpdateSpectatorActions(int64_t spectatorDelay /* seconds */)
   }
 
   spectatorDelay *= 1000 /* ticks */;
-  if (m_Duration <= spectatorDelay) {
+  if (m_Duration <= m_SpectatorDuration + spectatorDelay) {
     return;
   }
 
-  int64_t gameDurationWanted = m_Duration - spectatorDelay;
+  int64_t gameDurationWanted = m_Duration - m_SpectatorDuration - spectatorDelay;
   auto it = begin(m_PlayingBuffer) + m_SpectatorOffset;
   auto itEnd = end(m_PlayingBuffer);
   while (it != itEnd && (m_SpectatorActiveLatency <= gameDurationWanted || it->GetType() == GAME_FRAME_TYPE_LATENCY)) {

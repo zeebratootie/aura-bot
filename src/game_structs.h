@@ -158,6 +158,7 @@ struct GameHistory
   inline void SetIsFinished(const bool nFinished) { m_Finished = nFinished; }
   [[nodiscard]] inline size_t GetNumActionFrames() const { return m_NumActionFrames; }
   [[nodiscard]] inline size_t GetNumSpectatorActionFrames() const { return m_NumSpectatorActionFrames; }
+  [[nodiscard]] inline size_t GetPlayerOffset() const { return m_PlayingBuffer.size(); }
   [[nodiscard]] inline size_t GetSpectatorOffset() const { return m_SpectatorOffset; }
   inline void SetStartedTicks(const int64_t nStartedTicks) { m_StartedTicks = nStartedTicks; }
   [[nodiscard]] inline bool GetIsStarted() const { return m_StartedTicks.has_value();}
