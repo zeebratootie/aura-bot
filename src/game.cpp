@@ -591,7 +591,7 @@ void CGame::Reset()
   m_JoinInProgressVirtualUser.reset();
   m_FakeUsers.clear();
   if (!m_GameHistory->GetIsFinished()) {
-    m_GameHistory->SetIsFinished(true);
+    m_GameHistory->SetFinishedTicks(m_Aura->GetLoopTicks());
     m_GameHistory->UpdateSpectatorActions((int64_t)m_Config.m_SpectatorDelay);
   }
   m_GameHistory.reset();
@@ -869,7 +869,7 @@ void CGame::StartGameOverTimer(bool isMMD)
     m_GameOverTolerance = 60;
   }
   if (!m_GameHistory->GetIsFinished()) {
-    m_GameHistory->SetIsFinished(true);
+    m_GameHistory->SetFinishedTicks(m_Aura->GetLoopTicks());
     m_GameHistory->UpdateSpectatorActions((int64_t)m_Config.m_SpectatorDelay);
   }
 

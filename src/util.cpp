@@ -192,13 +192,13 @@ string ToFormattedRealm(const string& hostName)
   return hostName;
 }
 
-string ToFormattedTimeStamp(const int64_t hh, const int64_t mm, const int64_t ss)
+string ToFormattedTimeStampHHMMSS(const int64_t hh, const int64_t mm, const int64_t ss)
 {
   if (hh > 0) return ToDecStringPadded(hh, 2) + ":" + ToDecStringPadded(mm, 2) + ":" + ToDecStringPadded(ss, 2);
   return ToDecStringPadded(mm, 2) + ":" + ToDecStringPadded(ss, 2);
 }
 
-string ToDurationString(const int64_t hh, const int64_t mm, const int64_t ss)
+string ToDurationStringHHMMSS(const int64_t hh, const int64_t mm, const int64_t ss)
 {
   string result;
   if (hh > 0) result.append(to_string(hh) + " h ");
@@ -208,9 +208,10 @@ string ToDurationString(const int64_t hh, const int64_t mm, const int64_t ss)
   return TrimString(result);
 }
 
-string ToFormattedTimeStamp(const int64_t seconds)
+template <typename T>
+string ToFormattedTimeStamp(const T seconds)
 {
-  int64_t ss, mm, hh;
+  T ss, mm, hh;
   ss = seconds;
 
   mm = ss / 60;
@@ -218,12 +219,13 @@ string ToFormattedTimeStamp(const int64_t seconds)
   hh = mm / 60;
   mm = mm % 60;
 
-  return ToFormattedTimeStamp(hh, mm, ss);
+  return ToFormattedTimeStampHHMMSS((const int64_t)hh, (const int64_t)mm, (const int64_t)ss);
 }
 
-string ToDurationString(const int64_t seconds)
+template <typename T>
+string ToDurationString(const T seconds)
 {
-  int64_t ss, mm, hh;
+  T ss, mm, hh;
   ss = seconds;
 
   mm = ss / 60;
@@ -231,8 +233,13 @@ string ToDurationString(const int64_t seconds)
   hh = mm / 60;
   mm = mm % 60;
 
-  return ToDurationString(hh, mm, ss);
+  return ToDurationStringHHMMSS((const int64_t)hh, (const int64_t)mm, (const int64_t)ss);
 }
+
+template string ToFormattedTimeStamp(const int64_t seconds);
+template string ToFormattedTimeStamp(const uint64_t seconds);
+template string ToDurationString(const int64_t seconds);
+template string ToDurationString(const uint64_t seconds);
 
 string ToVersionString(const Version& version)
 {
@@ -2108,6 +2115,14 @@ size_t DoubleToSize(double x)
   if (x < 0) x *= -1;
   if (x > maxValue) return numeric_limits<size_t>::max();
   return static_cast<size_t>(x);
+}
+
+uint64_t DoubleToUnsigned(double x)
+{
+  constexpr double maxValue = static_cast<double>(numeric_limits<uint64_t>::max());
+  if (x < 0) x *= -1;
+  if (x > maxValue) return numeric_limits<uint64_t>::max();
+  return static_cast<uint64_t>(x);
 }
 
 uint32_t GetRandomUInt32()

@@ -115,11 +115,11 @@ struct GameFrame
 
 struct GameHistory
 {
-  bool                                                   m_Finished;
   bool                                                   m_Desynchronized;
   bool                                                   m_SoftDesynchronized;            // desynchronizes spectators
   uint8_t                                                m_GProxyEmptyActions;
   std::optional<int64_t>                                 m_StartedTicks;
+  std::optional<int64_t>                                 m_FinishedTicks;
   size_t                                                 m_NumActionFrames;
   size_t                                                 m_NumSpectatorActionFrames;
   size_t                                                 m_SpectatorOffset;
@@ -154,8 +154,6 @@ struct GameHistory
   [[nodiscard]] inline int64_t GetSpectatorActiveLatency() const { return m_SpectatorActiveLatency; }
   inline void SetGProxyEmptyActions(const uint8_t nCount) { m_GProxyEmptyActions = nCount; }
   [[nodiscard]] inline uint32_t GetGProxyEmptyActions() const { return m_GProxyEmptyActions; }
-  [[nodiscard]] inline bool GetIsFinished() const { return m_Finished; }
-  inline void SetIsFinished(const bool nFinished) { m_Finished = nFinished; }
   [[nodiscard]] inline size_t GetNumActionFrames() const { return m_NumActionFrames; }
   [[nodiscard]] inline size_t GetNumSpectatorActionFrames() const { return m_NumSpectatorActionFrames; }
   [[nodiscard]] inline size_t GetPlayerOffset() const { return m_PlayingBuffer.size(); }
@@ -163,6 +161,9 @@ struct GameHistory
   inline void SetStartedTicks(const int64_t nStartedTicks) { m_StartedTicks = nStartedTicks; }
   [[nodiscard]] inline bool GetIsStarted() const { return m_StartedTicks.has_value();}
   [[nodiscard]] inline int64_t GetStartedTicks() const { return m_StartedTicks.value(); }
+  inline void SetFinishedTicks(const int64_t nFinishedTicks) { m_FinishedTicks = nFinishedTicks; }
+  [[nodiscard]] inline bool GetIsFinished() const { return m_FinishedTicks.has_value(); }
+  [[nodiscard]] inline int64_t GetFinishedTicks() const { return m_FinishedTicks.value(); }
   [[nodiscard]] inline int64_t GetDuration() const { return m_Duration; }
   [[nodiscard]] inline int64_t GetSpectatorDuration() const { return m_SpectatorDuration; }
   [[nodiscard]] inline int64_t GetSpectatorDelay() const { return m_Duration - m_SpectatorDuration; }

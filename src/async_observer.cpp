@@ -784,19 +784,23 @@ void CAsyncObserver::SendChat(const string& message)
 
 void CAsyncObserver::SendGameLoadedReport()
 {
-  int64_t ss, mm, hh;
-  ss = (m_Aura->GetLoopTicks() - m_GameHistory->GetStartedTicks()) / 1000;
-
-  mm = ss / 60;
-  ss = ss % 60;
-  hh = mm / 60;
-  mm = mm % 60;
-
-  if (GetIsGameOver()) {
+  if (m_GameHistory->GetIsFinished()) {
+    int64_t playedAgo = (m_Aura->GetLoopTicks() - m_GameHistory->GetFinishedTicks()) / 1000;
+    string playedAgoFragment;
+    if (playedAgo > 0) {
+      playedAgoFragment = ToDurationString(playedAgo) + " ago";
+    } else {
+      playedAgoFragment = "just now";
+    }
     SendChat("Watching replay");
-    SendChat("Game was played " + ToFormattedTimeStamp(hh, mm, ss) + " ago. Duration: " + ToDurationString(m_GameHistory->GetDuration() / 1000));
+    SendChat("Game was played " + playedAgoFragment + ". Duration: " + ToFormattedTimeStamp(m_GameHistory->GetDuration() / 1000));
   } else {
-    SendChat("Running spectator mode (delay is " + ToDurationString(m_GameHistory->GetSpectatorDelay() / 1000) + ")");
+    int64_t delay = m_GameHistory->GetSpectatorDelay();
+    string delayHint;
+    if (delay > 0) {
+      delayHint = " (delay is " + ToDurationString(delay / 1000) + ")";
+    }
+    SendChat("Running spectator mode" + delayHint);
   }
   if (m_FrameRate > 1) {
     SendChat("Use !sync to watch at 1x, !ff to fast-forward");
@@ -848,17 +852,22 @@ void CAsyncObserver::SendProgressReport()
   double catchUpFrameRate = clientFrameRate;
   if (!GetIsGameOver()) catchUpFrameRate = max(0.0, catchUpFrameRate - 1.0);
 
-  string rateFragment = ToFormattedString(PERCENT_FACTOR * progress) + "% - Fast-forwarding at " + to_string(static_cast<int64_t>(round(clientFrameRate))) + "x";
-  if (catchUpFrameRate < epsilon) {
-    SendChat(rateFragment);
-  } else {
-    // Estimate time for catching up with live (or finished) game, assuming that latency will be constant.
-    double etaSeconds = (double)m_Latency * ((double)GetGoalActionFrames() - (double)clientFrame) / catchUpFrameRate / (double)1000.0;
-    // Let it fit in chat log (F12)
-    SendChat(rateFragment + " - ETA " + ToDurationString((int64_t)etaSeconds));
-  }
+  bool isFastForward = round(clientFrameRate) > 1;
 
-  if (!m_CheckSumsTimeStamps.empty() || (clientFrameRate - 6.) < epsilon /* 6x or slower can be trusted */) {
+  string message = ToFormattedString(PERCENT_FACTOR * progress) + "%";
+  if (isFastForward) {
+    message.append(" - Fast-forwarding at " + to_string(static_cast<int64_t>(round(clientFrameRate))) + "x");
+  }
+  if (catchUpFrameRate > epsilon) {
+    // Estimate time for catching up with live (or finished) game,
+    // assuming that latency will be constant.
+    uint64_t etaSeconds = DoubleToUnsigned((double)m_Latency * (double)((GetGoalActionFrames() - clientFrame)) / catchUpFrameRate / (double)1000.0);
+    // Let it fit in chat log (F12)
+    message.append(" - ETA " + ToDurationString(etaSeconds));
+  }
+  SendChat(message);
+
+  if (!m_CheckSumsTimeStamps.empty() || (clientFrameRate - 6.) <= epsilon /* 6x or slower can be trusted */) {
     m_LastProgressReportTime = m_Aura->GetLoopTime();
   }
 }

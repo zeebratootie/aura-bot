@@ -217,8 +217,7 @@ bool CQueuedActionsFrame::GetHasActionsBy(const uint8_t UID) const
 //
 
 GameHistory::GameHistory()
- : m_Finished(false),
-   m_Desynchronized(false),
+ : m_Desynchronized(false),
    m_SoftDesynchronized(false),
    m_GProxyEmptyActions(0),
    m_NumActionFrames(0),
@@ -244,7 +243,7 @@ void GameHistory::EventActionFramePushed()
 
 void GameHistory::UpdateSpectatorActions(int64_t spectatorDelay /* seconds */)
 {
-  if (m_Finished) {
+  if (GetIsFinished()) {
     m_SpectatorOffset = m_PlayingBuffer.size();
     m_SpectatorDuration = m_Duration;
     m_NumSpectatorActionFrames = m_NumActionFrames;
