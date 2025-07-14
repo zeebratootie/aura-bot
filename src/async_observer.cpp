@@ -64,7 +64,9 @@ CAsyncObserver::CAsyncObserver(shared_ptr<CGame> nGame, CConnection* nConnection
     m_GameVersionIsExact(gameVersionIsExact),
     m_GameVersion(gameVersion),
     m_MissingLog(0),
+    m_MaxFrameRate(2),
     m_FrameRate(2),
+    m_MaxSafeClientFrameRate(1),
     m_Latency(nGame->GetGameHistory()->GetDefaultLatency()),
     m_SyncCounter(0),
     m_ActionFrameCounter(0),
@@ -115,15 +117,20 @@ void CAsyncObserver::SetTimeoutAtLatest(const int64_t atLatestTicks)
   }
 }
 
+void CAsyncObserver::SetFrameRate(int64_t nFrameRate)
+{
+  m_FrameRate = nFrameRate;
+  if ((int64_t)m_MaxFrameRate < m_FrameRate) {
+    // m_FrameRate restricted to 1x-64x, so uint8_t m_MaxFrameRate is enough
+    m_MaxFrameRate = (uint8_t)m_FrameRate;
+  }
+}
+
 bool CAsyncObserver::CloseConnection(bool /*recoverable*/)
 {
   if (!m_Socket->GetConnected()) return false;
   m_Socket->Close();
   return true;
-}
-
-void CAsyncObserver::Init()
-{
 }
 
 AsyncObserverStatus CAsyncObserver::Update(fd_set* fd, fd_set* send_fd, int64_t timeout)
@@ -331,16 +338,28 @@ AsyncObserverStatus CAsyncObserver::Update(fd_set* fd, fd_set* send_fd, int64_t 
       const size_t delta = SubtractClampZero(m_ActionFrameCounter, beforeCounter);
       if (beforeCounter <= 50 || delta > 1) Print(GetLogPrefix() + "pushed " + to_string(delta) + " action frames");
       //*/
-      if (m_FrameRate > 1 && canSendChat) {
-        if (m_Aura->GetTimeIsAfterDelay(m_LastProgressReportTime, m_Aura->GetTicksIsAfterDelay(m_FinishedLoadingTicks, 120000) ? 75 : 30)) {
-          SendProgressReport();
-          m_MissingLog = GetClientMissingLog();
-        } else if (m_Aura->GetTimeIsAfterDelay(m_LastProgressReportTime, 5)) {
-          uint8_t missingLog = GetClientMissingLog();
-          if (m_MissingLog < missingLog) {
-            // Ensure progress reports around 75% 87.5% 91.25% ...
+      if (m_FrameRate > 1) {
+        // High watermark
+        if (
+          (m_MaxSafeClientFrameRate < m_FrameRate) &&
+          GetClientIsBehindFrames((size_t)(3000 * m_FrameRate / m_Latency))
+        ) {
+          int64_t frameRateBefore = m_FrameRate;
+          ResetClientFrameRate();
+          ResetFrameRateToClientSafe();
+          Print(GetLogPrefix() + "High watermark reached (" + to_string(GetClientFramesBehind()) + " frames behind) - dropped frame rate " + to_string(frameRateBefore) + " -> " + to_string(m_FrameRate));
+        }
+        if (canSendChat) {
+          if (m_Aura->GetTimeIsAfterDelay(m_LastProgressReportTime, m_Aura->GetTicksIsAfterDelay(m_FinishedLoadingTicks, 120000) ? 75 : 30)) {
             SendProgressReport();
-            m_MissingLog = missingLog;
+            m_MissingLog = GetClientMissingLog();
+          } else if (m_Aura->GetTimeIsAfterDelay(m_LastProgressReportTime, 5)) {
+            uint8_t missingLog = GetClientMissingLog();
+            if (m_MissingLog < missingLog) {
+              // Ensure progress reports around 75% 87.5% 91.25% ...
+              SendProgressReport();
+              m_MissingLog = missingLog;
+            }
           }
         }
       }
@@ -384,9 +403,15 @@ int64_t CAsyncObserver::GetNextTimedActionByTicks() const
   return m_LastFrameTicks + m_Latency / m_FrameRate;
 }
 
-bool CAsyncObserver::GetClientIsBehindFrames(const uint32_t limit) const
+bool CAsyncObserver::GetClientIsBehindFrames(const size_t limit) const
 {
-  return (m_ActionFrameCounter >= m_SyncCounter) && (m_ActionFrameCounter - m_SyncCounter >= limit);
+  return GetClientFramesBehind() >= limit;
+}
+
+size_t CAsyncObserver::GetClientFramesBehind() const
+{
+  if (m_ActionFrameCounter < m_SyncCounter) return 0;
+  return m_ActionFrameCounter - m_SyncCounter;
 }
 
 bool CAsyncObserver::PushGameFrames(bool isFlush)
@@ -811,8 +836,24 @@ void CAsyncObserver::SendGameLoadedReport()
   m_SentGameLoadedReport = true;
 }
 
+void CAsyncObserver::SampleMaxSafeFrameRate()
+{
+  optional<double> maybeClientFrameRate = GetClientFrameRate();
+  if (!maybeClientFrameRate.has_value()) return;
+  // intentionally flooring
+  uint64_t clientFrameRate = DoubleToUnsigned(maybeClientFrameRate.value());
+  if ((uint64_t)m_MaxFrameRate < clientFrameRate) {
+    // Restrict to 1x-64x range
+    clientFrameRate = (uint64_t)m_MaxFrameRate;
+  }
+  if (m_MaxSafeClientFrameRate < (int64_t)clientFrameRate) {
+    m_MaxSafeClientFrameRate = (int64_t)clientFrameRate;
+  }
+}
+
 void CAsyncObserver::ResetClientFrameRate()
 {
+  SampleMaxSafeFrameRate();
   m_CheckSumsTimeStamps.clear();
 }
 
@@ -821,10 +862,11 @@ size_t CAsyncObserver::GetClientFrameClamped() const
   return min(m_SyncCounter, m_ActionFrameCounter);
 }
 
-double CAsyncObserver::GetClientFrameRate() const
+optional<double> CAsyncObserver::GetClientFrameRate() const
 {
-  if (m_CheckSumsTimeStamps.size() < 2) return (double)m_FrameRate; // fallback to server frame rate
+  if (m_CheckSumsTimeStamps.size() < 2) return nullopt;
   int64_t deltaTicks = m_CheckSumsTimeStamps.back() - m_CheckSumsTimeStamps.front();
+  if (deltaTicks < 0) return nullopt;
   return (double)((m_CheckSumsTimeStamps.size() - 1) * m_Latency * (int64_t)(TIMESTAMPS_SAMPLE_RATE)) / (double)(deltaTicks);
 }
 
@@ -846,7 +888,7 @@ void CAsyncObserver::SendProgressReport()
 {
   constexpr double epsilon = numeric_limits<double>::epsilon();
   size_t clientFrame = GetClientFrameClamped();
-  double clientFrameRate = GetClientFrameRate();
+  double clientFrameRate = GetClientFrameRate().value_or((double)m_FrameRate);
   double progress = (double)clientFrame / (double)GetGoalActionFrames();
 
   double catchUpFrameRate = clientFrameRate;

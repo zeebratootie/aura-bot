@@ -87,7 +87,9 @@ public:
   bool                                                          m_GameVersionIsExact;
   Version                                                       m_GameVersion;
   uint8_t                                                       m_MissingLog;
-  int64_t                                                       m_FrameRate;
+  uint8_t                                                       m_MaxFrameRate;                 // frame rate is restricted to 64x
+  int64_t                                                       m_FrameRate;                    // store as int64_t for faster calculations
+  int64_t                                                       m_MaxSafeClientFrameRate;       // frame rate is restricted to 64x
   int64_t                                                       m_Latency;
   size_t                                                        m_SyncCounter;                  // the number of keepalive packets received from this player
   size_t                                                        m_ActionFrameCounter;
@@ -126,7 +128,6 @@ public:
   void SetTimeoutAtLatest(const int64_t nTicks);
 
   bool CloseConnection(bool recoverable = false);
-  void Init();
   [[nodiscard]] AsyncObserverStatus Update(fd_set* fd, fd_set* send_fd, int64_t timeout);
 
   [[nodiscard]] inline MapTransfer&             GetMapTransfer() { return m_MapTransfer; }
@@ -141,7 +142,8 @@ public:
   [[nodiscard]] inline std::shared_ptr<CGame>   GetGame() const { return m_Game.lock(); }
 
   [[nodiscard]] inline int64_t                  GetFrameRate() const { return m_FrameRate; }
-  inline void                                   SetFrameRate(int64_t nFrameRate) { m_FrameRate = nFrameRate; }
+  void                                          SetFrameRate(int64_t nFrameRate);
+  void                                          ResetFrameRateToClientSafe() { m_FrameRate = m_MaxSafeClientFrameRate; }
 
   [[nodiscard]] inline bool                     HasLeftReason() { return !m_LeftReason.empty(); }
   [[nodiscard]] inline std::string              GetLeftReason() { return m_LeftReason; }
@@ -188,10 +190,12 @@ public:
   void SendOtherPlayersInfo();
   void SendChat(const std::string& message);
   void SendGameLoadedReport();
+  void                                          SampleMaxSafeFrameRate();
   void                                          ResetClientFrameRate();
-  [[nodiscard]] bool                            GetClientIsBehindFrames(const uint32_t limit) const;
+  [[nodiscard]] bool                            GetClientIsBehindFrames(const size_t limit) const;
+  [[nodiscard]] size_t                          GetClientFramesBehind() const;
   [[nodiscard]] size_t                          GetClientFrameClamped() const;
-  [[nodiscard]] double                          GetClientFrameRate() const;
+  [[nodiscard]] std::optional<double>           GetClientFrameRate() const;
   [[nodiscard]] uint8_t                         GetClientMissingLog() const;
   void                                          SendProgressReport();
   size_t                                        GetGoalActionFrames() const;
