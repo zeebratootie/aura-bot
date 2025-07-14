@@ -8352,7 +8352,13 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
             spectator->SetFrameRate(frameRate *  4 / 3);
             break;
           default:
-            spectator->SetFrameRate(2 * frameRate);
+            if (frameRate < 8 && (frameRate % 2 != 0)) {
+              // Smooth out acceleration from low odd frame rates
+              // (likely autoadjusted frame rate)
+              spectator->SetFrameRate(frameRate + 1);
+            } else {
+              spectator->SetFrameRate(frameRate >= 32 ? 64 : 2 * frameRate);
+            }
         }
         spectator->ResetClientFrameRate();
         spectator->SendProgressReport();
