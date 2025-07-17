@@ -828,6 +828,15 @@ void CGameUser::Send(const std::vector<uint8_t>& data)
   }
 }
 
+void CGameUser::Send(const GameProtocol::PacketWrapper& data)
+{
+  m_GProxy->EventSendData(data, m_Game.get().GetGameLoaded());
+
+  if (!m_Disconnected && !m_Socket->HasError()) {
+    m_Socket->PutBytes(data.data);
+  }
+}
+
 void CGameUser::EventGProxyClientInit(const uint32_t version)
 {
   shared_ptr<CRealm> realm = GetRealm(false);

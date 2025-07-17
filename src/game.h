@@ -370,6 +370,7 @@ public:
   uint8_t                                                GetNumJoinedPlayersOrFakeUsers() const;
   uint8_t                                                GetNumFakePlayers() const;
   uint8_t                                                GetNumFakeObservers() const;
+  size_t                                                 GetNumSpectators() const;
   uint8_t                                                GetNumOccupiedSlots() const;
   uint8_t                                                GetNumPotentialControllers() const;
   uint8_t                                                GetNumControllers() const;
@@ -387,6 +388,7 @@ public:
   inline int64_t                                         GetStartedLaggingTime() const { return m_StartedLaggingTime; }
   inline bool                                            GetChatOnly() const { return m_ChatOnly; }
   inline bool                                            GetAnyUsingGProxy() { return m_ReconnectProtocols > 0; }
+  std::string                                            GetGameSpectatorName() const;
   std::string                                            GetStatusDescription() const;
   std::string                                            GetEndDescription(std::shared_ptr<const CRealm> realm) const;
   std::string                                            GetCategory() const;
@@ -405,6 +407,7 @@ public:
   ImmutableUserList                                      GetObservers() const;
   ImmutableUserList                                      GetUnreadyPlayers() const;
   ImmutableUserList                                      GetWaitingReconnectPlayers() const;
+  std::vector<CAsyncObserver*>                           GetSpectators() const;
   std::optional<Version>                                 GetOverrideLANVersion(const std::string& playerName, const sockaddr_storage* address) const;
   std::optional<Version>                                 GetIncomingPlayerVersion(const CConnection* user, const CIncomingJoinRequest& joinRequest, std::shared_ptr<const CRealm> fromRealm) const;
   Version                                                GuessIncomingPlayerVersion(const CConnection* user, const CIncomingJoinRequest& joinRequest, std::shared_ptr<const CRealm> fromRealm) const;
@@ -489,6 +492,8 @@ public:
   bool                                                   SendAllChat(const std::string& message) const;
   bool                                                   SendObserverChat(uint8_t fromUID, const std::string& message) const;
   bool                                                   SendObserverChat(const std::string& message) const;
+  bool                                                   SendSpectatorChat(const CAsyncObserver* excludeSpectator, const std::string& prefix, const std::string& message) const;
+  bool                                                   SendSpectatorChat(const std::string& prefix, const std::string& message) const;
   void                                                   SendAllSlotInfo();
   void                                                   SendVirtualHostPlayerInfo(CConnection* user) const;
   void                                                   SendFakeUsersInfo(CConnection* user) const;

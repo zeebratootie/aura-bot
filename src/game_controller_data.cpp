@@ -131,3 +131,9 @@ string CGameController::GetAMAIName(uint8_t nDifficulty)
     default: return "AMAI";
   }
 }
+
+string CGameController::GetShortName() const
+{
+  if (m_Type == GameControllerType::kComputer) return "AI";
+  return m_Name;
+}

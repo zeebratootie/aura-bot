@@ -210,15 +210,20 @@ namespace GameProtocol
   template size_t GetPacketCount<GameProtocol::FragmentPolicy::kIgnore>(const std::vector<uint8_t>& data);
   template size_t GetPacketCount<GameProtocol::FragmentPolicy::kAccept>(const std::vector<uint8_t>& data);
 
+  PacketWrapper::PacketWrapper()
+  : count(0)
+  {
+  }
+
   PacketWrapper::PacketWrapper(const std::vector<uint8_t>& nData, const size_t nCount)
   : count(nCount),
     data(nData)
   {
-  };
+  }
 
   PacketWrapper::~PacketWrapper()
   {
-  };
+  }
 
   void PacketWrapper::Remove(size_t removeCount)
   {
@@ -232,6 +237,48 @@ namespace GameProtocol
       --removeCount;
     }
     data.erase(data.begin(), data.begin() + cursor);
+  }
+
+  //
+  // MemoizedGameChatMessageBuilder
+  //
+
+  MemoizedGameChatMessageBuilder::MemoizedGameChatMessageBuilder(const GameProtocol::ChatToHostType nGameStatus, const std::string_view nPrefix, const string_view nMessage)
+   : gameStatus(nGameStatus),
+     channel(0),
+     prefix(nPrefix),
+     message(nMessage)
+  {
+  }
+
+  MemoizedGameChatMessageBuilder::MemoizedGameChatMessageBuilder(const GameProtocol::ChatToHostType nGameStatus, const uint32_t nChannel, const std::string_view nPrefix, const string_view nMessage)
+   : gameStatus(nGameStatus),
+     channel(nChannel),
+     prefix(nPrefix),
+     message(nMessage)
+  {
+  }
+
+  MemoizedGameChatMessageBuilder::~MemoizedGameChatMessageBuilder()
+  {
+  }
+
+  PacketWrapper MemoizedGameChatMessageBuilder::ToNew(uint8_t uid)
+  {
+    if (gameStatus == GameProtocol::ChatToHostType::CTH_MESSAGE_INGAME) {
+      return SENDWRAP_W3GS_CHAT_SELF_IN_GAME(uid, channel, prefix, message);
+    } else {
+      return SENDWRAP_W3GS_CHAT_SELF_LOBBY(uid, prefix, message);
+    }
+  }
+
+  const PacketWrapper& MemoizedGameChatMessageBuilder::To(uint8_t uid)
+  {
+    auto it = cache.find(uid);
+    if (it != nullptr) return *it;
+    PacketWrapper focusedMessage = ToNew(uid);
+    cache.insert(uid, focusedMessage);
+    return *cache.find(uid);
   }
 
   ///////////////////////
@@ -630,10 +677,10 @@ namespace GameProtocol
     return packet;
   }
 
-  std::vector<uint8_t> SEND_W3GS_CHAT_FROM_HOST_IN_GAME_ATOMIC(uint8_t fromUID, const std::vector<uint8_t>& toUIDs, uint8_t flag, const uint32_t flagExtra, string_view message)
+  std::vector<uint8_t> SEND_W3GS_CHAT_FROM_HOST_IN_GAME_ATOMIC(uint8_t fromUID, const std::vector<uint8_t>& toUIDs, uint8_t flag, const uint32_t flagExtra, string_view prefix, string_view message)
   {
     vector<uint8_t> packet;
-    uint16_t length = static_cast<uint16_t>(12 + toUIDs.size() + message.size());
+    uint16_t length = static_cast<uint16_t>(12 + toUIDs.size() + prefix.size() + message.size());
     packet.reserve(length);
     packet.push_back(GameProtocol::Magic::W3GS_HEADER);
     packet.push_back(GameProtocol::Magic::CHAT_FROM_HOST);
@@ -643,15 +690,16 @@ namespace GameProtocol
     packet.push_back(fromUID);              // sender
     packet.push_back(flag);                 // flag
     AppendByteArray(packet, flagExtra, false); // extra flag
+    AppendByteArrayString(packet, prefix, false);   // prefix
     AppendByteArrayString(packet, message, true);   // message
     AssignLength(packet);
     return packet;
   }
 
-  std::vector<uint8_t> SEND_W3GS_CHAT_FROM_HOST_LOBBY_ATOMIC(uint8_t fromUID, const std::vector<uint8_t>& toUIDs, uint8_t flag, string_view message)
+  std::vector<uint8_t> SEND_W3GS_CHAT_FROM_HOST_LOBBY_ATOMIC(uint8_t fromUID, const std::vector<uint8_t>& toUIDs, uint8_t flag, string_view prefix, string_view message)
   {
     vector<uint8_t> packet;
-    uint16_t length = static_cast<uint16_t>(8 + toUIDs.size() + message.size());
+    uint16_t length = static_cast<uint16_t>(8 + toUIDs.size() + prefix.size() + message.size());
     packet.reserve(length);
     packet.push_back(GameProtocol::Magic::W3GS_HEADER);
     packet.push_back(GameProtocol::Magic::CHAT_FROM_HOST);
@@ -660,6 +708,7 @@ namespace GameProtocol
     AppendByteArrayFast(packet, toUIDs);    // receivers
     packet.push_back(fromUID);              // sender
     packet.push_back(flag);                 // flag
+    AppendByteArrayString(packet, prefix, false);   // prefix
     AppendByteArrayString(packet, message, true);   // message
     AssignLength(packet);
     return packet;
@@ -672,16 +721,17 @@ namespace GameProtocol
       return vector<uint8_t>();
     }
 
+    string_view noPrefix;
     vector<uint8_t> packet;
     packet.reserve(((message.size() + (MAX_IN_GAME_CHAT_SIZE - 1)) / MAX_IN_GAME_CHAT_SIZE) * (12 + toUIDs.size()) + message.size());
 
     while (message.size() > MAX_IN_GAME_CHAT_SIZE) {
       string_view chunk = message.substr(0, MAX_IN_GAME_CHAT_SIZE);
-      AppendByteArrayFast(packet, SEND_W3GS_CHAT_FROM_HOST_IN_GAME_ATOMIC(fromUID, toUIDs, flag, flagExtra, chunk));
+      AppendByteArrayFast(packet, SEND_W3GS_CHAT_FROM_HOST_IN_GAME_ATOMIC(fromUID, toUIDs, flag, flagExtra, noPrefix, chunk));
       message.remove_prefix(MAX_IN_GAME_CHAT_SIZE);
     }
     if (!message.empty()) {
-      AppendByteArrayFast(packet, SEND_W3GS_CHAT_FROM_HOST_IN_GAME_ATOMIC(fromUID, toUIDs, flag, flagExtra, message));
+      AppendByteArrayFast(packet, SEND_W3GS_CHAT_FROM_HOST_IN_GAME_ATOMIC(fromUID, toUIDs, flag, flagExtra, noPrefix, message));
     }
     return packet;
   }
@@ -693,18 +743,77 @@ namespace GameProtocol
       return vector<uint8_t>();
     }
 
+    string_view noPrefix;
     vector<uint8_t> packet;
     packet.reserve(((message.size() + (MAX_LOBBY_CHAT_SIZE - 1)) / MAX_LOBBY_CHAT_SIZE) * (8 + toUIDs.size()) + message.size());
 
     while (message.size() > MAX_LOBBY_CHAT_SIZE) {
       string_view chunk = message.substr(0, MAX_LOBBY_CHAT_SIZE);
-      AppendByteArrayFast(packet, SEND_W3GS_CHAT_FROM_HOST_LOBBY_ATOMIC(fromUID, toUIDs, flag, chunk));
+      AppendByteArrayFast(packet, SEND_W3GS_CHAT_FROM_HOST_LOBBY_ATOMIC(fromUID, toUIDs, flag, noPrefix, chunk));
       message.remove_prefix(MAX_LOBBY_CHAT_SIZE);
     }
     if (!message.empty()) {
-      AppendByteArrayFast(packet, SEND_W3GS_CHAT_FROM_HOST_LOBBY_ATOMIC(fromUID, toUIDs, flag, message));
+      AppendByteArrayFast(packet, SEND_W3GS_CHAT_FROM_HOST_LOBBY_ATOMIC(fromUID, toUIDs, flag, noPrefix, message));
     }
     return packet;
+  }
+
+  PacketWrapper SENDWRAP_W3GS_CHAT_FROM_HOST_IN_GAME(uint8_t fromUID, const std::vector<uint8_t>& toUIDs, uint8_t flag, const uint32_t flagExtra, string_view prefix, string_view message)
+  {
+    if (toUIDs.empty() || message.empty() || MAX_SLOTS_MODERN < toUIDs.size() || prefix.size() >= MAX_IN_GAME_CHAT_SIZE) {
+      Print("[GAMEPROTO] invalid parameters passed to SEND_W3GS_CHAT_FROM_HOST_IN_GAME");
+      return PacketWrapper();
+    }
+    string::size_type maxChatSize = MAX_IN_GAME_CHAT_SIZE - prefix.size();
+
+    PacketWrapper packetWrapper;
+    packetWrapper.count = (message.size() + (maxChatSize - 1)) / maxChatSize;
+    packetWrapper.data.reserve(packetWrapper.count * (12 + toUIDs.size() + prefix.size()) + message.size());
+
+    while (message.size() > maxChatSize) {
+      string_view chunk = message.substr(0, maxChatSize);
+      AppendByteArrayFast(packetWrapper.data, SEND_W3GS_CHAT_FROM_HOST_IN_GAME_ATOMIC(fromUID, toUIDs, flag, flagExtra, prefix, chunk));
+      message.remove_prefix(maxChatSize);
+    }
+    if (!message.empty()) {
+      AppendByteArrayFast(packetWrapper.data, SEND_W3GS_CHAT_FROM_HOST_IN_GAME_ATOMIC(fromUID, toUIDs, flag, flagExtra, prefix, message));
+    }
+    return packetWrapper;
+  }
+
+  PacketWrapper SENDWRAP_W3GS_CHAT_FROM_HOST_LOBBY(uint8_t fromUID, const std::vector<uint8_t>& toUIDs, uint8_t flag, string_view prefix, string_view message)
+  {
+    if (toUIDs.empty() || message.empty() || MAX_SLOTS_MODERN < toUIDs.size() || prefix.size() >= MAX_LOBBY_CHAT_SIZE) {
+      Print("[GAMEPROTO] invalid parameters passed to SEND_W3GS_CHAT_FROM_HOST_LOBBY");
+      return PacketWrapper();
+    }
+    string::size_type maxChatSize = MAX_LOBBY_CHAT_SIZE - prefix.size();
+
+    PacketWrapper packetWrapper;
+    packetWrapper.count = (message.size() + (maxChatSize - 1)) / maxChatSize;
+    packetWrapper.data.reserve(packetWrapper.count * (8 + toUIDs.size() + prefix.size()) + message.size());
+
+    while (message.size() > maxChatSize) {
+      string_view chunk = message.substr(0, maxChatSize);
+      AppendByteArrayFast(packetWrapper.data, SEND_W3GS_CHAT_FROM_HOST_LOBBY_ATOMIC(fromUID, toUIDs, flag, prefix, chunk));
+      message.remove_prefix(maxChatSize);
+    }
+    if (!message.empty()) {
+      AppendByteArrayFast(packetWrapper.data, SEND_W3GS_CHAT_FROM_HOST_LOBBY_ATOMIC(fromUID, toUIDs, flag, prefix, message));
+    }
+    return packetWrapper;
+  }
+
+  PacketWrapper SENDWRAP_W3GS_CHAT_SELF_IN_GAME(uint8_t fromUID, uint32_t flagExtra, string_view prefix, string_view message)
+  {
+    vector<uint8_t> toUIDs = {fromUID};
+    return SENDWRAP_W3GS_CHAT_FROM_HOST_IN_GAME(fromUID, toUIDs, GameProtocol::Magic::ChatType::CHAT_IN_GAME, flagExtra, prefix, message);
+  }
+
+  PacketWrapper SENDWRAP_W3GS_CHAT_SELF_LOBBY(uint8_t fromUID, string_view prefix, string_view message)
+  {
+    vector<uint8_t> toUIDs = {fromUID};
+    return SENDWRAP_W3GS_CHAT_FROM_HOST_LOBBY(fromUID, toUIDs, GameProtocol::Magic::ChatType::CHAT_LOBBY, prefix, message);
   }
 
   std::vector<uint8_t> SEND_W3GS_START_LAG(const vector<GameUser::CGameUser*>& users, const int64_t ticks)

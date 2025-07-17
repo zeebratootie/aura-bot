@@ -154,6 +154,23 @@ void CGProxyServer::EventSendData(const vector<uint8_t>& data, bool isLoaded)
   }
 }
 
+void CGProxyServer::EventSendData(const GameProtocol::PacketWrapper& data, bool isLoaded)
+{
+  if (isLoaded && !m_IsEnabled) return;
+
+  // must start counting packet total from beginning of connection
+  // accepting fragmented packets should not make an observable difference,
+  // but it's the safest behavior, just in case something weird is going on in the caller side.
+  m_TotalSentPackets += data.count;
+
+  // we can avoid buffering packets until we know the client is using GProxy++ since that'll be determined before the game starts
+  // this prevents us from buffering packets for non-reconnectable clients
+  if (isLoaded) {
+    m_Buffer.push(data);
+    m_BufferSize += data.count;
+  }
+}
+
 bool CGProxyServer::UnqueuePackets(const size_t lastPacket)
 {
   const size_t alreadyUnqueued = GetUnqueuedPacketsCount();

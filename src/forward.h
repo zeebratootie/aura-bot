@@ -93,6 +93,7 @@ namespace GameUser
 namespace GameProtocol
 {
   struct PacketWrapper;
+  struct MemoizedGameChatMessageBuilder;
 };
 
 namespace Dota

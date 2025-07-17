@@ -155,6 +155,8 @@ public:
   [[nodiscard]] inline bool                     GetMapReady() const { return m_MapReady; }
   inline void                                   SetMapReady(bool nHasMap) { m_MapReady = nHasMap; }
 
+  [[nodiscard]] inline bool                     GetFinishedLoading() const { return m_FinishedLoading; }
+
   [[nodiscard]] inline uint8_t                  GetSID() const { return m_SID; }
   [[nodiscard]] inline uint8_t                  GetUID() const { return m_UID; }
   
@@ -187,6 +189,7 @@ public:
   // other functions
 
   void Send(const std::vector<uint8_t>& data) final;
+  void Send(const GameProtocol::PacketWrapper& data) final;
   void SendOtherPlayersInfo();
   void SendChat(const std::string& message);
   void SendGameLoadedReport();

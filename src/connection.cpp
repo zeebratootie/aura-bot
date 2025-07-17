@@ -277,3 +277,10 @@ void CConnection::Send(const std::vector<uint8_t>& data)
     m_Socket->PutBytes(data);
   }
 }
+
+void CConnection::Send(const GameProtocol::PacketWrapper& data)
+{
+  if (m_Socket && !m_Socket->HasError()) {
+    m_Socket->PutBytes(data.data);
+  }
+}

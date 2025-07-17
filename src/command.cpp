@@ -1778,6 +1778,19 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
       vector<string> output;
       output.push_back("Game#" + to_string(targetGame->GetGameID()) + " - " + targetGame->GetMap()->GetMapTitle());
 
+      switch (targetGame->GetMap()->GetGameObservers()) {
+        case GameObserversMode::kNone:
+          output.push_back("Observers OFF");
+          break;
+        case GameObserversMode::kOnDefeat:
+        case GameObserversMode::kStartOrOnDefeat:
+          output.push_back("Defeated players can observe the game. Observers cannot chat.");
+          break;
+        case GameObserversMode::kReferees:
+          output.push_back("Defeated players cannot observe the game. Observers can chat (referees.)");
+          break;
+      }
+
       // GOTCHA: /game - Leavers info is omitted. This affects games with name obfuscation.
       vector<const GameUser::CGameUser*> players = targetGame->GetPlayers();
       for (const auto& player : players) {

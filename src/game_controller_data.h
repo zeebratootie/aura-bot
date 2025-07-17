@@ -110,6 +110,8 @@ public:
   inline void SetClientLeftCode(uint8_t nClientLeftCode) { m_ClientLeftCode = nClientLeftCode; }
   inline void SetLeftGameTime(uint64_t nGameTime) { m_LeftGameTime = nGameTime; }
 
+  [[nodiscard]] std::string GetShortName() const;
+
   [[nodiscard]] std::string static GetAIName(uint8_t nDifficulty);
   [[nodiscard]] std::string static GetAMAIName(uint8_t nDifficulty);
 };

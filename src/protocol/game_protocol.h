@@ -49,6 +49,7 @@
 #include "../includes.h"
 #include "../game_slot.h"
 #include "../util.h"
+#include "../flat_map.h"
 
 namespace GameProtocol
 {
@@ -152,11 +153,28 @@ namespace GameProtocol
     size_t count;
     std::vector<uint8_t> data;
 
+    PacketWrapper();
     PacketWrapper(const std::vector<uint8_t>& nData, const size_t nCount);
     ~PacketWrapper();
 
     void Remove(size_t count);
     [[nodiscard]] inline bool GetIsEmpty() const { return count == 0; }
+  };
+
+  struct MemoizedGameChatMessageBuilder
+  {
+    GameProtocol::ChatToHostType gameStatus;
+    uint32_t channel;
+    std::string_view prefix;
+    std::string_view message;
+    FlatMap<uint8_t, PacketWrapper> cache;
+
+    MemoizedGameChatMessageBuilder(const GameProtocol::ChatToHostType gameStatus, const std::string_view prefix, const std::string_view message);
+    MemoizedGameChatMessageBuilder(const GameProtocol::ChatToHostType gameStatus, const uint32_t channel, const std::string_view prefix, const std::string_view message);
+    ~MemoizedGameChatMessageBuilder();
+
+    PacketWrapper ToNew(uint8_t uid);
+    const PacketWrapper& To(uint8_t uid);
   };
 
   // receive functions
@@ -186,10 +204,14 @@ namespace GameProtocol
   [[nodiscard]] std::vector<uint8_t> SEND_W3GS_EMPTY_ACTIONS(uint32_t count);
   [[nodiscard]] std::vector<uint8_t> SEND_W3GS_INCOMING_ACTION(const ActionQueue& actions, uint16_t sendInterval);
   [[nodiscard]] std::vector<uint8_t> SEND_W3GS_INCOMING_ACTION2(const ActionQueue& actions);
-  [[nodiscard]] std::vector<uint8_t> SEND_W3GS_CHAT_FROM_HOST_IN_GAME_ATOMIC(uint8_t fromUID, const std::vector<uint8_t>& toUIDs, uint8_t flag, const uint32_t flagExtra, std::string_view message);
-  [[nodiscard]] std::vector<uint8_t> SEND_W3GS_CHAT_FROM_HOST_LOBBY_ATOMIC(uint8_t fromUID, const std::vector<uint8_t>& toUIDs, uint8_t flag, std::string_view message);
+  [[nodiscard]] std::vector<uint8_t> SEND_W3GS_CHAT_FROM_HOST_IN_GAME_ATOMIC(uint8_t fromUID, const std::vector<uint8_t>& toUIDs, uint8_t flag, const uint32_t flagExtra, std::string_view prefix, std::string_view message);
+  [[nodiscard]] std::vector<uint8_t> SEND_W3GS_CHAT_FROM_HOST_LOBBY_ATOMIC(uint8_t fromUID, const std::vector<uint8_t>& toUIDs, uint8_t flag, std::string_view prefix, std::string_view message);
   [[nodiscard]] std::vector<uint8_t> SEND_W3GS_CHAT_FROM_HOST_IN_GAME(uint8_t fromUID, const std::vector<uint8_t>& toUIDs, uint8_t flag, const uint32_t flagExtra, std::string_view message);
   [[nodiscard]] std::vector<uint8_t> SEND_W3GS_CHAT_FROM_HOST_LOBBY(uint8_t fromUID, const std::vector<uint8_t>& toUIDs, uint8_t flag, std::string_view message);
+  [[nodiscard]] PacketWrapper SENDWRAP_W3GS_CHAT_FROM_HOST_IN_GAME(uint8_t fromUID, const std::vector<uint8_t>& toUIDs, uint8_t flag, const uint32_t flagExtra, std::string_view prefix, std::string_view message);
+  [[nodiscard]] PacketWrapper SENDWRAP_W3GS_CHAT_FROM_HOST_LOBBY(uint8_t fromUID, const std::vector<uint8_t>& toUIDs, uint8_t flag, std::string_view prefix, std::string_view message);
+  [[nodiscard]] PacketWrapper SENDWRAP_W3GS_CHAT_SELF_IN_GAME(uint8_t fromUID, uint32_t flagExtra, std::string_view prefix, std::string_view message);
+  [[nodiscard]] PacketWrapper SENDWRAP_W3GS_CHAT_SELF_LOBBY(uint8_t fromUID, std::string_view prefix, std::string_view message);
   [[nodiscard]] std::vector<uint8_t> SEND_W3GS_START_LAG(const std::vector<GameUser::CGameUser*>& users, const int64_t ticks);
   [[nodiscard]] std::vector<uint8_t> SEND_W3GS_STOP_LAG(const GameUser::CGameUser* user, const int64_t ticks);
   [[nodiscard]] std::vector<uint8_t> SEND_W3GS_GAMEINFO(const bool isExpansion, const Version& war3Version, const uint32_t mapGameType, const uint32_t mapFlags, const std::array<uint8_t, 2>& mapWidth, const std::array<uint8_t, 2>& mapHeight, const std::string& gameName, const std::string& hostName, uint32_t upTime, const std::string& mapPath, const std::array<uint8_t, 4>& mapBlizzHash, uint32_t slotsTotal, uint32_t slotsAvailableOff, uint16_t port, uint32_t hostCounter, uint32_t entryKey);

@@ -344,10 +344,9 @@ AsyncObserverStatus CAsyncObserver::Update(fd_set* fd, fd_set* send_fd, int64_t 
           (m_MaxSafeClientFrameRate < m_FrameRate) &&
           GetClientIsBehindFrames((size_t)(3000 * m_FrameRate / m_Latency))
         ) {
-          int64_t frameRateBefore = m_FrameRate;
           ResetClientFrameRate();
           ResetFrameRateToClientSafe();
-          Print(GetLogPrefix() + "High watermark reached (" + to_string(GetClientFramesBehind()) + " frames behind) - dropped frame rate " + to_string(frameRateBefore) + " -> " + to_string(m_FrameRate));
+          SendChat("Your playback speed is limited to " + to_string(m_FrameRate) + "x");
         }
         if (canSendChat) {
           if (m_Aura->GetTimeIsAfterDelay(m_LastProgressReportTime, m_Aura->GetTicksIsAfterDelay(m_FinishedLoadingTicks, 120000) ? 75 : 30)) {
@@ -635,7 +634,8 @@ void CAsyncObserver::EventChat(const CIncomingChatMessage& incomingChatMessage)
     return;
   }
 
-  bool shouldRelay = !isLobbyChat && false; // relay the chat message to other users
+  bool shouldRelay = !isLobbyChat; // relay the chat message to other users
+  const uint8_t targetType = static_cast<uint8_t>(incomingChatMessage.GetExtraFlags());
 
   if (!isLobbyChat && m_Aura->m_Config.m_LogGameChat == LOG_GAME_CHAT_ALWAYS) {
     Print(GetLogPrefix() + "[" + GetName() + "] " + incomingChatMessage.GetMessage());
@@ -723,7 +723,18 @@ void CAsyncObserver::EventChat(const CIncomingChatMessage& incomingChatMessage)
     }
     if (!isCommand) {
       cmdHistory->ClearLastCommand();
-      SendChat("You are in spectator mode. Chat is RESTRICTED.");
+    }
+    if (!game) {
+      shouldRelay = false;
+    }
+    bool relaySuccess = false;
+    if (shouldRelay) {
+      string prefix = "[" + ToFormattedTimeStamp(m_GameTicks / 1000) + "] [" + m_Name + "]: ";
+      relaySuccess = game->SendSpectatorChat(this, prefix, incomingChatMessage.GetMessage());
+      shouldRelay = false;
+    }
+    if (!relaySuccess || targetType != CHAT_RECV_OBS) {
+      SendChat("You are in spectator mode, and may only chat with other spectators.");
     }
     if (shouldRelay) {
       //SendChat(incomingChatMessage);
@@ -789,6 +800,13 @@ void CAsyncObserver::Send(const std::vector<uint8_t>& data)
   }
 }
 
+void CAsyncObserver::Send(const GameProtocol::PacketWrapper& data)
+{
+  if (m_Socket && !m_Socket->HasError()) {
+    m_Socket->PutBytes(data.data);
+  }
+}
+
 void CAsyncObserver::SendOtherPlayersInfo()
 {
   Send(m_GameHistory->m_PlayersBuffer);
@@ -809,6 +827,12 @@ void CAsyncObserver::SendChat(const string& message)
 
 void CAsyncObserver::SendGameLoadedReport()
 {
+  shared_ptr<CGame> game = GetGame();
+  size_t numSpectators = game ? game->GetNumSpectators() : 1;
+  string otherSpectators;
+  if (numSpectators > 1) {
+    otherSpectators = " with " + to_string(numSpectators - 1) + " other user(s)";
+  }
   if (m_GameHistory->GetIsFinished()) {
     int64_t playedAgo = (m_Aura->GetLoopTicks() - m_GameHistory->GetFinishedTicks()) / 1000;
     string playedAgoFragment;
@@ -825,7 +849,7 @@ void CAsyncObserver::SendGameLoadedReport()
     if (delay > 0) {
       delayHint = " (delay is " + ToDurationString(delay / 1000) + ")";
     }
-    SendChat("Running spectator mode" + delayHint);
+    SendChat("Watching game" + otherSpectators + delayHint);
   }
   if (m_FrameRate > 1) {
     SendChat("Use !sync to watch at 1x, !ff to fast-forward");

@@ -28,6 +28,8 @@
 
 #include "includes.h"
 #include "socket.h"
+// For PacketWrapper
+#include "protocol/game_protocol.h"
 
 enum class IncomingConnectionStatus : uint8_t {
   kOk = 0,
@@ -94,6 +96,7 @@ public:
   // other functions
 
   virtual void Send(const std::vector<uint8_t>& data);
+  virtual void Send(const GameProtocol::PacketWrapper& data);
 };
 
 #endif // AURA_CONNECTION_H_

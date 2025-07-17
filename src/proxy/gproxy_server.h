@@ -79,6 +79,7 @@ public:
 
   void EventGameStart();
   void EventSendData(const std::vector<uint8_t>& data, bool isLoaded);
+  void EventSendData(const GameProtocol::PacketWrapper& data, bool isLoaded);
   void SynchronizeFromBuffer();
 
   void StartExtendedHandShake(int64_t waitTicks, uint32_t gameID) const;

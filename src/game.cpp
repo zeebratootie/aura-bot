@@ -1147,6 +1147,21 @@ uint8_t CGame::GetNumFakeObservers() const
   return counter;
 }
 
+size_t CGame::GetNumSpectators() const
+{
+  size_t counter = 0;
+  for (const auto& serverConnections : m_Aura->m_Net.m_GameObservers) {
+    // std::pair<uint16_t, vector<CAsyncObserver*>>
+    for (const auto& spectator : serverConnections.second) {
+      if (!spectator->GetFinishedLoading()) continue;
+      if (spectator->GetGame() == shared_from_this()) {
+        ++counter;
+      }
+    }
+  }
+  return counter;
+}
+
 uint8_t CGame::GetNumJoinedPlayersOrFake() const
 {
   return GetNumJoinedPlayers() + GetNumFakePlayers();
@@ -1250,6 +1265,41 @@ string CGame::GetClientFileName() const
     return m_MapPath;
   }
   return m_MapPath.substr(LastSlash + 1);
+}
+
+string CGame::GetGameSpectatorName() const
+{
+  if (!GetMap()->GetMapIsMelee()) {
+    return m_GameName;
+  }
+  vector<const CGameController*> startingControllers;
+  for (const auto& controllerData : m_GameControllers) {
+    if (controllerData == nullptr || controllerData->GetIsObserver()) continue;
+    startingControllers.push_back(controllerData);
+  }
+  string candidateName;
+  const size_t numControllers = startingControllers.size();
+  if (numControllers == 2) {
+    candidateName = startingControllers[0]->GetName() + " vs " + startingControllers[1]->GetName();
+  }
+  if (!candidateName.empty() && candidateName.size() <= m_Aura->m_MaxGameNameSize) {
+    return candidateName;
+  }
+  if (numControllers == 2) {
+    vector<string> controllers;
+    controllers.push_back(startingControllers[0]->GetShortName());
+    controllers.push_back(startingControllers[1]->GetShortName());
+    candidateName = JoinStrings(controllers, " vs ", false);
+    if (candidateName.size() > m_Aura->m_MaxGameNameSize) {
+      candidateName = "Melee VS";
+    }
+  } else if (m_CustomLayout == CUSTOM_LAYOUT_FFA) {
+    candidateName = "FFA " + to_string(numControllers) + "P";
+  }
+  if (!candidateName.empty() && candidateName.size() <= m_Aura->m_MaxGameNameSize) {
+    return candidateName;
+  }
+  return m_GameName;
 }
 
 string CGame::GetStatusDescription() const
@@ -1372,6 +1422,21 @@ ImmutableUserList CGame::GetWaitingReconnectPlayers() const
     }
   }
   return players;
+}
+
+vector<CAsyncObserver*> CGame::GetSpectators() const
+{
+  vector<CAsyncObserver*> spectators;
+  for (const auto& serverConnections : m_Aura->m_Net.m_GameObservers) {
+    // std::pair<uint16_t, vector<CAsyncObserver*>>
+    for (const auto& spectator : serverConnections.second) {
+      if (!spectator->GetFinishedLoading()) continue;
+      if (spectator->GetGame() == shared_from_this()) {
+        spectators.push_back(spectator);
+      }
+    }
+  }
+  return spectators;
 }
 
 uint32_t CGame::GetUptime() const
@@ -2331,6 +2396,25 @@ bool CGame::SendObserverChat(uint8_t fromUID, const string& message) const
 bool CGame::SendObserverChat(const string& message) const
 {
   return SendObserverChat(GetHostUID(), message);
+}
+
+bool CGame::SendSpectatorChat(const CAsyncObserver* excludeSpectator, const string& prefix, const string& message) const
+{
+  if (!m_GameLoaded) return false;
+  GameProtocol::MemoizedGameChatMessageBuilder builder(GameProtocol::ChatToHostType::CTH_MESSAGE_INGAME, CHAT_RECV_OBS, prefix, message);
+  vector<CAsyncObserver*> spectators = GetSpectators();
+  bool anySent = false;
+  for (auto& spectator : spectators) {
+    if (spectator == excludeSpectator) continue;
+    spectator->Send(builder.To(spectator->GetUID()));
+    anySent = true;
+  }
+  return anySent;
+}
+
+bool CGame::SendSpectatorChat(const string& prefix, const string& message) const
+{
+  return SendSpectatorChat(nullptr, prefix, message);
 }
 
 void CGame::UpdateReadyCounters()
@@ -7166,6 +7250,8 @@ void CGame::EventGameLoaded()
   // move the game to the games in progress vector
   if (m_Config.m_EnableJoinObserversInProgress || m_Config.m_EnableJoinPlayersInProgress) {
     m_GameDiscoveryInfoChanged |= GAME_DISCOVERY_CHANGED_MAJOR;
+    m_GameName = GetGameSpectatorName();
+    m_HostCounter = m_Aura->NextHostCounter();
     m_Aura->TrackGameJoinInProgress(shared_from_this());
 
     if (GetUDPEnabled() && !m_GameDiscoveryActive) {

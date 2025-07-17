@@ -419,6 +419,7 @@ namespace GameUser
     // other functions
 
     void Send(const std::vector<uint8_t>& data) final;
+    void Send(const GameProtocol::PacketWrapper& data) final;
 
 
     void EventGProxyClientInit(const uint32_t version);
