@@ -305,7 +305,7 @@ public:
   inline bool                                            GetCanJoinInProgress() const { return m_JoinInProgressVirtualUser.has_value(); }
 
   template <typename T>
-  [[nodiscard]]                                           std::shared_ptr<T> GetCreatedFrom() const;
+  [[nodiscard]]                                          std::shared_ptr<T> GetCreatedFrom() const;
 
   [[nodiscard]]                                          bool MatchesCreatedFrom(const ServiceType fromType) const;
   [[nodiscard]]                                          bool MatchesCreatedFrom(const ServiceType fromType, std::shared_ptr<const void> fromThing) const;
@@ -547,6 +547,8 @@ public:
   // note: these are only called while iterating through the m_Potentials or m_Users std::vectors
   // therefore you can't modify those std::vectors and must use the player's m_DeleteMe member to flag for deletion
 
+  void                      ChangeGameName(const std::string& nGameName);
+  
   void                      EventUserDeleted(GameUser::CGameUser* user, fd_set* fd, fd_set* send_fd);
   void                      EventLobbyLastPlayerLeaves();
   void                      ReportAllPings() const;

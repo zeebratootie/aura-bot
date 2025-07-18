@@ -3373,7 +3373,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
       bool IsPrivate = cmdHash == HashCode("priv");
       if (targetGame) {
         targetGame->m_DisplayMode = IsPrivate ? GAME_DISPLAY_PRIVATE : GAME_DISPLAY_PUBLIC;
-        targetGame->m_GameName = gameName;
+        targetGame->ChangeGameName(gameName);
         targetGame->m_HostCounter = m_Aura->NextHostCounter();
         targetGame->UpdateGameDiscovery();
         for (auto& realm : m_Aura->m_Realms) {
@@ -5209,9 +5209,9 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
 
       targetGame->m_DisplayMode = GAME_DISPLAY_PUBLIC;
       if (Args.size() >= 2) {
-        targetGame->m_GameName = renameTarget;
+        targetGame->ChangeGameName(renameTarget);
       }
-      targetGame->m_HostCounter  = m_Aura->NextHostCounter();
+      targetGame->m_HostCounter = m_Aura->NextHostCounter();
       targetGame->UpdateGameDiscovery();
       string earlyFeedback = "Announcement sent.";
       if (toAllRealms) {

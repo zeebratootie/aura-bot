@@ -695,11 +695,11 @@ void CRealm::ProcessChatEvent(const uint32_t eventType, const string& fromUser, 
       optional<BNETProtocol::WhoisInfo> whoisInfo = ParseWhoisInfo(message);
       if (whoisInfo.has_value() && !whoisInfo->name.empty()) {
         GameUser::CGameUser* aboutPlayer = gameBroadcast->GetUserFromName(whoisInfo->name, true);
-        if (aboutPlayer && aboutPlayer->GetRealmInternalID() == m_InternalServerID) {
+        if (aboutPlayer && aboutPlayer->GetRealmInternalID() == m_InternalServerID && !aboutPlayer->GetIsRealmVerified()) {
           // handle spoof checking for current game
           // this case covers whois results which are used when hosting a public game (we send out a "/whois [player]" for each player)
           // at all times you can still /w the bot with "spoofcheck" to manually spoof check
-          if (whoisInfo->GetIsInGame() && whoisInfo->location == m_GameBroadcastName) {
+          if (whoisInfo->GetIsInGame() && whoisInfo->location == aboutPlayer->GetGameName()) {
             gameBroadcast->AddToRealmVerified(m_HostName, aboutPlayer, true);
           } else {
             gameBroadcast->ReportSpoofed(m_HostName, aboutPlayer);

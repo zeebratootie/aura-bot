@@ -110,6 +110,7 @@ namespace GameUser
     uint8_t                          m_PseudonymUID;
     bool                             m_GameVersionIsExact;
     Version                          m_GameVersion;
+    std::string                      m_GameName;                     // game name for spoof-checking - this will be unique depending on the CRealm instance and when the user joined (in case of rename)
     bool                             m_Verified;                     // if the player has spoof checked or not
     bool                             m_Owner;                        // if the player has spoof checked or not
     bool                             m_Reserved;                     // if the player is reserved (VIP) or not
@@ -275,6 +276,8 @@ namespace GameUser
     [[nodiscard]] inline bool                  GetStatusMessageSent() const { return m_StatusMessageSent; }
     [[nodiscard]] inline bool                  GetLatencySent() const { return m_LatencySent; }
     [[nodiscard]] inline bool                  GetLeftMessageSent() const { return m_LeftMessageSent; }
+    [[nodiscard]] std::string_view             GetGameName() const { return m_GameName; }
+    void                                       AcquireGameName();
     [[nodiscard]] bool                         UpdateReady();
     [[nodiscard]] bool                         GetIsOwner(std::optional<bool> nAssumeVerified) const;
     [[nodiscard]] inline bool                  GetIsDraftCaptain() const { return m_TeamCaptain != 0; }

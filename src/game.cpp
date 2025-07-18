@@ -1339,7 +1339,7 @@ string CGame::GetEndDescription(shared_ptr<const CRealm> realm) const
   }
 
   string Description = (
-    "[" + GetMap()->GetMapTitle() + "] \"" + GetCustomGameName(realm, true) + "\". " + (winnersFragment.empty() ? ("Players: " + m_PlayedBy) : winnersFragment)
+    "[" + GetMap()->GetMapTitle() + "] \"" + GetCustomGameName(realm, true) + "\". " +  winnersFragment
   );
 
   if (m_GameLoading || m_GameLoaded)
@@ -3922,15 +3922,10 @@ void CGame::SendGProxyEmptyActions()
 
   // GProxy sends these empty actions itself BEFORE every action received.
   // So we need to match it, to avoid desyncs.
+  // Note that Warcraft III doesn't respond to empty actions (i.e no keep alive frame).
   for (auto& user : m_Users) {
     if (!user->GetCanReconnect()) {
       Send(user, emptyActions);
-
-      // Warcraft III doesn't respond to empty actions,
-      // so we need to artificially increase users' sync counters.
-      /*
-      user->AddSyncCounterOffset(m_GProxyEmptyActions);
-      */
     }
   }
 
@@ -3945,9 +3940,11 @@ void CGame::SendAllActions()
   if (!m_IsPaused) {
     m_EffectiveTicks += activeLatency;
   } else {
-    m_PausedTicksDeltaSum = activeLatency;
+    m_PausedTicksDeltaSum += activeLatency;
   }
 
+// Note that Warcraft III doesn't respond to empty actions (i.e no keep alive frame).
+  // So adding +1 to sync counter is enough.
   ++m_SyncCounter;
 
   SendGProxyEmptyActions();
@@ -4547,6 +4544,17 @@ void CGame::SendGameDiscoveryInfo()
       SendGameDiscoveryInfo(version);
     }
     version = GetNextVersion(version);
+  }
+}
+
+void CGame::ChangeGameName(const std::string& gameName)
+{
+  m_GameName = gameName;
+
+  for (auto& realm : m_Aura->m_Realms) {
+    if (realm->GetGameBroadcast() == shared_from_this()) {
+      realm->SetGameBroadcastWantsRename();
+    }
   }
 }
 
@@ -5910,17 +5918,12 @@ void CGame::EventUserLoaded(GameUser::CGameUser* user)
     }
     // GProxy sends m_GProxyEmptyActions additional empty actions for every action received.
     // So we need to match it, to avoid desyncs.
+    // Note that Warcraft III doesn't respond to empty actions (i.e no keep alive frame).
     if (user->GetCanReconnect()) {
       Send(user, GameProtocol::SEND_W3GS_EMPTY_ACTIONS(m_BeforePlayingEmptyActions));
     } else {
       Send(user, GameProtocol::SEND_W3GS_EMPTY_ACTIONS(m_BeforePlayingEmptyActions * (1 + m_GProxyEmptyActions)));
     }
-
-    // Warcraft III doesn't respond to empty actions,
-    // so we need to artificially increase users' sync counters.
-    /*
-    user->AddSyncCounterOffset(1);
-    */
 
     user->SetLagging(false);
     user->SetStartedLaggingTicks(0);
@@ -7250,7 +7253,7 @@ void CGame::EventGameLoaded()
   // move the game to the games in progress vector
   if (m_Config.m_EnableJoinObserversInProgress || m_Config.m_EnableJoinPlayersInProgress) {
     m_GameDiscoveryInfoChanged |= GAME_DISCOVERY_CHANGED_MAJOR;
-    m_GameName = GetGameSpectatorName();
+    ChangeGameName(GetGameSpectatorName());
     m_HostCounter = m_Aura->NextHostCounter();
     m_Aura->TrackGameJoinInProgress(shared_from_this());
 
@@ -9508,14 +9511,9 @@ void CGame::ResetLagScreen()
 
       // GProxy sends these empty actions itself for every action received.
       // So we need to match it, to avoid desyncs.
+      // Note that Warcraft III doesn't respond to empty actions (i.e no keep alive frame).
       if (anyUsingGProxy && !user->GetCanReconnect()) {
         Send(user, GameProtocol::SEND_W3GS_EMPTY_ACTIONS(m_GProxyEmptyActions));
-
-        // Warcraft III doesn't respond to empty actions,
-        // so we need to artificially increase users' sync counters.
-        /*
-        user->AddSyncCounterOffset(m_GProxyEmptyActions);
-        */
       }
 
       DLOG_APP_IF(LogLevel::kTrace, "@[" + user->GetName() + "] lagger update (+" + ToNameListSentence(laggingPlayers) + ")")
@@ -9524,15 +9522,6 @@ void CGame::ResetLagScreen()
       if (m_GameLoading) {
         SendChat(user, "Please wait for " + to_string(laggingPlayers.size()) + " player(s) to load the game.");
       }
-    } else {
-      // Warcraft III doesn't respond to empty actions,
-      // so we need to artificially increase users' sync counters.
-      /*
-      user->AddSyncCounterOffset(1);
-      if (anyUsingGProxy && !user->GetCanReconnect()) {
-        user->AddSyncCounterOffset(m_GProxyEmptyActions);
-      }
-      */
     }
   }
 

@@ -167,6 +167,7 @@ CGameUser::CGameUser(shared_ptr<CGame> nGame, CConnection* connection, uint8_t n
   m_RTTValues.reserve(MAXIMUM_PINGS_COUNT);
   m_Socket->SetLogErrors(true);
   m_Type = IncomingConnectionType::kPlayer;
+  AcquireGameName();
 }
 
 CGameUser::~CGameUser()
@@ -1096,6 +1097,19 @@ bool CGameUser::GetIsOwner(optional<bool> assumeVerified) const
   return m_Game.get().MatchOwnerName(m_Name) && m_RealmHostName == m_Game.get().GetOwnerRealm() && (
     isVerified || m_RealmHostName.empty()
   );
+}
+
+void CGameUser::AcquireGameName()
+{
+  shared_ptr<CRealm> realm = GetRealm(false);
+  if (realm && realm->GetGameBroadcast() == GetGame()) {
+    m_GameName = realm->GetGameBroadcastName();
+  } else {
+    m_GameName = m_Game.get().GetCustomGameName(realm, true);
+    if (m_GameName.size() > MAX_GAME_NAME_SIZE) {
+      m_GameName = m_GameName.substr(0, MAX_GAME_NAME_SIZE);
+    }
+  }
 }
 
 bool CGameUser::UpdateReady()
