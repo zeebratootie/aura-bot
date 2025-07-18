@@ -214,14 +214,17 @@ namespace BNETProtocol
   struct AuthCheckResult
   {
     const uint32_t state;
-    const uint8_t* descriptionStart;
-    const uint8_t* descriptionEnd;
+    std::string_view description;
 
-    AuthCheckResult(const uint32_t nState, const uint8_t* nDescriptionStart, const uint8_t* nDescriptionEnd)
+    AuthCheckResult()
+     : state(BNETProtocol::KeyResult::BAD)
+    {}
+
+    AuthCheckResult(const uint32_t nState, std::string_view nDescription)
      : state(nState),
-       descriptionStart(nDescriptionStart),
-       descriptionEnd(nDescriptionEnd)
-     {};
+       description(nDescription)
+    {}
+
     ~AuthCheckResult() = default;
   };
 
@@ -242,14 +245,17 @@ namespace BNETProtocol
   struct EnterChatResult
   {
     const bool success;
-    const uint8_t* uniqueNameStart;
-    const uint8_t* uniqueNameEnd;
+    std::string_view uniqueName;
 
-    EnterChatResult(const bool nSuccess, const uint8_t* nUniqueNameStart, const uint8_t* nUniqueNameEnd)
+    EnterChatResult()
+    : success(false)
+    {}
+
+    EnterChatResult(const bool nSuccess, std::string_view nUniqueName)
     : success(nSuccess),
-      uniqueNameStart(nUniqueNameStart),
-      uniqueNameEnd(nUniqueNameEnd)
-    {};
+      uniqueName(nUniqueName)
+    {}
+
     ~EnterChatResult() = default;
   };
 
@@ -261,18 +267,19 @@ namespace BNETProtocol
   {
     const bool success;
     const uint32_t type;
-    const uint8_t* userStart;
-    const uint8_t* userEnd;
-    const uint8_t* messageStart;
-    const uint8_t* messageEnd;
+    std::string_view userName;
+    std::string_view message;
 
-    IncomingChatResult(const bool nSuccess, const uint32_t nType, const uint8_t* nUserStart, const uint8_t* nUserEnd, const uint8_t* nMessageStart, const uint8_t* nMessageEnd)
+    IncomingChatResult()
+     : success(false),
+       type(0)
+     {};
+
+    IncomingChatResult(const bool nSuccess, const uint32_t nType, std::string_view nUserName, std::string_view nMessage)
      : success(nSuccess),
        type(nType),
-       userStart(nUserStart),
-       userEnd(nUserEnd),
-       messageStart(nMessageStart),
-       messageEnd(nMessageEnd)
+       userName(nUserName),
+       message(nMessage)
      {};
     ~IncomingChatResult() = default;
   };

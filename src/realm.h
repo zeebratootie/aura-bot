@@ -166,7 +166,7 @@ public:
   inline bool                             GetInChat() const { return !m_CurrentChannel.empty(); }
   inline std::string                      GetCurrentChannel() const { return m_CurrentChannel; }
 
-  std::optional<BNETProtocol::WhoisInfo>  ParseWhoisInfo(const std::string& message) const;
+  std::optional<BNETProtocol::WhoisInfo>  ParseWhoisInfo(std::string_view message) const;
   bool                                    GetConnected() const;
   bool                                    GetEnabled() const;
   bool                                    GetIsPvPGN() const;
@@ -215,7 +215,7 @@ public:
   void EventConnected(fd_set* fd, fd_set* send_fd);
   void UpdateConnected(fd_set* fd, fd_set* send_fd);
   void Update(fd_set* fd, fd_set* send_fd);
-  void ProcessChatEvent(const uint32_t eventType, const std::string& fromUser, const std::string& nMessage);
+  void ProcessChatEvent(const uint32_t eventType, std::string_view fromUser, std::string_view message);
   uint8_t CountChatQuota();
   bool CheckWithinChatQuota(CQueuedChatMessage* message);
   bool SendQueuedMessage(CQueuedChatMessage* message);
@@ -241,7 +241,7 @@ public:
   CQueuedChatMessage* QueuePriorityWhois(const std::string& message);
   CQueuedChatMessage* QueueChatChannel(const std::string& message, std::shared_ptr<CCommandContext> fromCtx = nullptr, const bool isProxy = false);
   CQueuedChatMessage* QueueChatReply(const uint8_t messageValue, const std::string& message, const std::string& user, const uint8_t selector, std::shared_ptr<CCommandContext> fromCtx = nullptr, const bool isProxy = false);
-  CQueuedChatMessage* QueueWhisper(const std::string& message, const std::string& user, std::shared_ptr<CCommandContext> fromCtx = nullptr, const bool isProxy = false);
+  CQueuedChatMessage* QueueWhisper(const std::string& message, std::string_view user, std::shared_ptr<CCommandContext> fromCtx = nullptr, const bool isProxy = false);
   CQueuedChatMessage* QueueGameChatAnnouncement(std::shared_ptr<const CGame> game, std::shared_ptr<CCommandContext> fromCtx = nullptr, const bool isProxy = false);
   void TryQueueChatReply(const std::string& chatCommand, const std::string& user, bool isPrivate, std::shared_ptr<CCommandContext> ctx = nullptr, const uint8_t ctxFlags = 0);
   void RunMessageCallbackRefreshGame(CQueuedChatMessage* message);

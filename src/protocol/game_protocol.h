@@ -283,15 +283,16 @@ private:
 
 public:
   CIncomingJoinRequest();
-  CIncomingJoinRequest(uint32_t nHostCounter, uint32_t nEntryKey, std::string nName, std::array<uint8_t, 4> nIPv4Internal);
+  CIncomingJoinRequest(uint32_t nHostCounter, uint32_t nEntryKey, std::string_view nName, std::array<uint8_t, 4> nIPv4Internal);
   ~CIncomingJoinRequest();
 
   [[nodiscard]] inline bool                   GetIsValid() const { return m_Valid; }
   [[nodiscard]] inline bool                   GetIsCensored() const { return m_Censored; }
   [[nodiscard]] inline uint32_t               GetHostCounter() const { return m_HostCounter; }
   [[nodiscard]] inline uint32_t               GetEntryKey() const { return m_EntryKey; }
-  [[nodiscard]] inline const std::string&     GetName() const { return m_Name; }
-  [[nodiscard]] inline const std::string&     GetOriginalName() const { return m_OriginalName; }
+  [[nodiscard]] inline std::string            GetName() const { return m_Name; }
+  [[nodiscard]] inline std::string            GetLowerName() const { return ToLowerCase(std::string(m_Name)); }
+  [[nodiscard]] inline std::string_view       GetOriginalName() const { return m_OriginalName; }
   [[nodiscard]] inline std::array<uint8_t, 4> GetIPv4Internal() const { return m_IPv4Internal; }
 
   void                                        UpdateCensored(OnUnsafeNameHandler unsafeNameHandler, const bool pipeConsideredHarmful);
@@ -371,8 +372,8 @@ private:
 
 public:
   CIncomingChatMessage();
-  CIncomingChatMessage(uint8_t nFromUID, std::vector<uint8_t> nToUIDs, uint8_t nFlag, std::string nMessage);
-  CIncomingChatMessage(uint8_t nFromUID, std::vector<uint8_t> nToUIDs, uint8_t nFlag, std::string nMessage, uint32_t nExtraFlags);
+  CIncomingChatMessage(uint8_t nFromUID, std::vector<uint8_t> nToUIDs, uint8_t nFlag, std::string_view nMessage);
+  CIncomingChatMessage(uint8_t nFromUID, std::vector<uint8_t> nToUIDs, uint8_t nFlag, std::string_view nMessage, uint32_t nExtraFlags);
   CIncomingChatMessage(uint8_t nFromUID, std::vector<uint8_t> nToUIDs, uint8_t nFlag, uint8_t nByte);
   ~CIncomingChatMessage();
 

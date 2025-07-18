@@ -62,7 +62,7 @@ CQueuedChatMessage::CQueuedChatMessage(shared_ptr<CRealm> nRealm, shared_ptr<CCo
   }
   if (isProxy) {
     m_ProxySenderCtx = nCtx;
-    const string& fromName = nCtx->GetSender();
+    string_view fromName = nCtx->GetSender();
     m_ProxySenderName = vector<uint8_t>(fromName.begin(), fromName.end());
   }
 }

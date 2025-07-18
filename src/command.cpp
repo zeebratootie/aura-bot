@@ -125,7 +125,7 @@ CCommandContext::CCommandContext(ServiceType serviceType, CAura* nAura, CCommand
 }
 
 /* Command received from BNET but targetting a game */
-CCommandContext::CCommandContext(ServiceType serviceType, CAura* nAura, CCommandConfig* config, shared_ptr<CGame> targetGame, shared_ptr<CRealm> fromRealm, const string& fromName, const bool& isWhisper, const bool& nIsBroadcast, ostream* nOutputStream)
+CCommandContext::CCommandContext(ServiceType serviceType, CAura* nAura, CCommandConfig* config, shared_ptr<CGame> targetGame, shared_ptr<CRealm> fromRealm, string_view fromName, const bool& isWhisper, const bool& nIsBroadcast, ostream* nOutputStream)
   : m_Aura(nAura),
     m_Config(config),
     m_TargetGame(targetGame),
@@ -152,7 +152,7 @@ CCommandContext::CCommandContext(ServiceType serviceType, CAura* nAura, CCommand
 }
 
 /* Command received from IRC but targetting a game */
-CCommandContext::CCommandContext(ServiceType serviceType, CAura* nAura, CCommandConfig* config, shared_ptr<CGame> targetGame, const string& channelName, const string& userName, const bool& isWhisper, const string& reverseHostName, const bool& nIsBroadcast, ostream* nOutputStream)
+CCommandContext::CCommandContext(ServiceType serviceType, CAura* nAura, CCommandConfig* config, shared_ptr<CGame> targetGame, string_view channelName, string_view userName, const bool& isWhisper, string_view reverseHostName, const bool& nIsBroadcast, ostream* nOutputStream)
   : m_Aura(nAura),
     m_Config(config),
     m_TargetGame(targetGame),
@@ -166,7 +166,7 @@ CCommandContext::CCommandContext(ServiceType serviceType, CAura* nAura, CCommand
     m_Permissions(USER_PERMISSIONS_NONE),
 
     m_ServerName(nAura->m_IRC.m_Config.m_HostName),
-    m_ReverseHostName(reverseHostName),
+    m_ReverseHostName(string(reverseHostName)),
 
     m_Output(nOutputStream),
     m_PartiallyDestroyed(false)
@@ -219,7 +219,7 @@ CCommandContext::CCommandContext(ServiceType serviceType, CAura* nAura, CCommand
 #endif
 
 /* Command received from elsewhere but targetting a game */
-CCommandContext::CCommandContext(ServiceType serviceType, CAura* nAura, CCommandConfig* config, shared_ptr<CGame> targetGame, const string& nFromName, const bool& nIsBroadcast, ostream* nOutputStream)
+CCommandContext::CCommandContext(ServiceType serviceType, CAura* nAura, CCommandConfig* config, shared_ptr<CGame> targetGame, string_view nFromName, const bool& nIsBroadcast, ostream* nOutputStream)
   : m_Aura(nAura),
     m_Config(config),
     m_TargetGame(targetGame),
@@ -242,7 +242,7 @@ CCommandContext::CCommandContext(ServiceType serviceType, CAura* nAura, CCommand
 }
 
 /* BNET command */
-CCommandContext::CCommandContext(ServiceType serviceType, CAura* nAura, CCommandConfig* config, shared_ptr<CRealm> fromRealm, const string& fromName, const bool& isWhisper, const bool& nIsBroadcast, ostream* nOutputStream)
+CCommandContext::CCommandContext(ServiceType serviceType, CAura* nAura, CCommandConfig* config, shared_ptr<CRealm> fromRealm, string_view fromName, const bool& isWhisper, const bool& nIsBroadcast, ostream* nOutputStream)
   : m_Aura(nAura),
     m_Config(config),
 
@@ -267,7 +267,7 @@ CCommandContext::CCommandContext(ServiceType serviceType, CAura* nAura, CCommand
 }
 
 /* IRC command */
-CCommandContext::CCommandContext(ServiceType serviceType, CAura* nAura, CCommandConfig* config, const string& channelName, const string& userName, const bool& isWhisper, const string& reverseHostName, const bool& nIsBroadcast, ostream* nOutputStream)
+CCommandContext::CCommandContext(ServiceType serviceType, CAura* nAura, CCommandConfig* config, string_view channelName, string_view userName, const bool& isWhisper, string_view reverseHostName, const bool& nIsBroadcast, ostream* nOutputStream)
   : m_Aura(nAura),
     m_Config(config),
 
@@ -280,7 +280,7 @@ CCommandContext::CCommandContext(ServiceType serviceType, CAura* nAura, CCommand
     m_Permissions(USER_PERMISSIONS_NONE),
 
     m_ServerName(nAura->m_IRC.m_Config.m_HostName),
-    m_ReverseHostName(reverseHostName),
+    m_ReverseHostName(string(reverseHostName)),
 
     m_Output(nOutputStream),
     m_PartiallyDestroyed(false)
@@ -331,7 +331,7 @@ CCommandContext::CCommandContext(ServiceType serviceType, CAura* nAura, CCommand
 #endif
 
 /* Generic command */
-CCommandContext::CCommandContext(ServiceType serviceType, CAura* nAura, const string& nFromName, const bool& nIsBroadcast, ostream* nOutputStream)
+CCommandContext::CCommandContext(ServiceType serviceType, CAura* nAura, string_view nFromName, const bool& nIsBroadcast, ostream* nOutputStream)
   : m_Aura(nAura),
     m_Config(nAura->m_CommandDefaultConfig),
 
@@ -430,7 +430,7 @@ CommandHistory* CCommandContext::GetCommandHistory() const
   }
 }
 
-string CCommandContext::GetChannelName() const
+string_view CCommandContext::GetChannelName() const
 {
   const SimpleNestedLocation* subLoc = nullptr;
   switch (GetServiceSourceType()) {
@@ -447,9 +447,9 @@ string CCommandContext::GetChannelName() const
       }
       break;
     default:
-      return string();
+      return string_view();
   }
-  return string();
+  return string_view();
 }
 
 shared_ptr<CRealm> CCommandContext::GetSourceRealm() const
@@ -1658,7 +1658,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
       if (m_Aura->m_Net.m_Config.m_EnableGeoLocalization) {
         FromFragment = ", From: " + m_Aura->m_DB->FromCheck(ByteArrayToUInt32(targetPlayer->GetIPv4(), true));
       }
-      string realmFragment = "Realm: " + (targetPlayer->GetRealmHostName().empty() ? "LAN" : targetPlayer->GetRealmHostName());
+      string realmFragment = "Realm: " + (targetPlayer->GetRealmHostName().empty() ? "LAN" : string(targetPlayer->GetRealmHostName()));
       string versionFragment;
       if (targetGame->m_SupportedGameVersionsMin != targetGame->m_SupportedGameVersionsMax) {
         versionFragment = " (" + targetPlayer->GetGameVersionString() + ")";

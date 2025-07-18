@@ -125,7 +125,8 @@ IncomingConnectionStatus CConnection::Update(fd_set* fd, fd_set* send_fd, int64_
           if (Bytes[1] == GameProtocol::Magic::REQJOIN) {
             CIncomingJoinRequest joinRequest = GameProtocol::RECEIVE_W3GS_REQJOIN(Data);
             if (!joinRequest.GetIsValid()) {
-              DPRINT_IF(LogLevel::kTrace2, "[AURA] Got invalid REQJOIN <" + ByteArrayToDecString(Bytes) + ">")
+              // TODO: kTrace2
+              PRINT_IF(LogLevel::kDebug, "[AURA] Got invalid REQJOIN <" + ByteArrayToDecString(Bytes) + ">")
               Abort = true;
               break;
             }

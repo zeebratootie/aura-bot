@@ -161,7 +161,7 @@ namespace GameUser
     std::optional<TokenBucketRateLimiter>       m_APMQuota;
     std::optional<double>                       m_APMTrainer;
 
-    CGameUser(std::shared_ptr<CGame> game, CConnection* connection, uint8_t nUID, const bool gameVersionIsExact, const Version& gameVersion, uint32_t nJoinedRealmInternalId, std::string nJoinedRealm, std::string nName, std::array<uint8_t, 4> nInternalIP, bool nReserved);
+    CGameUser(std::shared_ptr<CGame> game, CConnection* connection, uint8_t nUID, const bool gameVersionIsExact, const Version& gameVersion, uint32_t nJoinedRealmInternalId, std::string nJoinedRealm, std::string_view nName, std::array<uint8_t, 4> nInternalIP, bool nReserved);
     ~CGameUser() final;
 
     [[nodiscard]] uint32_t GetOperationalRTT() const;
@@ -220,7 +220,7 @@ namespace GameUser
     [[nodiscard]] std::shared_ptr<CRealm>         GetRealm(bool mustVerify) const;
     [[nodiscard]] std::string                     GetRealmDataBaseID(bool mustVerify) const;
     [[nodiscard]] inline uint32_t                 GetRealmInternalID() const { return m_RealmInternalId; }
-    [[nodiscard]] inline std::string              GetRealmHostName() const { return m_RealmHostName; }
+    [[nodiscard]] inline std::string_view         GetRealmHostName() const { return m_RealmHostName; }
     [[nodiscard]] inline std::string              GetExtendedName() const {
       if (m_RealmHostName.empty()) {
         return m_Name + "@@@LAN/VPN";

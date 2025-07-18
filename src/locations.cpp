@@ -48,25 +48,25 @@ ServiceUser::ServiceUser(const ServiceUser& otherService)
 {
 };
 
-ServiceUser::ServiceUser(ServiceType nServiceType, string nUserName)
+ServiceUser::ServiceUser(ServiceType nServiceType, string_view nUserName)
  : serviceType(nServiceType),
-   userName(nUserName),
+   userName(string(nUserName)),
    subLocation(nullptr)
 {
 };
 
-ServiceUser::ServiceUser(ServiceType nServiceType, int64_t nUserIdentifier, string nUserName)
+ServiceUser::ServiceUser(ServiceType nServiceType, int64_t nUserIdentifier, string_view nUserName)
  : serviceType(nServiceType),
    userIdentifier(nUserIdentifier),
-   userName(nUserName),
+   userName(string(nUserName)),
    subLocation(nullptr)
 {
 };
 
-ServiceUser::ServiceUser(ServiceType nServiceType, string nUserName, shared_ptr<void> nServicePtr)
+ServiceUser::ServiceUser(ServiceType nServiceType, string_view nUserName, shared_ptr<void> nServicePtr)
  : serviceType(nServiceType),
    servicePtr(nServicePtr),
-   userName(nUserName),
+   userName(string(nUserName)),
    subLocation(nullptr)
 {
 };

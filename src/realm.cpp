@@ -256,7 +256,7 @@ void CRealm::UpdateConnected(fd_set* fd, fd_set* send_fd)
             BNETProtocol::EnterChatResult enterChatResult = BNETProtocol::RECEIVE_SID_ENTERCHAT(Data);
             if (enterChatResult.success) {
               PRINT_IF(LogLevel::kDebug, GetLogPrefix() + "entered chat")
-              m_ChatNickName = GetStringAddressRange(enterChatResult.uniqueNameStart, enterChatResult.uniqueNameEnd);
+              m_ChatNickName = string(enterChatResult.uniqueName);
               ResetGameBroadcastData(); // m_EnteringChat guards against ENTERCHAT network loop
               AutoJoinChat();
             }
@@ -267,7 +267,7 @@ void CRealm::UpdateConnected(fd_set* fd, fd_set* send_fd)
           case BNETProtocol::Magic::CHATEVENT: {
             BNETProtocol::IncomingChatResult chatEventResult = BNETProtocol::RECEIVE_SID_CHATEVENT(Data);
             if (chatEventResult.success) {
-              ProcessChatEvent(chatEventResult.type, GetStringAddressRange(chatEventResult.userStart, chatEventResult.userEnd), GetStringAddressRange(chatEventResult.messageStart, chatEventResult.messageEnd));
+              ProcessChatEvent(chatEventResult.type, chatEventResult.userName, chatEventResult.message);
             }
             break;
           }
@@ -357,11 +357,11 @@ void CRealm::UpdateConnected(fd_set* fd, fd_set* send_fd)
               switch (checkResult.state)
               {
                 case BNETProtocol::KeyResult::ROC_KEY_IN_USE:
-                  PRINT_IF(LogLevel::kError, GetLogPrefix() + "logon failed - ROC CD key in use by user [" + GetStringAddressRange(checkResult.descriptionStart, checkResult.descriptionEnd) + "], disconnecting...")
+                  PRINT_IF(LogLevel::kError, GetLogPrefix() + "logon failed - ROC CD key in use by user [" + string(checkResult.description) + "], disconnecting...")
                   break;
 
                 case BNETProtocol::KeyResult::TFT_KEY_IN_USE:
-                  PRINT_IF(LogLevel::kError, GetLogPrefix() + "logon failed - TFT CD key in use by user [" + GetStringAddressRange(checkResult.descriptionStart, checkResult.descriptionEnd) + "], disconnecting...");
+                  PRINT_IF(LogLevel::kError, GetLogPrefix() + "logon failed - TFT CD key in use by user [" + string(checkResult.description) + "], disconnecting...");
                   break;
 
                 case BNETProtocol::KeyResult::OLD_GAME_VERSION:
@@ -597,12 +597,12 @@ void CRealm::Update(fd_set* fd, fd_set* send_fd)
   }
 }
 
-void CRealm::ProcessChatEvent(const uint32_t eventType, const string& fromUser, const string& message)
+void CRealm::ProcessChatEvent(const uint32_t eventType, string_view fromUser, string_view message)
 {
   bool isWhisper = (eventType == BNETProtocol::IncomingChatEvent::WHISPER);
 
   if (!m_Socket->GetConnected()) {
-    PRINT_IF(LogLevel::kDebug, GetLogPrefix() + "not connected - message from [" + fromUser + "] rejected: [" + message + "]")
+    PRINT_IF(LogLevel::kDebug, GetLogPrefix() + "not connected - message from [" + string(fromUser) + "] rejected: [" + string(message) + "]")
     return;
   }
 
@@ -613,7 +613,7 @@ void CRealm::ProcessChatEvent(const uint32_t eventType, const string& fromUser, 
   if (eventType == BNETProtocol::IncomingChatEvent::WHISPER && (message == "s" || message == "sc" || message == "spoofcheck")) {
     shared_ptr<CGame> gameBroadcast = GetGameBroadcast();
     if (gameBroadcast && !gameBroadcast->GetIsMirror()) {
-      GameUser::CGameUser* matchUser = gameBroadcast->GetUserFromName(fromUser, true);
+      GameUser::CGameUser* matchUser = gameBroadcast->GetUserFromName<CaseSensitive::kStrict>(fromUser);
       if (matchUser) gameBroadcast->AddToRealmVerified(m_Config.m_HostName, matchUser, true);
       return;
     }
@@ -629,9 +629,9 @@ void CRealm::ProcessChatEvent(const uint32_t eventType, const string& fromUser, 
     }
     // FIXME: Chat logging kinda sucks
     if (isWhisper) {
-      PRINT_IF(LogLevel::kNotice, "[WHISPER: " + m_Config.m_UniqueName + "] [" + fromUser + "] " + message)
+      PRINT_IF(LogLevel::kNotice, "[WHISPER: " + m_Config.m_UniqueName + "] [" + string(fromUser) + "] " + string(message))
     } else if (GetShouldLogChatToConsole()) {
-      Print("[CHAT: " + m_Config.m_UniqueName + "] [" + fromUser + "] " + message);
+      Print("[CHAT: " + m_Config.m_UniqueName + "] [" + string(fromUser) + "] " + string(message));
     }
 
     // handle bot commands
@@ -652,7 +652,7 @@ void CRealm::ProcessChatEvent(const uint32_t eventType, const string& fromUser, 
       if (isWhisper && fromUser != "PvPGN Realm") {
         string tokenName = GetTokenName(m_Config.m_PrivateCmdToken);
         string example = m_Aura->m_Net.m_Config.m_AllowDownloads ? "host wc3maps-8" : "host castle";
-        QueueWhisper("Hi, " + fromUser + ". Use " + m_Config.m_PrivateCmdToken + tokenName + " for commands. Example: " + m_Config.m_PrivateCmdToken + example, fromUser);
+        QueueWhisper("Hi, " + string(fromUser) + ". Use " + m_Config.m_PrivateCmdToken + tokenName + " for commands. Example: " + m_Config.m_PrivateCmdToken + example, fromUser);
       }
       return;
     }
@@ -667,10 +667,10 @@ void CRealm::ProcessChatEvent(const uint32_t eventType, const string& fromUser, 
   }
   else if (eventType == BNETProtocol::IncomingChatEvent::CHANNEL)
   {
-    PRINT_IF(LogLevel::kInfo, GetLogPrefix() + "joined channel [" + message + "]")
+    PRINT_IF(LogLevel::kInfo, GetLogPrefix() + "joined channel [" + string(message) + "]")
     m_CurrentChannel = message;
   } else if (eventType == BNETProtocol::IncomingChatEvent::WHISPERSENT) {
-    PRINT_IF(LogLevel::kDebug, GetLogPrefix() + "whisper sent OK [" + message + "]")
+    PRINT_IF(LogLevel::kDebug, GetLogPrefix() + "whisper sent OK [" + string(message) + "]")
     if (!m_ChatSentWhispers.empty()) {
       CQueuedChatMessage* oldestWhisper = m_ChatSentWhispers.front();
       if (oldestWhisper->IsProxySent()) {
@@ -708,7 +708,7 @@ void CRealm::ProcessChatEvent(const uint32_t eventType, const string& fromUser, 
       }
     }
     if (LogInfo) {
-      PRINT_IF(LogLevel::kInfo, "[INFO: " + m_Config.m_UniqueName + "] " + message)
+      PRINT_IF(LogLevel::kInfo, "[INFO: " + m_Config.m_UniqueName + "] " + string(message))
     }
   } else if (eventType == BNETProtocol::IncomingChatEvent::NOTICE) {
     // Note that the default English error message <<That user is not logged on.>> is also received in other two circumstances:
@@ -730,7 +730,7 @@ void CRealm::ProcessChatEvent(const uint32_t eventType, const string& fromUser, 
       delete oldestWhisper;
       m_ChatSentWhispers.pop();
     }
-    PRINT_IF(LogLevel::kNotice, "[NOTE: " + m_Config.m_UniqueName + "] " + message)
+    PRINT_IF(LogLevel::kNotice, "[NOTE: " + m_Config.m_UniqueName + "] " + string(message))
   }
 }
 
@@ -821,9 +821,10 @@ bool CRealm::SendQueuedMessage(CQueuedChatMessage* message)
   return deleteMessage;
 }
 
-optional<BNETProtocol::WhoisInfo> CRealm::ParseWhoisInfo(const string& message) const
+optional<BNETProtocol::WhoisInfo> CRealm::ParseWhoisInfo(string_view message) const
 {
-  return BNETProtocol::PARSE_WHOIS_INFO(message, m_Config.m_Locale);
+  const string tmp(message);
+  return BNETProtocol::PARSE_WHOIS_INFO(tmp, m_Config.m_Locale);
 }
 
 bool CRealm::GetConnected() const
@@ -1276,7 +1277,7 @@ CQueuedChatMessage* CRealm::QueueChatReply(const uint8_t messageValue, const str
   return entry;
 }
 
-CQueuedChatMessage* CRealm::QueueWhisper(const string& message, const string& user, shared_ptr<CCommandContext> fromCtx, const bool isProxy)
+CQueuedChatMessage* CRealm::QueueWhisper(const string& message, string_view user, shared_ptr<CCommandContext> fromCtx, const bool isProxy)
 {
   if (message.empty() || !m_LoggedIn)
     return nullptr;
@@ -1291,7 +1292,7 @@ CQueuedChatMessage* CRealm::QueueWhisper(const string& message, const string& us
   m_ChatQueueMain.push(entry);
   m_HadChatActivity = true;
 
-  DPRINT_IF(LogLevel::kTrace, GetLogPrefix() + "queued whisper to [" + user + "] - \"" + entry->GetInnerMessage() + "\"")
+  DPRINT_IF(LogLevel::kTrace, GetLogPrefix() + "queued whisper to [" + string(user) + "] - \"" + entry->GetInnerMessage() + "\"")
   return entry;
 }
 

@@ -111,7 +111,7 @@ namespace GameProtocol
       case ACTION_SAVE: {
         // <0x06 cstring>
         size_t messageStart = pos + 1;
-        size_t messageEnd = FindNullDelimiterOrStart(action, messageStart);
+        size_t messageEnd = FindNullDelimiterOrStart<OOBPolicy::kCheck>(action, messageStart);
         if (messageEnd == messageStart) return pos;
         return messageEnd + 1;
       }
@@ -122,7 +122,7 @@ namespace GameProtocol
       case ACTION_CHAT_TRIGGER: {
         // <0x60 dword dword cstring>
         size_t messageStart = pos + 9;
-        size_t messageEnd = FindNullDelimiterOrStart(action, messageStart);
+        size_t messageEnd = FindNullDelimiterOrStart<OOBPolicy::kCheck>(action, messageStart);
         if (messageEnd == messageStart) return pos;
         return messageEnd + 1;
       }
@@ -143,13 +143,13 @@ namespace GameProtocol
       case ACTION_GAME_CACHE_CLEAR_STRING: { // 0x74
         size_t stringStart, stringEnd;
         stringStart = pos + 1;
-        stringEnd = FindNullDelimiterOrStart(action, stringStart); // end cache file name
+        stringEnd = FindNullDelimiterOrStart<OOBPolicy::kCheck>(action, stringStart); // end cache file name
         if (stringEnd == stringStart) return pos;
         stringStart = stringEnd + 1;
-        stringEnd = FindNullDelimiterOrStart(action, stringStart); // end mission key
+        stringEnd = FindNullDelimiterOrStart<OOBPolicy::kCheck>(action, stringStart); // end mission key
         if (stringEnd == stringStart) return pos;
         stringStart = stringEnd + 1;
-        stringEnd = FindNullDelimiterOrStart(action, stringStart); // end key
+        stringEnd = FindNullDelimiterOrStart<OOBPolicy::kCheck>(action, stringStart); // end key
         if (stringEnd == stringStart) return pos;
         if (action[pos] < ACTION_GAME_CACHE_UNIT) {
           return stringEnd + 5; // end value (1 byte is null delimiter, 4 bytes are uint32_t)
@@ -157,7 +157,7 @@ namespace GameProtocol
           return GetNextActionPosCacheUnitInner(action, pos, stringEnd + 1);
         } else if (action[pos] == ACTION_GAME_CACHE_STRING) {
           stringStart = stringEnd + 1;
-          stringEnd = FindNullDelimiterOrStart(action, stringStart); // end key
+          stringEnd = FindNullDelimiterOrStart<OOBPolicy::kCheck>(action, stringStart); // end key
           if (stringEnd == stringStart) return pos;
           return stringEnd + 1; // end value (1 byte is null delimiter)
         } else {
@@ -172,10 +172,10 @@ namespace GameProtocol
       case ACTION_SYNCHRONIZE: { // 0x78
         size_t stringStart, stringEnd;
         stringStart = pos + 1;
-        stringEnd = FindNullDelimiterOrStart(action, stringStart); // ??
+        stringEnd = FindNullDelimiterOrStart<OOBPolicy::kCheck>(action, stringStart); // ??
         if (stringEnd == stringStart) return pos;
         stringStart = stringEnd + 1;
-        stringEnd = FindNullDelimiterOrStart(action, stringStart); // ??
+        stringEnd = FindNullDelimiterOrStart<OOBPolicy::kCheck>(action, stringStart); // ??
         if (stringEnd == stringStart) return pos;
         return stringEnd + 5; // end value (1 byte is null delimiter, 4 bytes are uint32_t)
       }
@@ -294,14 +294,13 @@ namespace GameProtocol
     // 4 bytes                    -> InternalIP
 
     if (ValidateLength(data) && data.size() >= 20) {
-      const uint32_t             HostCounter = ByteArrayToUInt32(data, false, 4);
-      const uint32_t             EntryKey    = ByteArrayToUInt32(data, false, 8);
-      const std::vector<uint8_t> RawName     = ExtractCString(data, 19);
-
-      if (!RawName.empty() && data.size() >= RawName.size() + 30) {
-        std::array<uint8_t, 4> InternalIP = {0, 0, 0, 0};
-        copy_n(data.begin() + RawName.size() + 26, 4, InternalIP.begin());
-        return CIncomingJoinRequest(HostCounter, EntryKey, string(begin(RawName), end(RawName)), InternalIP);
+      const uint32_t hostCounter = ByteArrayToUInt32(data, false, 4);
+      const uint32_t entryKey = ByteArrayToUInt32(data, false, 8);
+      string_view rawName = ExtractUTF8View(data, 19, MAX_PLAYER_NAME_SIZE);
+      if (!rawName.empty() && (data.size() >= rawName.size() + 30) && !HasUnsafeUTF8CodePoints(rawName)) {
+        array<uint8_t, 4> internalIP = {0, 0, 0, 0};
+        copy_n(data.begin() + rawName.size() + 26, 4, internalIP.begin());
+        return CIncomingJoinRequest(hostCounter, entryKey, rawName, internalIP);
       }
     }
 
@@ -411,8 +410,10 @@ namespace GameProtocol
         if (Flag == GameProtocol::Magic::ChatType::CHAT_LOBBY && data.size() >= i + 1) { // 16
           // chat message
 
-          const std::vector<uint8_t> Message = ExtractCString(data, i);
-          return CIncomingChatMessage(FromUID, ToUIDs, Flag, string(begin(Message), end(Message)));
+          string_view message = ExtractUTF8View(data, i, MAX_LOBBY_CHAT_SIZE);
+          if (!message.empty() && !HasUnsafeUTF8CodePoints(message)) {
+            return CIncomingChatMessage(FromUID, ToUIDs, Flag, message);
+          }
         } else if ((Flag >= GameProtocol::Magic::ChatType::REQUEST_TEAM && Flag <= GameProtocol::Magic::ChatType::REQUEST_HANDICAP) && data.size() >= i + 1) { // 17-20
           // team/colour/race/handicap change request 
 
@@ -422,8 +423,10 @@ namespace GameProtocol
           // chat message with extra flags
 
           const uint32_t ExtraFlags = ByteArrayToUInt32(data, false, i);
-          const std::vector<uint8_t> Message = ExtractCString(data, i + 4);
-          return CIncomingChatMessage(FromUID, ToUIDs, Flag, string(begin(Message), end(Message)), ExtraFlags);
+          string_view message = ExtractUTF8View(data, i + 4, MAX_IN_GAME_CHAT_SIZE);
+          if (!message.empty() && !HasUnsafeUTF8CodePoints(message)) {
+            return CIncomingChatMessage(FromUID, ToUIDs, Flag, message, ExtraFlags);
+          }
         }
       }
     }
@@ -1203,10 +1206,10 @@ CIncomingJoinRequest::CIncomingJoinRequest()
   m_Name = m_OriginalName;
 }
 
-CIncomingJoinRequest::CIncomingJoinRequest(uint32_t nHostCounter, uint32_t nEntryKey, string nName, std::array<uint8_t, 4> nIPv4Internal)
+CIncomingJoinRequest::CIncomingJoinRequest(uint32_t nHostCounter, uint32_t nEntryKey, string_view nName, std::array<uint8_t, 4> nIPv4Internal)
   : m_Valid(true),
     m_Censored(false),
-    m_OriginalName(std::move(nName)),
+    m_OriginalName(std::string(nName)),
     m_IPv4Internal(std::move(nIPv4Internal)),
     m_HostCounter(nHostCounter),
     m_EntryKey(nEntryKey)
@@ -1504,9 +1507,9 @@ CIncomingChatMessage::CIncomingChatMessage()
 {
 }
 
-CIncomingChatMessage::CIncomingChatMessage(uint8_t nFromUID, std::vector<uint8_t> nToUIDs, uint8_t nFlag, string nMessage)
+CIncomingChatMessage::CIncomingChatMessage(uint8_t nFromUID, std::vector<uint8_t> nToUIDs, uint8_t nFlag, string_view nMessage)
   : m_Valid(true),
-    m_Message(std::move(nMessage)),
+    m_Message(std::string(nMessage)),
     m_Type(GameProtocol::ChatToHostType::CTH_MESSAGE_LOBBY),
     m_Byte(255),
     m_FromUID(nFromUID),
@@ -1515,9 +1518,9 @@ CIncomingChatMessage::CIncomingChatMessage(uint8_t nFromUID, std::vector<uint8_t
 {
 }
 
-CIncomingChatMessage::CIncomingChatMessage(uint8_t nFromUID, std::vector<uint8_t> nToUIDs, uint8_t nFlag, string nMessage, uint32_t nExtraFlags)
+CIncomingChatMessage::CIncomingChatMessage(uint8_t nFromUID, std::vector<uint8_t> nToUIDs, uint8_t nFlag, string_view nMessage, uint32_t nExtraFlags)
   : m_Valid(true),
-    m_Message(std::move(nMessage)),
+    m_Message(std::string(nMessage)),
     m_Type(GameProtocol::ChatToHostType::CTH_MESSAGE_INGAME),
     m_Byte(255),
     m_FromUID(nFromUID),

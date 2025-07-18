@@ -62,7 +62,7 @@ public:
   void SetReceiver(const uint8_t selector) {
     m_ReceiverSelector = selector;
   }
-  void SetReceiver(const uint8_t selector, const std::string& name) {
+  void SetReceiver(const uint8_t selector, std::string_view name) {
     m_ReceiverSelector = selector;
     m_ReceiverName = std::vector<uint8_t>(name.begin(), name.end());
   }

@@ -77,10 +77,10 @@ public:
   void Disable() { m_Config.m_Enabled = false; }
   void Update(fd_set* fd, fd_set* send_fd);
   void ExtractPackets();
-  void Send(const std::string& message);
-  void SendUser(const std::string& message, const std::string& target);
-  void SendChannel(const std::string& message, const std::string& target);
-  void SendAllChannels(const std::string& message);
+  void Send(std::string_view message);
+  void SendUser(std::string_view message, std::string_view target);
+  void SendChannel(std::string_view message, std::string_view target);
+  void SendAllChannels(std::string_view message);
 
   [[nodiscard]] bool GetIsModerator(const std::string& nHostName);
   [[nodiscard]] bool GetIsSudoer(const std::string& nHostName);

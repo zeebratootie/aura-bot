@@ -299,7 +299,7 @@ public:
   inline std::string                                     GetOwnerName() const { return m_OwnerName; }
   inline std::string                                     GetOwnerRealm() const { return m_OwnerRealm; }
 
-  inline std::string                                     GetCreatorName() const { return m_Creator.GetUser(); }
+  inline std::string_view                                GetCreatorName() const { return m_Creator.GetUser(); }
   inline ServiceType                                     GetCreatedFromType() const { return m_Creator.GetServiceType(); }
   inline bool                                            GetCreatedFromIsExpired() const { return m_Creator.GetIsExpired(); }
   inline bool                                            GetCanJoinInProgress() const { return m_JoinInProgressVirtualUser.has_value(); }
@@ -619,6 +619,8 @@ public:
   std::string               GetUserNameFromUID(uint8_t UID) const;
   std::string               GetUserNameFromSID(uint8_t SID) const;
   GameUser::CGameUser*      GetUserFromName(std::string name, bool sensitive) const;
+  template <CaseSensitive sensitive>
+  GameUser::CGameUser*      GetUserFromName(std::string_view name) const;
   GameUser::CGameUser*      GetOwner() const;
   bool                      HasOwnerSet() const;
   bool                      HasOwnerInGame() const;
@@ -640,7 +642,7 @@ public:
   bool                      GetIsRealPlayerSlot(const uint8_t SID) const;
   bool                      GetIsVirtualPlayerSlot(const uint8_t SID) const;
   bool                      GetHasAnotherPlayer(const uint8_t ExceptSID) const;
-  bool                      CheckIPFlood(const std::string joinName, const sockaddr_storage* sourceAddress) const;
+  bool                      CheckIPFlood(std::string_view joinName, const sockaddr_storage* sourceAddress) const;
   std::vector<uint8_t>      GetAllChatUIDs() const;
   std::vector<uint8_t>      GetObserverChatUIDs() const;
   std::vector<uint8_t>      GetFilteredChatUIDs(uint8_t fromUID, const std::vector<uint8_t>& toUIDs) const;
@@ -755,7 +757,7 @@ public:
   bool GetIsProxyReconnectableLong() const;
   bool IsDownloading() const;
   void UncacheOwner();
-  void SetOwner(const std::string& name, const std::string& realm);
+  void SetOwner(std::string_view name, std::string_view realm);
   void ReleaseOwner();
   void ResetDraft();
   void ResetTeams(const bool alsoCaptains);

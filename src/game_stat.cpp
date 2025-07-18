@@ -88,13 +88,13 @@ GameStat::GameStat(const uint8_t* ptr, size_t size)
   copy_n(cursorStart, 4, m_MapScriptsBlizzHash.begin());
   cursorStart = cursorEnd;
 
-  cursorEnd = FindNullDelimiterOrStart(cursorStart, dataEnd);
+  cursorEnd = FindNullDelimiterInRangeOrStart(cursorStart, dataEnd);
   if (cursorEnd == cursorStart) return;
 
   m_MapPath = GetStringAddressRange(cursorStart, cursorEnd);
 
   cursorStart = cursorEnd + 1;
-  cursorEnd = FindNullDelimiterOrStart(cursorStart, dataEnd);
+  cursorEnd = FindNullDelimiterInRangeOrStart(cursorStart, dataEnd);
   if (cursorEnd == cursorStart) return;
 
   m_HostName = GetStringAddressRange(cursorStart, cursorEnd);

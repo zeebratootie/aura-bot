@@ -134,10 +134,10 @@ bool CW3MMD::HandleTokens(uint8_t fromUID, uint32_t valueID, vector<string> Toke
       optional<uint32_t> minVersion = ToUint32(Tokens[3]);
       if (!minVersion.has_value()) return false;
       if (version.value() > 1) {
-        Print(GetLogPrefix() + "error - map requires MMD parser version " + Tokens[2] + " or higher (using version 1)");
+        Print(GetLogPrefix() + "error - map requires MMD parser version " + SanitizeStringUTF8(Tokens[2]) + " or higher (using version 1)");
         m_Error = true;
       } else {
-        Print(GetLogPrefix() + "map is using Warcraft 3 Map Meta Data library version [" + Tokens[3] + "]");
+        Print(GetLogPrefix() + "map is using Warcraft 3 Map Meta Data library version " + SanitizeStringUTF8(Tokens[3]));
         m_Version = *version;
       }
     } else if (Tokens[1] == "pid" && Tokens.size() == 4) {
@@ -168,7 +168,7 @@ bool CW3MMD::HandleTokens(uint8_t fromUID, uint32_t valueID, vector<string> Toke
     } else if (Tokens[2] == "string") {
       subType = MMD_VALUE_TYPE_STRING;
     } else {
-      Print(GetLogPrefix() + "invalid DefVarP type [" + Tokens[2] + "] found, ignoring");
+      Print(GetLogPrefix() + "invalid DefVarP type " + SanitizeStringUTF8(Tokens[2]) + " found, ignoring");
       return false;
     }
     CW3MMDDefinition* def = new CW3MMDDefinition(GetGame(), fromUID, valueID, MMD_DEFINITION_TYPE_VAR, subType);
@@ -182,7 +182,7 @@ bool CW3MMD::HandleTokens(uint8_t fromUID, uint32_t valueID, vector<string> Toke
 
     optional<uint32_t> SID = ToUint32(Tokens[1]);
     if (!SID.has_value()) {
-      Print(GetLogPrefix() + "VarP [" + Tokens[2] + "] has invalid SID [" + Tokens[1] + "], ignoring");
+      Print(GetLogPrefix() + "VarP " + SanitizeStringUTF8(Tokens[2]) + " has invalid SID " + SanitizeStringUTF8(Tokens[1]) + ", ignoring");
       return false;
     }
     uint8_t subType = 0xFFu;
@@ -193,7 +193,7 @@ bool CW3MMD::HandleTokens(uint8_t fromUID, uint32_t valueID, vector<string> Toke
     } else if (Tokens[3] == "-=") {
       subType = MMD_OPERATOR_SUBTRACT;
     } else {
-      Print(GetLogPrefix() + "unknown VarP operation [" + Tokens[3] + "] found, ignoring");
+      Print(GetLogPrefix() + "unknown VarP operation " + SanitizeStringUTF8(Tokens[3]) + " found, ignoring");
       return false;
     }
     CW3MMDAction* action = new CW3MMDAction(GetGame(), fromUID, valueID, MMD_ACTION_TYPE_VAR, subType, (uint8_t)*SID);
@@ -206,7 +206,7 @@ bool CW3MMD::HandleTokens(uint8_t fromUID, uint32_t valueID, vector<string> Toke
 
     optional<uint32_t> SID = ToUint32(Tokens[1]);
     if (!SID.has_value()) {
-      Print(GetLogPrefix() + "FlagP [" + Tokens[2] + "] has invalid SID [" + Tokens[1] + "], ignoring");
+      Print(GetLogPrefix() + "FlagP " + SanitizeStringUTF8(Tokens[2]) + " has invalid SID " + SanitizeStringUTF8(Tokens[1]) + ", ignoring");
       return false;
     }
 
@@ -227,7 +227,7 @@ bool CW3MMD::HandleTokens(uint8_t fromUID, uint32_t valueID, vector<string> Toke
       //m_FlagsPracticing[*SID] = true;
       subType = MMD_FLAG_LOSER;
     } else {
-      Print(GetLogPrefix() + "unknown flag [" + Tokens[2] + "] found, ignoring");
+      Print(GetLogPrefix() + "unknown flag " + SanitizeStringUTF8(Tokens[2]) + " found, ignoring");
       return false;
     }
 
@@ -241,11 +241,11 @@ bool CW3MMD::HandleTokens(uint8_t fromUID, uint32_t valueID, vector<string> Toke
 
     optional<uint32_t> arity = ToUint32(Tokens[2]);
     if (!arity.has_value() || arity.value() > MMD_MAX_ARITY) {
-      Print(GetLogPrefix() + "DefEvent invalid arity [" + Tokens[2] + "] found, ignoring");
+      Print(GetLogPrefix() + "DefEvent invalid arity " + SanitizeStringUTF8(Tokens[2]) + " found, ignoring");
       return false;
     }
     if (Tokens.size() != arity.value() + 4) {
-      Print(GetLogPrefix() + "DefEvent [" + Tokens[2] + "] tokens missing, ignoring");
+      Print(GetLogPrefix() + "DefEvent " + SanitizeStringUTF8(Tokens[2]) + " tokens missing, ignoring");
       return false;
     }
     CW3MMDDefinition* def = new CW3MMDDefinition(GetGame(), fromUID, valueID, MMD_DEFINITION_TYPE_EVENT, (uint8_t)*arity);
@@ -286,7 +286,7 @@ bool CW3MMD::EventGameCacheInteger(const uint8_t fromUID, const std::string& fil
   }
 
   if (missionKey.size() < 4) {
-    Print(GetLogPrefix() + "unknown mission key [" + missionKey + "] found, ignoring");
+    Print(GetLogPrefix() + "unknown mission key [" + SanitizeStringUTF8(missionKey) + "] found, ignoring");
     return !m_Error;
   }
 
@@ -297,7 +297,7 @@ bool CW3MMD::EventGameCacheInteger(const uint8_t fromUID, const std::string& fil
     optional<uint32_t> ValueID = ToUint32(ValueIDString);
     vector<string> Tokens = TokenizeKey(key);
     if (!ValueID.has_value() || !HandleTokens(fromUID, ValueID.value(), Tokens)) {
-      Print(GetLogPrefix() + "error parsing [" + key + "]");
+      Print(GetLogPrefix() + "error parsing " + SanitizeStringUTF8(key));
     }
   } else if (missionKey.compare(0, 4, "chk:") == 0) {
     /*
@@ -309,7 +309,7 @@ bool CW3MMD::EventGameCacheInteger(const uint8_t fromUID, const std::string& fil
      ++m_NextCheckID;
      */
   } else {
-    Print(GetLogPrefix() + "unknown mission key [" + missionKey + "] found, ignoring");
+    Print(GetLogPrefix() + "unknown mission key " + SanitizeStringUTF8(missionKey) + " found, ignoring");
   }
 
   return !m_Error;
@@ -332,13 +332,13 @@ bool CW3MMD::ProcessDefinition(CW3MMDDefinition* definition)
       const bool found = m_SIDToName.find(SID) != m_SIDToName.end();
       if (found) {
         Print(
-          GetLogPrefix() + "Player [" + GetSenderName(definition) + "] overrode previous name [" + m_SIDToName[SID] +
-          "] with new name [" + definition->GetName() + "] for SID [" + ToDecString(SID) + "]"
+          GetLogPrefix() + "Player [" + GetSenderName(definition) + "] overrode previous name " + SanitizeStringUTF8(m_SIDToName[SID]) +
+          " with new name " + SanitizeStringUTF8(definition->GetName()) + " for SID [" + ToDecString(SID) + "]"
         );
       } else {
         Print(
           GetLogPrefix() + "Player [" + GetSenderName(definition) + "] initialized player ID [" + ToDecString(SID) +
-          "] as [" + definition->GetName() + "]"
+          "] as " + SanitizeStringUTF8(definition->GetName())
         );
       }
       
@@ -352,7 +352,7 @@ bool CW3MMD::ProcessDefinition(CW3MMDDefinition* definition)
     return true;
   } else if (definition->GetType() == MMD_DEFINITION_TYPE_VAR) { // DefVarP
     if (m_DefVarPs.find(definition->GetName()) != m_DefVarPs.end()) {
-      Print(GetLogPrefix() + "duplicate DefVarP [" + definition->GetName() + "] found, ignoring");
+      Print(GetLogPrefix() + "duplicate DefVarP " + SanitizeStringUTF8(definition->GetName()) + " found, ignoring");
       return false;
     }
     if (definition->GetSubType() == MMD_VALUE_TYPE_INT) {
@@ -365,7 +365,7 @@ bool CW3MMD::ProcessDefinition(CW3MMDDefinition* definition)
     return true;
   } else { // if (definition->GetType() == MMD_DEFINITION_TYPE_EVENT) // DefEvent
     if (m_DefEvents.find(definition->GetName()) != m_DefEvents.end()) {
-      Print(GetLogPrefix() + "duplicate DefEvent [" + definition->GetName() + "] found, ignoring");
+      Print(GetLogPrefix() + "duplicate DefEvent " + SanitizeStringUTF8(definition->GetName()) + " found, ignoring");
       return false;
     }
     m_DefEvents[definition->GetName()] = definition->CopyValues();
@@ -377,7 +377,7 @@ bool CW3MMD::ProcessAction(CW3MMDAction* action)
 {
   if (action->GetType() == MMD_ACTION_TYPE_FLAG) {
     if (m_SIDToName.find(action->GetSID()) == m_SIDToName.end()) {
-      Print(GetLogPrefix() + "FlagP [" + action->GetName() + "] has undefined SID [" + ToDecString(action->GetSID()) + "], ignoring");
+      Print(GetLogPrefix() + "FlagP " + SanitizeStringUTF8(action->GetName()) + " has undefined SID [" + ToDecString(action->GetSID()) + "], ignoring");
       return false;
     }
     GamePlayerResult result = GamePlayerResult::kUndecided;
@@ -425,7 +425,7 @@ bool CW3MMD::ProcessAction(CW3MMDAction* action)
     return true;
   } else if (action->GetType() == MMD_ACTION_TYPE_VAR) {
     if (m_DefVarPs.find(action->GetName()) == m_DefVarPs.end()) {
-      Print(GetLogPrefix() + "VarP [" + action->GetName() + "] found without a corresponding DefVarP, ignoring");
+      Print(GetLogPrefix() + "VarP " + SanitizeStringUTF8(action->GetName()) + " found without a corresponding DefVarP, ignoring");
       return false;
     }
     uint8_t valueType = m_DefVarPs[action->GetName()];
@@ -434,7 +434,7 @@ bool CW3MMD::ProcessAction(CW3MMDAction* action)
       if (valueType == MMD_VALUE_TYPE_REAL) {
         optional<double> realValue = ToDouble(operand);
         if (!realValue.has_value()) {
-          Print(GetLogPrefix() + "invalid real VarP [" + action->GetName() + "] value [" + operand + "] found, ignoring");
+          Print(GetLogPrefix() + "invalid real VarP " + SanitizeStringUTF8(action->GetName()) + " value " + SanitizeStringUTF8(operand) + " found, ignoring");
           return false;
         }
         VarP VP = VarP(action->GetSID(), action->GetName());
@@ -443,7 +443,7 @@ bool CW3MMD::ProcessAction(CW3MMDAction* action)
       } else if (valueType == MMD_VALUE_TYPE_INT) {
         optional<uint32_t> intValue = ToUint32(operand);
         if (!intValue.has_value()) {
-          Print(GetLogPrefix() + "invalid int VarP [" + action->GetName() + "] value [" + operand + "] found, ignoring");
+          Print(GetLogPrefix() + "invalid int VarP " + SanitizeStringUTF8(action->GetName()) + " value " + SanitizeStringUTF8(operand) + " found, ignoring");
           return false;
         }
         VarP VP = VarP(action->GetSID(), action->GetName());
@@ -456,14 +456,14 @@ bool CW3MMD::ProcessAction(CW3MMDAction* action)
       }
     } else {
       if (valueType == MMD_VALUE_TYPE_STRING) {
-        Print(GetLogPrefix() + "VarP [" + action->GetName() + "] of type string cannot accept +=, -= operators, ignoring");
+        Print(GetLogPrefix() + "VarP " + SanitizeStringUTF8(action->GetName()) + " of type string cannot accept +=, -= operators, ignoring");
         return false;
       }
       std::string operand = action->GetFirstValue();
       if (valueType == MMD_VALUE_TYPE_REAL) {
         optional<double> realValue = ToDouble(operand);
         if (!realValue.has_value()) {
-          Print(GetLogPrefix() + "invalid real VarP [" + action->GetName() + "] value [" + operand + "] found, ignoring");
+          Print(GetLogPrefix() + "invalid real VarP " + SanitizeStringUTF8(action->GetName()) + " value " + SanitizeStringUTF8(operand) + " found, ignoring");
           return false;
         }
         VarP VP = VarP(action->GetSID(), action->GetName());
@@ -475,7 +475,7 @@ bool CW3MMD::ProcessAction(CW3MMDAction* action)
       } else { // MMD_VALUE_TYPE_INT
         optional<uint32_t> intValue = ToUint32(operand);
         if (!intValue.has_value()) {
-          Print(GetLogPrefix() + "invalid int VarP [" + action->GetName() + "] value [" + operand + "] found, ignoring");
+          Print(GetLogPrefix() + "invalid int VarP " + SanitizeStringUTF8(action->GetName()) + " value " + SanitizeStringUTF8(operand) + " found, ignoring");
           return false;
         }
         VarP VP = VarP(action->GetSID(), action->GetName());
@@ -490,17 +490,17 @@ bool CW3MMD::ProcessAction(CW3MMDAction* action)
   } else { // if (action->GetType() == MMD_ACTION_TYPE_EVENT) 
     auto defEventIt = m_DefEvents.find(action->GetName());
     if (defEventIt == m_DefEvents.end()) {
-      Print(GetLogPrefix() + "Event [" + action->GetName() + "] found without a corresponding DefEvent, ignoring");
+      Print(GetLogPrefix() + "Event " + SanitizeStringUTF8(action->GetName()) + " found without a corresponding DefEvent, ignoring");
       return false;
     }
     const std::vector<std::string>& values = action->RefValues();
     const vector<string>& DefEvent = defEventIt->second;
     if (values.size() != DefEvent.size() - 1) {
-      Print(GetLogPrefix() + "Event [" + action->GetName() + "] found with " + to_string(values.size()) + " arguments but expected " + to_string(DefEvent.size() - 1) + " arguments, ignoring");
+      Print(GetLogPrefix() + "Event " + SanitizeStringUTF8(action->GetName()) + " found with " + to_string(values.size()) + " arguments but expected " + to_string(DefEvent.size() - 1) + " arguments, ignoring");
       return false;
     }
     if (DefEvent.empty()) {
-      LogMetaData(action->GetRecvTicks(), "Event [" + action->GetName() + "]");
+      LogMetaData(action->GetRecvTicks(), "Event " + SanitizeStringUTF8(action->GetName()));
       return true;
     }
 
@@ -514,12 +514,12 @@ bool CW3MMD::ProcessAction(CW3MMDAction* action)
         // replace it with the player's name rather than their SID
         optional<uint32_t> SID = ToUint32(values[i]);
         if (!SID.has_value()) {
-          Print(GetLogPrefix() + "Event [" + action->GetName() + "] passed invalid PID " + values[i]);
+          Print(GetLogPrefix() + "Event " + SanitizeStringUTF8(action->GetName()) + " passed invalid PID " + SanitizeStringUTF8(values[i]));
           return false;
         }
         auto it = m_SIDToName.find(*SID);
         if (it == m_SIDToName.end()) {
-          Print(GetLogPrefix() + "Event [" + action->GetName() + "] passed undefined PID " + values[i]);
+          Print(GetLogPrefix() + "Event " + SanitizeStringUTF8(action->GetName()) + " passed undefined PID " + to_string(*SID));
           ReplaceText(Format, "{" + to_string(i) + "}", "SID:" + values[i]);
         } else {
           ReplaceText(Format, "{" + to_string(i) + "}", it->second);
@@ -528,7 +528,7 @@ bool CW3MMD::ProcessAction(CW3MMDAction* action)
         ReplaceText(Format, "{" + to_string(i) + "}", values[i]);
       }
     }
-    LogMetaData(action->GetRecvTicks(), "Event [" + action->GetName() + "]: " + Format);
+    LogMetaData(action->GetRecvTicks(), "Event " + SanitizeStringUTF8(action->GetName()) + ": " + Format);
     return true;
   }
 }
@@ -598,14 +598,14 @@ vector<string> CW3MMD::TokenizeKey(string key) const
       } else if (*i == '\\') {
         token += '\\';
       } else {
-        Print(GetLogPrefix() + "error tokenizing key [" + key + "], invalid escape sequence found, ignoring");
+        Print(GetLogPrefix() + "error tokenizing key " + SanitizeStringUTF8(key) + ", invalid escape sequence found, ignoring");
         return vector<string>();
       }
       escaping = false;
     } else {
       if (*i == ' ') {
         if (token.empty()) {
-          Print(GetLogPrefix() + "error tokenizing key [" + key + "], empty token found, ignoring");
+          Print(GetLogPrefix() + "error tokenizing key " + SanitizeStringUTF8(key) + ", empty token found, ignoring");
           return vector<string>();
         }
         tokens.push_back(token);
@@ -619,7 +619,7 @@ vector<string> CW3MMD::TokenizeKey(string key) const
   }
 
   if (token.empty()) {
-    Print(GetLogPrefix() + "error tokenizing key [" + key + "], empty token found, ignoring");
+    Print(GetLogPrefix() + "error tokenizing key " + SanitizeStringUTF8(key) + ", empty token found, ignoring");
     return vector<string>();
   }
 

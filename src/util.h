@@ -87,10 +87,14 @@ template <typename T>
 [[nodiscard]] std::string ToDecStringPadded(const int64_t num, const std::string::size_type padding);
 [[nodiscard]] std::string TrimString(const std::string& str);
 [[nodiscard]] std::string TrimStringExtended(const std::string& str);
+void TrimStringView(std::string_view& str);
 [[nodiscard]] PLATFORM_STRING_TYPE TrimPlatformString(const PLATFORM_STRING_TYPE& str);
 [[nodiscard]] PLATFORM_STRING_TYPE TrimPlatformStringExtended(const PLATFORM_STRING_TYPE& str);
 [[nodiscard]] std::string RemoveDuplicateWhiteSpace(const std::string& str);
 void EllideEmptyElementsInPlace(std::vector<std::string>& list);
+
+template <typename T>
+[[nodiscard]] std::string ConcatStringView(std::string_view start, T append);
 
 [[nodiscard]] std::string ToFormattedString(const double d, const uint8_t precision = 2);
 [[nodiscard]] std::string ToFormattedRealm();
@@ -161,13 +165,18 @@ void AppendSwapString(std::string& fromString, std::string& toString);
 void AppendProtoBufferFromLengthDelimitedS2S(std::vector<uint8_t>& b, const std::string& key, const std::string& value);
 void AppendProtoBufferFromLengthDelimitedS2C(std::vector<uint8_t>& b, const std::string& key, const uint8_t value);
 [[nodiscard]] bool IsAllZeroes(const uint8_t* start, const uint8_t* end);
+template <OOBPolicy oobPolicy>
 [[nodiscard]] size_t FindNullDelimiterOrStart(const std::vector<uint8_t>& b, const size_t start);
-[[nodiscard]] const uint8_t* FindNullDelimiterOrStart(const uint8_t* start, const uint8_t* end);
+[[nodiscard]] const uint8_t* FindNullDelimiterInRangeOrStart(const uint8_t* start, const uint8_t* end);
+template <OOBPolicy oobPolicy>
 [[nodiscard]] size_t FindNullDelimiterOrEnd(const std::vector<uint8_t>& b, const size_t start);
-[[nodiscard]] const uint8_t* FindNullDelimiterOrEnd(const uint8_t* start, const uint8_t* end);
+[[nodiscard]] const uint8_t* FindNullDelimiterInRangeOrEnd(const uint8_t* start, const uint8_t* end);
 [[nodiscard]] std::string GetStringAddressRange(const uint8_t* start, const uint8_t* end);
 [[nodiscard]] std::string GetStringAddressRange(const std::vector<uint8_t>& b, const size_t start, const size_t end);
 [[nodiscard]] std::vector<uint8_t> ExtractCString(const std::vector<uint8_t>& b, const size_t start);
+template <OOBPolicy oobPolicy, NullTerminatorPolicy nullPolicy, StringEncoding encoding>
+[[nodiscard]] std::string_view ExtractStringView(const std::vector<uint8_t>& b, const size_t start, const size_t maxSize);
+[[nodiscard]] std::string_view ExtractUTF8View(const std::vector<uint8_t>& b, const size_t start, const size_t maxSize);
 [[nodiscard]] uint8_t ExtractHex(const std::vector<uint8_t>& b, const size_t start, bool bigEndian);
 [[nodiscard]] std::vector<uint8_t> ExtractNumbers(const std::string& s, const uint32_t maxCount);
 [[nodiscard]] std::vector<uint8_t> ExtractHexNumbers(const std::string& s);
@@ -215,7 +224,12 @@ template<typename Container>
 [[nodiscard]] bool FileNameEquals(const std::string& nameOne, const std::string& nameTwo);
 [[nodiscard]] bool HasNullOrBreak(const std::string& unsafeInput);
 [[nodiscard]] bool PathHasNullBytes(const std::filesystem::path& filePath);
-[[nodiscard]] bool IsASCII(const std::string& unsafeInput);
+[[nodiscard]] bool IsUnsafeCodePoint(char32_t codePoint);
+[[nodiscard]] bool IsASCII(std::string_view unsafeInput);
+[[nodiscard]] bool HasUnsafeUTF8CodePoints(std::string_view unsafeUTF8Input);
+[[nodiscard]] bool IsArbitraryStringUTF8Safe(std::string_view unsafeInput);
+[[nodiscard]] std::string SanitizeStringUTF8(std::string_view unsafeInput);
+[[nodiscard]] std::string SanitizeStringASCII(std::string_view unsafeInput);
 [[nodiscard]] uint32_t ASCIIHexToNum(const std::array<uint8_t, 8>& data, bool reverse);
 [[nodiscard]] std::array<uint8_t, 8> NumToASCIIHex(uint32_t num, bool reverse);
 [[nodiscard]] std::string PreparePatternForFuzzySearch(const std::string& rawPattern);

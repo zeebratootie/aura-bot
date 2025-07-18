@@ -107,16 +107,16 @@ struct SimpleNestedLocation
   std::optional<uint64_t> id;
   SimpleNestedLocation* subLocation;
 
-  SimpleNestedLocation(uint8_t nOrder, const std::string& locationName)
+  SimpleNestedLocation(uint8_t nOrder, std::string_view locationName)
    : order(nOrder),
-     name(locationName),
+     name(std::string(locationName)),
      subLocation(nullptr)
   {
   }
 
-  SimpleNestedLocation(uint8_t nOrder, const std::string& locationName, const uint64_t locationIdentifier)
+  SimpleNestedLocation(uint8_t nOrder, std::string_view locationName, const uint64_t locationIdentifier)
    : order(nOrder),
-     name(locationName),
+     name(std::string(locationName)),
      id(locationIdentifier),
      subLocation(nullptr)
   {
@@ -128,17 +128,17 @@ struct SimpleNestedLocation
   }
 
   inline uint8_t GetOrder() const { return order; }
-  inline const std::string& GetName() const { return name; }
+  inline std::string_view GetName() const { return name; }
   inline SimpleNestedLocation* GetSubLocation() const { return subLocation; }
   inline const SimpleNestedLocation* InspectSubLocation() const { return subLocation; }
 
-  SimpleNestedLocation* AddNested(const std::string& locationName)
+  SimpleNestedLocation* AddNested(std::string_view locationName)
   {
     subLocation = new SimpleNestedLocation(order + 1, locationName);
     return subLocation;
   }
 
-  SimpleNestedLocation* AddNested(const std::string& locationName, const uint64_t locationIdentifier)
+  SimpleNestedLocation* AddNested(std::string_view locationName, const uint64_t locationIdentifier)
   {
     subLocation = new SimpleNestedLocation(order + 1, locationName, locationIdentifier);
     return subLocation;
@@ -159,9 +159,9 @@ struct ServiceUser
 
   ServiceUser();
   ServiceUser(const ServiceUser& otherService);
-  ServiceUser(ServiceType serviceType, std::string nUserName);
-  ServiceUser(ServiceType serviceType, int64_t nUserIdentifier, std::string nUserName);
-  ServiceUser(ServiceType serviceType, std::string nUserName, std::shared_ptr<void> nServicePtr);
+  ServiceUser(ServiceType serviceType, std::string_view nUserName);
+  ServiceUser(ServiceType serviceType, int64_t nUserIdentifier, std::string_view nUserName);
+  ServiceUser(ServiceType serviceType, std::string_view nUserName, std::shared_ptr<void> nServicePtr);
   ~ServiceUser();
 
   template <typename T>
@@ -172,24 +172,24 @@ struct ServiceUser
   inline bool GetIsExpired() const { return servicePtr.expired(); }
   inline ServiceType GetServiceType() const { return serviceType; }
   inline int64_t GetUserIdentifier() const { return userIdentifier.value(); }
-  inline const std::string& GetUser() const { return userName; }
+  inline std::string_view GetUser() const { return userName; }
   inline std::string GetUserOrAnon() const { return userName.empty() ? "[Anonymous]" : userName; }
   void Reset();
 
   inline void SetServiceType(ServiceType nServiceType) { serviceType = nServiceType; }
-  inline void SetName(const std::string& nUserName) { userName = nUserName; }
+  inline void SetName(std::string_view nUserName) { userName = std::string(nUserName); }
 
   inline uint8_t GetOrder() const { return 0; }
   inline SimpleNestedLocation* GetSubLocation() const { return subLocation; }
   inline const SimpleNestedLocation* InspectSubLocation() const { return subLocation; }
 
-  SimpleNestedLocation* AddNested(const std::string& locationName)
+  SimpleNestedLocation* AddNested(std::string_view locationName)
   {
     subLocation = new SimpleNestedLocation(1, locationName);
     return subLocation;
   }
 
-  SimpleNestedLocation* AddNested(const std::string& locationName, const uint64_t locationIdentifier)
+  SimpleNestedLocation* AddNested(std::string_view locationName, const uint64_t locationIdentifier)
   {
     subLocation = new SimpleNestedLocation(1, locationName, locationIdentifier);
     return subLocation;

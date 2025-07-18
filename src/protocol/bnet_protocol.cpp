@@ -116,7 +116,7 @@ namespace BNETProtocol
 
       cursor += 4; // <0x2b 0x00 0x00 0x00>
 
-      cursorEnd = FindNullDelimiterOrStart(data, cursor);
+      cursorEnd = FindNullDelimiterOrStart<OOBPolicy::kUnsafe>(data, cursor);
       string gameName = GetStringAddressRange(data, cursor, cursorEnd);
       if (gameName.empty()) {
         //Print("[BNETPROTO] Game name was empty #" + to_string(gameIndex + 1) + " at " + gameInfo.GetHostDetails());
@@ -126,12 +126,12 @@ namespace BNETProtocol
       gameInfo.SetGameName(gameName);
       cursor += gameName.size() + 1;
 
-      cursorEnd = FindNullDelimiterOrStart(data, cursor);
+      cursorEnd = FindNullDelimiterOrStart<OOBPolicy::kCheck>(data, cursor);
       string passWord = GetStringAddressRange(data, cursor, cursorEnd);
       gameInfo.SetPassword(passWord);
       cursor += passWord.size() + 1;
 
-      cursorEnd = FindNullDelimiterOrEnd(data, cursor);
+      cursorEnd = FindNullDelimiterOrEnd<OOBPolicy::kCheck>(data, cursor);
       string gameStat = GetStringAddressRange(data, cursor, cursorEnd);
       if (gameStat.empty()) {
         //Print("[BNETPROTO] Game info was empty");
@@ -155,10 +155,14 @@ namespace BNETProtocol
     // 2 bytes					-> Length
     // null terminated string	-> UniqueName
 
-    if (ValidateLength(packet) && packet.size() >= 5) {
-      return EnterChatResult(true, (packet.data() + 4), (packet.data() + FindNullDelimiterOrEnd(packet, 4)));
+    if (!ValidateLength(packet) || packet.size() < 5) {
+      return EnterChatResult();
     }
-    return EnterChatResult(false, nullptr, nullptr);
+    string_view uniqueName = ExtractUTF8View(packet, 4, 0);
+    if (uniqueName.empty() || HasUnsafeUTF8CodePoints(uniqueName)) {
+      return EnterChatResult();
+    }
+    return EnterChatResult(true, uniqueName);
   }
 
   IncomingChatResult RECEIVE_SID_CHATEVENT(const vector<uint8_t>& packet)
@@ -176,20 +180,21 @@ namespace BNETProtocol
     // null terminated string	-> Message
 
     if (!ValidateLength(packet) || packet.size() < 29) {
-      return IncomingChatResult(false, 0, nullptr, nullptr, nullptr, nullptr);
+      return IncomingChatResult();
     }
     const uint32_t eventID = ByteArrayToUInt32(packet, false, 4);
-    const size_t userEnd = FindNullDelimiterOrEnd(packet, 28);
-    if (userEnd > 0xFF || packet.size() <= userEnd + 1) {
-      return IncomingChatResult(false, 0, nullptr, nullptr, nullptr, nullptr);
+    string_view userName = ExtractUTF8View(packet, 28, MAX_PLAYER_NAME_SIZE);
+    if (userName.empty() || HasUnsafeUTF8CodePoints(userName)) {
+      return IncomingChatResult();
     }
-    const size_t messageStart = userEnd + 1;
-    const size_t messageEnd = FindNullDelimiterOrEnd(packet, messageStart);
-    return IncomingChatResult(
-      true, eventID,
-      (packet.data() + 28), (packet.data() + userEnd),
-      (packet.data() + messageStart), (packet.data() + messageEnd)
-    );
+    if (packet.size() <= 29 + userName.size()) {
+      return IncomingChatResult();
+    }
+    string_view message = ExtractUTF8View(packet, 29 + userName.size(), 256);
+    if (message.empty() || HasUnsafeUTF8CodePoints(message)) {
+      return IncomingChatResult();
+    }
+    return IncomingChatResult(true, eventID, userName, message);
   }
 
   bool RECEIVE_SID_CHECKAD(const vector<uint8_t>& packet)
@@ -258,11 +263,20 @@ namespace BNETProtocol
     if (!ValidateLength(packet) || packet.size() < 25) {
       return AuthInfoResult(false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr);
     }
-    size_t fileNameEndPos = FindNullDelimiterOrEnd(packet, 24);
+    size_t fileNameEndPos = FindNullDelimiterOrEnd<OOBPolicy::kUnsafe>(packet, 24);
     if (fileNameEndPos >= packet.size() || fileNameEndPos > 0xFFFFFF18) {
       return AuthInfoResult(false, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr);
     }
-    return AuthInfoResult(true, packet.data() + 4 /* 4 bytes */, packet.data() + 8 /* 4 bytes */, packet.data() + 16 /* 8 bytes */, packet.data() + 24, (packet.data() + fileNameEndPos), (packet.data() + fileNameEndPos + 1), (packet.data() + FindNullDelimiterOrEnd(packet, fileNameEndPos + 1)));
+    return AuthInfoResult(
+      true,
+      packet.data() + 4 /* 4 bytes */,
+      packet.data() + 8 /* 4 bytes */,
+      packet.data() + 16 /* 8 bytes */,
+      packet.data() + 24,
+      (packet.data() + fileNameEndPos),
+      (packet.data() + fileNameEndPos + 1),
+      (packet.data() + FindNullDelimiterOrEnd<OOBPolicy::kCheck>(packet, fileNameEndPos + 1))
+    );
   }
 
   AuthCheckResult RECEIVE_SID_AUTH_CHECK(const vector<uint8_t>& packet)
@@ -275,10 +289,14 @@ namespace BNETProtocol
     // 4 bytes					-> KeyState
     // null terminated string	    -> KeyStateDescription
 
-    if (ValidateLength(packet) && packet.size() >= 9) {
-      return AuthCheckResult(ByteArrayToUInt32(packet, false, 4), (packet.data() + 8), (packet.data() + FindNullDelimiterOrEnd(packet, 8)));
+    if (!ValidateLength(packet) || packet.size() < 9) {
+      return AuthCheckResult();
     }
-    return AuthCheckResult(BNETProtocol::KeyResult::BAD, nullptr, nullptr);
+    string_view description = ExtractUTF8View(packet, 8, 0);
+    if (HasUnsafeUTF8CodePoints(description)) {
+      description.remove_prefix(description.size());
+    }
+    return AuthCheckResult(ByteArrayToUInt32(packet, false, 4), description);
   }
 
   AuthLoginResult RECEIVE_SID_AUTH_ACCOUNTLOGON(const vector<uint8_t>& packet)
@@ -374,8 +392,11 @@ namespace BNETProtocol
         if (packet.size() < i + 1)
           break;
 
-        const vector<uint8_t> Account = ExtractCString(packet, i);
-        i += Account.size() + 1;
+        string_view account = ExtractUTF8View(packet, i, MAX_PLAYER_NAME_SIZE);
+        if (account.empty() || HasUnsafeUTF8CodePoints(account))
+          break;
+
+        i += account.size() + 1;
 
         if (packet.size() < i + 7)
           break;
@@ -383,7 +404,7 @@ namespace BNETProtocol
         i += 6;
         i += ExtractCString(packet, i).size() + 1;
 
-        Friends.emplace_back(begin(Account), end(Account));
+        Friends.emplace_back(account);
       }
     }
 
@@ -419,8 +440,11 @@ namespace BNETProtocol
         if (packet.size() < i + 1)
           break;
 
-        const vector<uint8_t> Name = ExtractCString(packet, i);
-        i += Name.size() + 1;
+        string_view name = ExtractUTF8View(packet, i, MAX_PLAYER_NAME_SIZE);
+        if (name.empty() || HasUnsafeUTF8CodePoints(name))
+          break;
+
+        i += name.size() + 1;
 
         if (packet.size() < i + 3)
           break;
@@ -430,7 +454,7 @@ namespace BNETProtocol
         // in the original VB source the location string is read but discarded, so that's what I do here
 
         i += ExtractCString(packet, i).size() + 1;
-        ClanList.emplace_back(begin(Name), end(Name));
+        ClanList.emplace_back(name);
       }
     }
 
@@ -519,8 +543,12 @@ namespace BNETProtocol
     cursor += 1;
 
     if (cursor < packet.size()) {
-      vector<uint8_t> gameName = ExtractCString(packet, cursor);
-      gameConfig->SetString("rehost.game.name", reinterpret_cast<const unsigned char*>(gameName.data()), gameName.size());
+      string_view gameName = ExtractUTF8View(packet, cursor, MAX_GAME_NAME_SIZE);
+      if (gameName.empty() || HasUnsafeUTF8CodePoints(gameName)) {
+        Print("[BNETPROTO] Game name is not valid UTF8.");
+        return gameConfig;
+      }
+      gameConfig->SetString("rehost.game.name", gameName);
     }
 
     // TODO: RECEIVE_HOSTED_GAME_CONFIG game flags
@@ -548,6 +576,7 @@ namespace BNETProtocol
 
   optional<BNETProtocol::WhoisInfo> PARSE_WHOIS_INFO(const string& message, const PvPGNLocale realmLocale)
   {
+    // TODO: Refactor PARSE_WHOIS_INFO to accept string_view instead
     optional<BNETProtocol::WhoisInfo> result;
     const string::size_type spIndex = message.find(' ');
     const string::size_type msgSize = message.size();

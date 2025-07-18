@@ -327,6 +327,13 @@ void CIRC::ExtractPackets()
       if (message.empty() || channel.empty())
         continue;
 
+      if (
+        !IsArbitraryStringUTF8Safe(nickName) || !IsArbitraryStringUTF8Safe(message) ||
+        !IsArbitraryStringUTF8Safe(channel) || !IsArbitraryStringUTF8Safe(hostName)
+      ) {
+        continue;
+      }
+
       string cmdToken, command, target;
       uint8_t tokenMatch = ExtractMessageTokensAny(message, m_Config.m_PrivateCmdToken, m_Config.m_BroadcastCmdToken, cmdToken, command, target);
       if (tokenMatch != COMMAND_TOKEN_MATCH_NONE) {
@@ -399,34 +406,47 @@ void CIRC::ExtractPackets()
   m_Socket->ClearRecvBuffer();
 }
 
-void CIRC::Send(const string& message)
+void CIRC::Send(string_view message)
 {
   // max message length is 512 bytes including the trailing CRLF
 
-  if (m_Socket->GetConnected())
-    m_Socket->PutBytes(message + LF);
-}
-
-void CIRC::SendUser(const string& message, const string& target)
-{
-  // max message length is 512 bytes including the trailing CRLF
-
-  if (!m_Socket->GetConnected())
+  if (!m_Socket->GetConnected()) {
     return;
+  }
 
-  m_Socket->PutBytes("PRIVMSG " + target + " :" + (message.size() > 450 ? message.substr(0, 450) : message) + LF);
+  string line = ConcatStringView(message, LF);
+  m_Socket->PutBytes(line);
 }
 
-void CIRC::SendChannel(const string& message, const string& target)
+void CIRC::SendUser(string_view message, string_view target)
+{
+  // max message length is 512 bytes including the trailing CRLF
+
+  if (!m_Socket->GetConnected()) {
+    return;
+  }
+
+  while (message.size() > 450) {
+    string line = ConcatStringView(message.substr(0, 450), LF);
+    m_Socket->PutBytes("PRIVMSG " + string(target) + " :" + line);
+    message.remove_prefix(450);
+  }
+  if (!message.empty()) {
+    string line = ConcatStringView(message, LF);
+    m_Socket->PutBytes("PRIVMSG " + string(target) + " :" + line);
+  }
+}
+
+void CIRC::SendChannel(string_view message, string_view target)
 {
   // Sending messages to channels or to user works exactly the same, except that channels start with #.
   SendUser(message, target);
 }
 
-void CIRC::SendAllChannels(const string& message)
+void CIRC::SendAllChannels(string_view message)
 {
   for (const auto& channel : m_Config.m_Channels) {
-    m_Socket->PutBytes("PRIVMSG " + channel + " :" + (message.size() > 450 ? message.substr(0, 450) : message) + LF);
+    SendChannel(message, channel);
   }
 }
 

@@ -103,6 +103,9 @@ optional<string> GetUserMultiPlayerName()
   int size = WideCharToMultiByte(CP_UTF8, 0, &localName.value()[0], (int)localName.value().size(), nullptr, 0, nullptr, nullptr);
   string multiByte(size, '\0');
   WideCharToMultiByte(CP_UTF8, 0, &localName.value()[0], (int)localName.value().size(), &multiByte[0], size, nullptr, nullptr);
+  if (HasUnsafeUTF8CodePoints(multiByte)) {
+    return nullopt;
+  }
   result = multiByte;
   return result;
 #else

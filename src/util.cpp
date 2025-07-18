@@ -103,6 +103,21 @@ string TrimString(const string& str)
   }
 }
 
+void TrimStringView(string_view& str)
+{
+  if (str.empty()) return;
+
+  string_view::size_type firstNonSpace = str.find_first_not_of(" ");
+  string_view::size_type lastNonSpace = str.find_last_not_of(" ");
+
+  if (firstNonSpace != string_view::npos && lastNonSpace != string_view::npos) {
+    str.remove_suffix(str.size() - 1 - lastNonSpace);
+    str.remove_prefix(firstNonSpace);
+  } else {
+    str.remove_prefix(str.size());
+  }
+}
+
 PLATFORM_STRING_TYPE TrimPlatformString(const PLATFORM_STRING_TYPE& str)
 {
   if (str.empty()) return PLATFORM_STRING_TYPE();
@@ -173,6 +188,23 @@ void EllideEmptyElementsInPlace(vector<string>& list)
     }
   }
 }
+
+template <typename T>
+string ConcatStringView(string_view start, T append)
+{
+  string result;
+  if constexpr (is_same_v<T, char>) {
+    result.reserve(start.size() + 1);
+  } else {
+    result.reserve(start.size() + append.size());
+  }
+  result += start;
+  result += append;
+  return result;
+}
+
+template string ConcatStringView(string_view start, string_view append);
+template string ConcatStringView(string_view start, char append);
 
 string ToFormattedString(const double d, const uint8_t precision)
 {
@@ -836,10 +868,13 @@ bool IsAllZeroes(const uint8_t* start, const uint8_t* end)
   return true;
 }
 
+template <OOBPolicy oobPolicy>
 size_t FindNullDelimiterOrStart(const vector<uint8_t>& b, const size_t start)
 {
   size_t end = b.size();
-  if (start >= end) return start;
+  if constexpr (oobPolicy == OOBPolicy::kCheck) {
+    if (start >= end) return start;
+  }
   for (size_t i = start; i < end; ++i) {
     if (b[i] == 0) {
       return i;
@@ -847,8 +882,10 @@ size_t FindNullDelimiterOrStart(const vector<uint8_t>& b, const size_t start)
   }
   return start;
 }
+template size_t FindNullDelimiterOrStart<OOBPolicy::kCheck>(const vector<uint8_t>& b, const size_t start);
+template size_t FindNullDelimiterOrStart<OOBPolicy::kUnsafe>(const vector<uint8_t>& b, const size_t start);
 
-const uint8_t* FindNullDelimiterOrStart(const uint8_t* start, const uint8_t* end)
+const uint8_t* FindNullDelimiterInRangeOrStart(const uint8_t* start, const uint8_t* end)
 {
   const uint8_t* needle = start;
   while (needle < end) {
@@ -860,13 +897,16 @@ const uint8_t* FindNullDelimiterOrStart(const uint8_t* start, const uint8_t* end
   return start;
 }
 
+template <OOBPolicy oobPolicy>
 size_t FindNullDelimiterOrEnd(const vector<uint8_t>& b, const size_t start)
 {
   // start searching the byte array at position 'start' for the first null value
   // if found, return the subarray from 'start' to the null value but not including the null value
 
   size_t end = b.size();
-  if (start >= end) return end;
+  if constexpr (oobPolicy == OOBPolicy::kCheck) {
+    if (start >= end) return end;
+  }
   for (size_t i = start; i < end; ++i) {
     if (b[i] == 0) {
       return i;
@@ -875,7 +915,10 @@ size_t FindNullDelimiterOrEnd(const vector<uint8_t>& b, const size_t start)
   return end;
 }
 
-const uint8_t* FindNullDelimiterOrEnd(const uint8_t* start, const uint8_t* end)
+template size_t FindNullDelimiterOrEnd<OOBPolicy::kCheck>(const vector<uint8_t>& b, const size_t start);
+template size_t FindNullDelimiterOrEnd<OOBPolicy::kUnsafe>(const vector<uint8_t>& b, const size_t start);
+
+const uint8_t* FindNullDelimiterInRangeOrEnd(const uint8_t* start, const uint8_t* end)
 {
   const uint8_t* needle = start;
   while (needle < end) {
@@ -918,6 +961,54 @@ vector<uint8_t> ExtractCString(const vector<uint8_t>& b, const size_t start)
   }
 
   return vector<uint8_t>();
+}
+
+
+template <OOBPolicy oobPolicy, NullTerminatorPolicy nullPolicy, StringEncoding encoding>
+string_view ExtractStringView(const vector<uint8_t>& b, const size_t start, const size_t maxSize)
+{
+  if constexpr (oobPolicy == OOBPolicy::kCheck) {
+    if (start >= b.size()) return string_view();
+  }
+
+  size_t nullPos = FindNullDelimiterOrEnd<OOBPolicy::kUnsafe>(b, start);
+  string_view sv;
+  if (nullPos == b.size()) {
+    if constexpr (nullPolicy == NullTerminatorPolicy::kRequired) {
+      return string_view();
+    } else {
+      sv = string_view(reinterpret_cast<const char*>(b.data() + start), b.size() - start);
+    }
+  } else {
+    sv = string_view(reinterpret_cast<const char*>(b.data() + start), nullPos - start);
+  }
+  if (0 < maxSize && maxSize < sv.size()) {
+    return string_view();
+  }
+  if constexpr (encoding == StringEncoding::kUTF8) {
+    if (!utf8::is_valid(sv)) {
+      return string_view();
+    }
+  }
+  return sv;
+}
+
+/*
+template string_view ExtractStringView<OOBPolicy::kCheck, NullTerminatorPolicy::kRequired, StringEncoding::kUTF8>(const vector<uint8_t>& b, const size_t start, const size_t maxSize);
+template string_view ExtractStringView<OOBPolicy::kCheck, NullTerminatorPolicy::kRequired, StringEncoding::kNone>(const vector<uint8_t>& b, const size_t start, const size_t maxSize);
+template string_view ExtractStringView<OOBPolicy::kCheck, NullTerminatorPolicy::kOptional, StringEncoding::kUTF8>(const vector<uint8_t>& b, const size_t start, const size_t maxSize);
+template string_view ExtractStringView<OOBPolicy::kCheck, NullTerminatorPolicy::kOptional, StringEncoding::kNone>(const vector<uint8_t>& b, const size_t start, const size_t maxSize);
+*/
+template string_view ExtractStringView<OOBPolicy::kUnsafe, NullTerminatorPolicy::kRequired, StringEncoding::kUTF8>(const vector<uint8_t>& b, const size_t start, const size_t maxSize);
+template string_view ExtractStringView<OOBPolicy::kUnsafe, NullTerminatorPolicy::kRequired, StringEncoding::kNone>(const vector<uint8_t>& b, const size_t start, const size_t maxSize);
+/*
+template string_view ExtractStringView<OOBPolicy::kUnsafe, NullTerminatorPolicy::kOptional, StringEncoding::kUTF8>(const vector<uint8_t>& b, const size_t start, const size_t maxSize);
+template string_view ExtractStringView<OOBPolicy::kUnsafe, NullTerminatorPolicy::kOptional, StringEncoding::kNone>(const vector<uint8_t>& b, const size_t start, const size_t maxSize);
+*/
+
+string_view ExtractUTF8View(const vector<uint8_t>& b, const size_t start, const size_t maxSize)
+{
+  return ExtractStringView<OOBPolicy::kUnsafe, NullTerminatorPolicy::kRequired, StringEncoding::kUTF8>(b, start, maxSize);
 }
 
 uint8_t ExtractHex(const vector<uint8_t>& b, const size_t start, bool bigEndian)
@@ -1682,7 +1773,7 @@ bool PathHasNullBytes(const filesystem::path& filePath)
   return false;
 }
 
-bool IsASCII(const string& unsafeInput)
+bool IsASCII(string_view unsafeInput)
 {
   for (const auto& c : unsafeInput) {
     if ((c & 0x80) != 0) {
@@ -1690,6 +1781,79 @@ bool IsASCII(const string& unsafeInput)
     }
   }
   return true;
+}
+
+bool IsUnsafeCodePoint(char32_t cp)
+{
+  // C0, DEL, C1
+  if (cp < 0x20 || 0x7F <= cp && cp <= 0x9F) {
+    return true;
+  }
+  switch (cp) {
+    // bidi control characters
+    case 0x200E: // LRM
+    case 0x200F: // RLM
+    case 0x202A: // LRE
+    case 0x202B: // RLE
+    case 0x202C: // PDF
+    case 0x202D: // LRO
+    case 0x202E: // RLO
+    case 0x2066: // LRI
+    case 0x2067: // RLI
+    case 0x2068: // FSI
+    case 0x2069: // PDI
+
+    // zero-width and format
+    case 0x200B:
+    case 0x200D:
+    case 0x2060:
+    case 0xFEFF:
+    case 0x00AD:
+
+    // line separators
+    case 0x2028: // line separator
+    case 0x2029: // paragraph separator
+      return true;
+  }
+  return false;
+}
+
+bool HasUnsafeUTF8CodePoints(string_view unsafeUTF8Input)
+{
+  auto it = unsafeUTF8Input.begin();
+  auto end = unsafeUTF8Input.end();
+
+  while (it != end) {
+    char32_t cp = utf8::unchecked::next(it);
+    if (IsUnsafeCodePoint(cp)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool IsArbitraryStringUTF8Safe(string_view unsafeInput)
+{
+  if (!utf8::is_valid(unsafeInput)) {
+    return false;
+  }
+  return !HasUnsafeUTF8CodePoints(unsafeInput);
+}
+
+string SanitizeStringUTF8(string_view unsafeInput)
+{
+  if (IsArbitraryStringUTF8Safe(unsafeInput)) {
+    return "[" + string(unsafeInput) + "]";
+  }
+  return "REDACTED";
+}
+
+string SanitizeStringASCII(string_view unsafeInput)
+{
+  if (IsASCII(unsafeInput)) {
+    return "[" + string(unsafeInput) + "]";
+  }
+  return "REDACTED";
 }
 
 uint32_t ASCIIHexToNum(const array<uint8_t, 8>& data, bool reverse)

@@ -235,7 +235,7 @@ CGameConfig::CGameConfig(CConfig& CFG)
   m_LobbyVirtualHostName                   = CFG.GetString("hosting.self.virtual_player.name", 1, 15, "|cFF4080C0Aura");
 
   m_NotifyJoins                            = CFG.GetBool("ui.notify_joins.enabled", false);
-  m_IgnoredNotifyJoinPlayers               = CFG.GetSetSensitive("ui.notify_joins.exceptions", ',', false, false, {}); /* do not trim, because LAN names may have trailing whitespace */
+  m_IgnoredNotifyJoinPlayers               = CFG.GetSet("ui.notify_joins.exceptions", ',', false, false, {}); /* do not trim, because LAN names may have trailing whitespace */
   m_MaxAPM                                 = CFG.GetMaybeUint16("hosting.apm_limiter.max.average");
   m_MaxBurstAPM                            = CFG.GetMaybeUint16("hosting.apm_limiter.max.burst");
   m_HideLobbyNames                         = CFG.GetBool("hosting.nicknames.hide_lobby", false);

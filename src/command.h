@@ -69,12 +69,12 @@ public:
   CCommandContext(ServiceType serviceType, CAura* nAura, CCommandConfig* config, std::shared_ptr<CGame> game, CAsyncObserver* spectator, const bool& nIsBroadcast, std::ostream* outputStream);
 
   // Realm, Realm->Game
-  CCommandContext(ServiceType serviceType, CAura* nAura, CCommandConfig* config, std::shared_ptr<CGame> targetGame, std::shared_ptr<CRealm> fromRealm, const std::string& fromName, const bool& isWhisper, const bool& nIsBroadcast, std::ostream* outputStream);
-  CCommandContext(ServiceType serviceType, CAura* nAura, CCommandConfig* config, std::shared_ptr<CRealm> fromRealm, const std::string& fromName, const bool& isWhisper, const bool& nIsBroadcast, std::ostream* outputStream);
+  CCommandContext(ServiceType serviceType, CAura* nAura, CCommandConfig* config, std::shared_ptr<CGame> targetGame, std::shared_ptr<CRealm> fromRealm, std::string_view fromName, const bool& isWhisper, const bool& nIsBroadcast, std::ostream* outputStream);
+  CCommandContext(ServiceType serviceType, CAura* nAura, CCommandConfig* config, std::shared_ptr<CRealm> fromRealm, std::string_view fromName, const bool& isWhisper, const bool& nIsBroadcast, std::ostream* outputStream);
 
   // IRC, IRC->Game
-  CCommandContext(ServiceType serviceType, CAura* nAura, CCommandConfig* config, const std::string& channelName, const std::string& userName, const bool& isWhisper, const std::string& reverseHostName, const bool& nIsBroadcast, std::ostream* outputStream);
-  CCommandContext(ServiceType serviceType, CAura* nAura, CCommandConfig* config, std::shared_ptr<CGame> targetGame, const std::string& channelName, const std::string& userName, const bool& isWhisper, const std::string& reverseHostName, const bool& nIsBroadcast, std::ostream* outputStream);
+  CCommandContext(ServiceType serviceType, CAura* nAura, CCommandConfig* config, std::string_view channelName, std::string_view userName, const bool& isWhisper, std::string_view reverseHostName, const bool& nIsBroadcast, std::ostream* outputStream);
+  CCommandContext(ServiceType serviceType, CAura* nAura, CCommandConfig* config, std::shared_ptr<CGame> targetGame, std::string_view channelName, std::string_view userName, const bool& isWhisper, std::string_view reverseHostName, const bool& nIsBroadcast, std::ostream* outputStream);
 
 #ifndef DISABLE_DPP
   // Discord, Discord->Game
@@ -83,8 +83,8 @@ public:
 #endif
 
   // Arbitrary, Arbitrary->Game
-  CCommandContext(ServiceType serviceType, CAura* nAura, const std::string& nFromName, const bool& nIsBroadcast, std::ostream* outputStream);
-  CCommandContext(ServiceType serviceType, CAura* nAura, CCommandConfig* config, std::shared_ptr<CGame> targetGame, const std::string& nFromName, const bool& nIsBroadcast, std::ostream* outputStream);
+  CCommandContext(ServiceType serviceType, CAura* nAura, std::string_view nFromName, const bool& nIsBroadcast, std::ostream* outputStream);
+  CCommandContext(ServiceType serviceType, CAura* nAura, CCommandConfig* config, std::shared_ptr<CGame> targetGame, std::string_view nFromName, const bool& nIsBroadcast, std::ostream* outputStream);
 
   [[nodiscard]] inline bool GetWritesToStdout() const { return m_ServiceSource.GetServiceType() == ServiceType::kCLI; }
 
@@ -114,8 +114,8 @@ public:
   inline void ResetServiceSource() { m_ServiceSource.Reset(); }
   [[nodiscard]] inline bool GetIsAnonymous() const { return m_ServiceSource.GetIsAnonymous(); }
 
-  [[nodiscard]] inline const std::string& GetSender() const { return m_ServiceSource.GetUser(); }
-  [[nodiscard]] std::string GetChannelName() const;
+  [[nodiscard]] inline std::string GetSender() const { return std::string(m_ServiceSource.GetUser()); }
+  [[nodiscard]] std::string_view GetChannelName() const;
   [[nodiscard]] std::shared_ptr<CRealm> GetSourceRealm() const;
 
   [[nodiscard]] inline std::shared_ptr<CRealm> GetTargetRealm() const { return m_TargetRealm.lock(); }
@@ -139,7 +139,7 @@ public:
   [[nodiscard]] bool CheckPermissions(const uint8_t nPermissionsRequired, const uint8_t nAutoPermissions) const;
   [[nodiscard]] std::optional<std::pair<std::string, std::string>> CheckSudo(const std::string& message);
   [[nodiscard]] bool GetIsSudo() const;
-  [[nodiscard]] bool CheckActionMessage(const std::string& nMessage) { return m_ActionMessage == nMessage; }
+  [[nodiscard]] bool CheckActionMessage(std::string_view nMessage) { return m_ActionMessage == nMessage; }
   [[nodiscard]] bool CheckConfirmation(const std::string& cmdToken, const std::string& cmd, const std::string& target, const std::string& errorMessage);
 
   [[nodiscard]] std::vector<std::string> JoinReplyListCompact(const std::vector<std::string>& stringList) const;
@@ -237,6 +237,7 @@ public:
 
 [[nodiscard]] inline uint8_t ExtractMessageTokensAny(const std::string& message, const std::string& privateToken, const std::string& broadcastToken, std::string& matchToken, std::string& matchCmd, std::string& matchTarget)
 {
+  // TODO: Refactor ExtractMessageTokensAny to accept string_view
   uint8_t result = COMMAND_TOKEN_MATCH_NONE;
   if (message.empty()) return result;
   if (!privateToken.empty()) {
@@ -269,6 +270,14 @@ public:
   }
 
   return result;
+}
+
+[[nodiscard]] inline uint8_t ExtractMessageTokensAny(std::string_view message, std::string_view privateToken, std::string_view broadcastToken, std::string& matchToken, std::string& matchCmd, std::string& matchTarget)
+{
+  const std::string msg(message);
+  const std::string privToken(privateToken);
+  const std::string pubToken(broadcastToken);
+  return ExtractMessageTokensAny(msg, privToken, pubToken, matchToken, matchCmd, matchTarget);
 }
 
 #endif

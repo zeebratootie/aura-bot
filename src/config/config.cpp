@@ -1070,13 +1070,19 @@ void CConfig::Set(const string& key, const string& value)
   SetString(key, value);
 }
 
-void CConfig::SetString(const string& key, const string& value)
+void CConfig::SetString(const string& key, string_view value)
 {
-  if (!utf8::is_valid(value.begin(), value.end())) return;
-  string trimmedValue = TrimString(value);
-  if (trimmedValue.empty()) return;
-  if (CConfig::GetIsEnvVar(trimmedValue)) return;
-  m_CFG[key] = trimmedValue;
+  if (!utf8::is_valid(value)) return;
+  TrimStringView(value);
+  if (value.empty()) return;
+  if (CConfig::GetIsEnvVar(value)) return;
+  m_CFG[key] = string(value);
+}
+
+void CConfig::SetString(const std::string& key, const char* start)
+{
+  string value(start);
+  SetString(key, value);
 }
 
 void CConfig::SetString(const std::string& key, const char* start, const std::string::size_type& size)
@@ -1219,12 +1225,12 @@ std::string CConfig::ReadString(const std::filesystem::path& file, const std::st
   return cfgValue;
 }
 
-bool CConfig::GetIsEnvVar(const string& value)
+bool CConfig::GetIsEnvVar(string_view value)
 {
   return value.size() >= 4 && value.substr(0, 4) == "env:";
 }
 
-bool CConfig::GetIsJSONValue(const string& value)
+bool CConfig::GetIsJSONValue(string_view value)
 {
   return value.size() >= 5 && value.substr(0, 5) == "json:";
 }

@@ -120,7 +120,7 @@ public:
   std::string                                                   m_Name;
   std::string                                                   m_LeftReason;
 
-  CAsyncObserver(std::shared_ptr<CGame> nGame, CConnection* nConnection, uint8_t nUID, const bool gameVersionIsExact, const Version& gameVersion, std::shared_ptr<CRealm> nFromRealm, std::string nName);
+  CAsyncObserver(std::shared_ptr<CGame> nGame, CConnection* nConnection, uint8_t nUID, const bool gameVersionIsExact, const Version& gameVersion, std::shared_ptr<CRealm> nFromRealm, std::string_view nName);
   ~CAsyncObserver();
 
   // processing functions

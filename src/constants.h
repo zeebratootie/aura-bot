@@ -34,6 +34,32 @@ struct is_comparable_enum : std::false_type {};
 
 // includes.h
 
+enum class Endianness : bool {
+  kLittle = true,
+  kBig = false,
+};
+
+enum class OOBPolicy : bool {
+  kCheck = true,
+  kUnsafe = false,
+};
+
+enum class StringEncoding : bool {
+  kUTF8 = true,
+  kNone = false,
+};
+
+enum class CaseSensitive : bool {
+  kStrict = true,
+  kNormalize = false,
+};
+
+enum class NullTerminatorPolicy : bool
+{
+  kRequired = true,
+  kOptional = false,
+};
+
 constexpr uint8_t LOG_LEVEL_EMERGENCY = 0;
 constexpr uint8_t LOG_LEVEL_ALERT = 1;
 constexpr uint8_t LOG_LEVEL_CRITICAL = 2;

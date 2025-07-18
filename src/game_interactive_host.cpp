@@ -169,7 +169,7 @@ bool CGameInteractiveHost::EventGameCacheInteger(const uint8_t fromUID, const st
       switch (*maybeRequestType) {
         case W3HMC_REQUEST_PLAYERREALM: {
           const GameUser::CGameUser* user = GetGame()->GetUserFromUID(fromUID);
-          ResolveInteraction(*instanceMatch, user->GetRealmHostName());
+          ResolveInteraction(*instanceMatch, string(user->GetRealmHostName()));
           break;
         }
         case W3HMC_REQUEST_HTTP: {

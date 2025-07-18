@@ -246,7 +246,8 @@ public:
   [[nodiscard]] std::optional<std::filesystem::path> GetMaybeDirectory(const std::string &key);
 
   void Set(const std::string& key, const std::string& x);
-  void SetString(const std::string& key, const std::string& x);
+  void SetString(const std::string& key, std::string_view x);
+  void SetString(const std::string& key, const char* start);
   void SetString(const std::string& key, const char* start, const std::string::size_type& size);
   void SetString(const std::string& key, const unsigned char* start, const std::string::size_type& size);
   void SetBool(const std::string& key, const bool& x);
@@ -263,8 +264,8 @@ public:
   [[nodiscard]] std::vector<uint8_t> Export() const;
 
   [[nodiscard]] static std::string ReadString(const std::filesystem::path& file, const std::string& key);
-  [[nodiscard]] static bool GetIsEnvVar(const std::string& value);
-  [[nodiscard]] static bool GetIsJSONValue(const std::string& value);
+  [[nodiscard]] static bool GetIsEnvVar(std::string_view value);
+  [[nodiscard]] static bool GetIsJSONValue(std::string_view value);
   [[nodiscard]] static std::string ReadEnvVar(const std::string& configKey);
 };
 

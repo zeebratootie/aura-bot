@@ -170,7 +170,7 @@ bool NetworkGameInfo::SetBNETGameInfo(const string& gameStat, const Version& war
   m_Host.SetIdentifier(ASCIIHexToNum(hostCounterRaw, true));
   
   const uint8_t* encStatStringStart = reinterpret_cast<const uint8_t*>(gameStat.c_str()) + 9;
-  const uint8_t* encStatStringEnd = FindNullDelimiterOrEnd(encStatStringStart, infoEnd);
+  const uint8_t* encStatStringEnd = FindNullDelimiterInRangeOrEnd(encStatStringStart, infoEnd);
   string encStatString = GetStringAddressRange(encStatStringStart, encStatStringEnd);
   GameStat statData = GameStat::Parse(encStatString);
   if (!statData.GetIsValid()) {

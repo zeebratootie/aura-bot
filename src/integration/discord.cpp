@@ -201,10 +201,22 @@ void CDiscord::Update()
         target = get<string>(maybeTarget);
       }
       command = get<string>(event->get_parameter("command"));
+      if (!IsArbitraryStringUTF8Safe(command)) {
+        event->edit_original_response(dpp::message("Command rejected"));
+        delete event;
+        m_CommandQueue.pop();
+        continue;
+      }
       event->edit_original_response(dpp::message("Command queued!"));
     } else if (event->command.get_command_name() == "host") {
       string mapName = get<string>(event->get_parameter("map"));
       string gameName = get<string>(event->get_parameter("title"));
+      if (!IsArbitraryStringUTF8Safe(mapName) || !IsArbitraryStringUTF8Safe(gameName)) {
+        event->edit_original_response(dpp::message("Command rejected"));
+        delete event;
+        m_CommandQueue.pop();
+        continue;
+      }
       command = "host";
       target = mapName + ", " + gameName;
       event->edit_original_response(dpp::message("Hosting your game briefly!"));

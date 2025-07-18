@@ -98,13 +98,13 @@ using namespace GameUser;
 // CGameUser
 //
 
-CGameUser::CGameUser(shared_ptr<CGame> nGame, CConnection* connection, uint8_t nUID, const bool gameVersionIsExact, const Version& gameVersion, uint32_t nJoinedRealmInternalId, string nJoinedRealm, string nName, std::array<uint8_t, 4> nInternalIP, bool nReserved)
+CGameUser::CGameUser(shared_ptr<CGame> nGame, CConnection* connection, uint8_t nUID, const bool gameVersionIsExact, const Version& gameVersion, uint32_t nJoinedRealmInternalId, string nJoinedRealm, string_view nName, std::array<uint8_t, 4> nInternalIP, bool nReserved)
   : CConnection(*connection),
     m_Game(ref(*nGame)),
     m_IPv4Internal(std::move(nInternalIP)),
     m_RealmInternalId(nJoinedRealmInternalId),
     m_RealmHostName(std::move(nJoinedRealm)),
-    m_Name(std::move(nName)),
+    m_Name(std::string(nName)),
     m_LeftCode(PLAYERLEAVE_LOBBY),
     m_Status(USERSTATUS_LOBBY),
     m_IsLeaver(false),
@@ -965,7 +965,7 @@ void CGameUser::EventGProxyReconnect(CConnection* connection, const uint32_t las
     m_Game.get().SendAllChat("Player [" + GetDisplayName() + "] reconnected with GProxy++!");
   }
   if (m_Game.get().m_Aura->MatchLogLevel(LogLevel::kNotice)) {
-    Print(m_Game.get().GetLogPrefix() + "user reconnected: [" + GetName() + "@" + GetRealmHostName() + "#" + ToDecString(GetUID()) + "] from [" + GetIPString() + "] (" + m_Socket->GetName() + ")");
+    Print(m_Game.get().GetLogPrefix() + "user reconnected: [" + GetName() + "@" + string(GetRealmHostName()) + "#" + ToDecString(GetUID()) + "] from [" + GetIPString() + "] (" + m_Socket->GetName() + ")");
   }
 }
 
