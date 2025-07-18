@@ -2288,8 +2288,7 @@ void CGame::SendChat(uint8_t fromUID, GameUser::CGameUser* user, const string& m
   if (!m_GameLoading && !m_GameLoaded) {
     packet = GameProtocol::SEND_W3GS_CHAT_FROM_HOST_LOBBY(fromUID, CreateByteArray(user->GetUID()), GameProtocol::Magic::ChatType::CHAT_LOBBY, message);
   } else {
-    // based on my limited testing it seems that the extra flags' first byte contains 3 plus the recipient's colour to denote a private message
-    packet = GameProtocol::SEND_W3GS_CHAT_FROM_HOST_IN_GAME(fromUID, CreateByteArray(user->GetUID()), GameProtocol::Magic::ChatType::CHAT_IN_GAME, user->GetChatChannel(), message);
+    packet = GameProtocol::SEND_W3GS_CHAT_FROM_HOST_IN_GAME(fromUID, CreateByteArray(user->GetUID()), GameProtocol::Magic::ChatType::CHAT_IN_GAME, user->GetChatChannel(true), message);
   }
   SendAsChat(user, packet);
 }
@@ -6769,7 +6768,7 @@ void CGame::EventGameStartedLoading()
   for (const auto& user : m_Users) {
     const uint8_t SID = GetSIDFromUID(user->GetUID());
     user->SetSID(SID);
-    user->SetChatChannel(user->GetIsObserver() ? CHAT_RECV_OBS : (3 + m_Slots[SID].GetColor()));
+    user->SetChatChannel(3 + m_Slots[SID].GetColor());
   }
 
   m_ReconnectProtocols = CalcActiveReconnectProtocols();

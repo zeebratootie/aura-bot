@@ -377,6 +377,12 @@ AsyncObserverStatus CAsyncObserver::Update(fd_set* fd, fd_set* send_fd, int64_t 
   return result;
 }
 
+uint8_t CAsyncObserver::GetChatChannel(bool forcePrivate) const
+{
+  if (!m_StartedLoading) return 0;
+  return m_IsObserver && !forcePrivate ? CHAT_RECV_OBS : (3u + m_Color);
+}
+
 bool CAsyncObserver::GetIsGameOver() const
 {
   return m_GameHistory->GetIsFinished();
@@ -825,7 +831,7 @@ void CAsyncObserver::SendChat(const string& message)
   if (!m_StartedLoading) {
     Send(GameProtocol::SEND_W3GS_CHAT_FROM_HOST_LOBBY(m_UID, CreateByteArray(m_UID), GameProtocol::Magic::ChatType::CHAT_LOBBY, message));
   } else {
-    Send(GameProtocol::SEND_W3GS_CHAT_FROM_HOST_IN_GAME(m_UID, CreateByteArray(m_UID), GameProtocol::Magic::ChatType::CHAT_IN_GAME, GetChatChannel(), message));
+    Send(GameProtocol::SEND_W3GS_CHAT_FROM_HOST_IN_GAME(m_UID, CreateByteArray(m_UID), GameProtocol::Magic::ChatType::CHAT_IN_GAME, GetChatChannel(true), message));
   }
 }
 

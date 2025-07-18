@@ -164,7 +164,7 @@ public:
   [[nodiscard]] inline uint8_t                  GetSID() const { return m_SID; }
   [[nodiscard]] inline uint8_t                  GetUID() const { return m_UID; }
   [[nodiscard]] inline uint8_t                  GetColor() const { return m_Color; }
-  [[nodiscard]] inline uint8_t                  GetChatChannel() const { return m_StartedLoading ? (m_IsObserver ? CHAT_RECV_OBS : (3u + m_Color)) : 0; }
+  [[nodiscard]] uint8_t                         GetChatChannel(bool forcePrivate = false) const;
   
   [[nodiscard]] inline int64_t                  GetGameTicks() const { return m_GameTicks; }
   int64_t                                       GetNextTimedActionByTicks() const;

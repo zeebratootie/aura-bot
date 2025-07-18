@@ -173,7 +173,7 @@ namespace GameUser
     [[nodiscard]] inline uint8_t                  GetUID() const { return m_UID; }
     [[nodiscard]] inline uint8_t                  GetOldUID() const { return m_OldUID; }
     [[nodiscard]] inline uint8_t                  GetPseudonymUID() const { return m_PseudonymUID; }
-    [[nodiscard]] inline uint8_t                  GetChatChannel() const { return m_ChatChannel; }
+    [[nodiscard]] uint8_t                         GetChatChannel(bool forcePrivate = false) const;
     [[nodiscard]] inline bool                     GetGameVersionIsExact() const { return m_GameVersionIsExact; }
     [[nodiscard]] inline Version                  GetGameVersion() const { return m_GameVersion; }
     [[nodiscard]] std::string                     GetGameVersionString() const;
