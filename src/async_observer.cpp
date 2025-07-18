@@ -724,17 +724,16 @@ void CAsyncObserver::EventChat(const CIncomingChatMessage& incomingChatMessage)
     if (!isCommand) {
       cmdHistory->ClearLastCommand();
     }
-    if (!game) {
-      shouldRelay = false;
-    }
     bool relaySuccess = false;
-    if (shouldRelay) {
+    if (shouldRelay && game) {
       string prefix = "[" + ToFormattedTimeStamp(m_GameTicks / 1000) + "] [" + m_Name + "]: ";
       relaySuccess = game->SendSpectatorChat(this, prefix, incomingChatMessage.GetMessage());
-      shouldRelay = false;
     }
-    if (!relaySuccess || targetType != CHAT_RECV_OBS) {
+    if (shouldRelay && !(relaySuccess && targetType == CHAT_RECV_OBS)) {
       SendChat("You are in spectator mode, and may only chat with other spectators.");
+    }
+    if (shouldRelay && relaySuccess) {
+      shouldRelay = false;
     }
     if (shouldRelay) {
       //SendChat(incomingChatMessage);
