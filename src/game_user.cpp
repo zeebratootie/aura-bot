@@ -122,6 +122,7 @@ CGameUser::CGameUser(shared_ptr<CGame> nGame, CConnection* connection, uint8_t n
     m_UID(nUID),
     m_OldUID(0xFF),
     m_PseudonymUID(0xFF),
+    m_ChatChannel(0),
     m_GameVersionIsExact(gameVersionIsExact),
     m_GameVersion(gameVersion),
     m_Verified(false),

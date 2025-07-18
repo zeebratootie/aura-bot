@@ -245,15 +245,6 @@ namespace GameProtocol
 
   MemoizedGameChatMessageBuilder::MemoizedGameChatMessageBuilder(const GameProtocol::ChatToHostType nGameStatus, const std::string_view nPrefix, const string_view nMessage)
    : gameStatus(nGameStatus),
-     channel(0),
-     prefix(nPrefix),
-     message(nMessage)
-  {
-  }
-
-  MemoizedGameChatMessageBuilder::MemoizedGameChatMessageBuilder(const GameProtocol::ChatToHostType nGameStatus, const uint32_t nChannel, const std::string_view nPrefix, const string_view nMessage)
-   : gameStatus(nGameStatus),
-     channel(nChannel),
      prefix(nPrefix),
      message(nMessage)
   {
@@ -263,7 +254,7 @@ namespace GameProtocol
   {
   }
 
-  PacketWrapper MemoizedGameChatMessageBuilder::ToNew(uint8_t uid)
+  PacketWrapper MemoizedGameChatMessageBuilder::ToNew(uint8_t uid, uint8_t channel)
   {
     if (gameStatus == GameProtocol::ChatToHostType::CTH_MESSAGE_INGAME) {
       return SENDWRAP_W3GS_CHAT_SELF_IN_GAME(uid, channel, prefix, message);
@@ -272,11 +263,11 @@ namespace GameProtocol
     }
   }
 
-  const PacketWrapper& MemoizedGameChatMessageBuilder::To(uint8_t uid)
+  const PacketWrapper& MemoizedGameChatMessageBuilder::To(uint8_t uid, uint8_t channel)
   {
     auto it = cache.find(uid);
     if (it != nullptr) return *it;
-    PacketWrapper focusedMessage = ToNew(uid);
+    PacketWrapper focusedMessage = ToNew(uid, channel);
     cache.insert(uid, focusedMessage);
     return *cache.find(uid);
   }

@@ -74,6 +74,7 @@ public:
   CommandHistory                                                m_CommandHistory;
   std::shared_ptr<GameHistory>                                  m_GameHistory;
   std::weak_ptr<CRealm>                                         m_FromRealm;
+  bool                                                          m_IsObserver;
   bool                                                          m_MapChecked;                   // if we received any W3GS_MAPSIZE packet from the client
   bool                                                          m_MapReady;                     // if we received a valid W3GS_MAPSIZE packet from the client matching the map size
   bool                                                          m_StateSynchronized;
@@ -150,6 +151,9 @@ public:
   inline void                                   SetLeftReason(const std::string& reason) { m_LeftReason = reason; }
   inline void                                   SetLeftReasonGeneric(const std::string& reason) { if (m_LeftReason.empty()) m_LeftReason = reason; }
 
+  [[nodiscard]] inline bool                     GetIsObserver() const { return m_IsObserver; }
+  inline void                                   SetIsObserver(bool nObserver) { m_IsObserver = nObserver; }
+
   [[nodiscard]] inline bool                     GetMapChecked() const { return m_MapChecked; }
   inline void                                   SetMapChecked(bool nChecked) { m_MapChecked = nChecked; }
   [[nodiscard]] inline bool                     GetMapReady() const { return m_MapReady; }
@@ -159,6 +163,8 @@ public:
 
   [[nodiscard]] inline uint8_t                  GetSID() const { return m_SID; }
   [[nodiscard]] inline uint8_t                  GetUID() const { return m_UID; }
+  [[nodiscard]] inline uint8_t                  GetColor() const { return m_Color; }
+  [[nodiscard]] inline uint8_t                  GetChatChannel() const { return m_StartedLoading ? (m_IsObserver ? CHAT_RECV_OBS : (3u + m_Color)) : 0; }
   
   [[nodiscard]] inline int64_t                  GetGameTicks() const { return m_GameTicks; }
   int64_t                                       GetNextTimedActionByTicks() const;

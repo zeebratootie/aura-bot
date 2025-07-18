@@ -2289,12 +2289,7 @@ void CGame::SendChat(uint8_t fromUID, GameUser::CGameUser* user, const string& m
     packet = GameProtocol::SEND_W3GS_CHAT_FROM_HOST_LOBBY(fromUID, CreateByteArray(user->GetUID()), GameProtocol::Magic::ChatType::CHAT_LOBBY, message);
   } else {
     // based on my limited testing it seems that the extra flags' first byte contains 3 plus the recipient's colour to denote a private message
-    uint8_t SID = GetSIDFromUID(user->GetUID());
-    uint32_t targetCode = 3;
-    if (SID < m_Slots.size()) {
-      targetCode += m_Slots[SID].GetColor();
-    }
-    packet = GameProtocol::SEND_W3GS_CHAT_FROM_HOST_IN_GAME(fromUID, CreateByteArray(user->GetUID()), GameProtocol::Magic::ChatType::CHAT_IN_GAME, targetCode, message);
+    packet = GameProtocol::SEND_W3GS_CHAT_FROM_HOST_IN_GAME(fromUID, CreateByteArray(user->GetUID()), GameProtocol::Magic::ChatType::CHAT_IN_GAME, user->GetChatChannel(), message);
   }
   SendAsChat(user, packet);
 }
@@ -2401,12 +2396,12 @@ bool CGame::SendObserverChat(const string& message) const
 bool CGame::SendSpectatorChat(const CAsyncObserver* excludeSpectator, const string& prefix, const string& message) const
 {
   if (!m_GameLoaded) return false;
-  GameProtocol::MemoizedGameChatMessageBuilder builder(GameProtocol::ChatToHostType::CTH_MESSAGE_INGAME, CHAT_RECV_OBS, prefix, message);
-  vector<CAsyncObserver*> spectators = GetSpectators();
+  GameProtocol::MemoizedGameChatMessageBuilder builder(GameProtocol::ChatToHostType::CTH_MESSAGE_INGAME, prefix, message);
+  vector<CAsyncObserver*> spectators = GetSpectators(); // excludes those that haven't finished loading
   bool anySent = false;
   for (auto& spectator : spectators) {
     if (spectator == excludeSpectator) continue;
-    spectator->Send(builder.To(spectator->GetUID()));
+    spectator->Send(builder.To(spectator->GetUID(), spectator->GetChatChannel()));
     anySent = true;
   }
   return anySent;
@@ -6772,7 +6767,9 @@ void CGame::EventGameStartedLoading()
   }
 
   for (const auto& user : m_Users) {
-    user->SetSID(GetSIDFromUID(user->GetUID()));
+    const uint8_t SID = GetSIDFromUID(user->GetUID());
+    user->SetSID(SID);
+    user->SetChatChannel(user->GetIsObserver() ? CHAT_RECV_OBS : (3 + m_Slots[SID].GetColor()));
   }
 
   m_ReconnectProtocols = CalcActiveReconnectProtocols();

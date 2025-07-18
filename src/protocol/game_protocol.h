@@ -164,17 +164,15 @@ namespace GameProtocol
   struct MemoizedGameChatMessageBuilder
   {
     GameProtocol::ChatToHostType gameStatus;
-    uint32_t channel;
     std::string_view prefix;
     std::string_view message;
     FlatMap<uint8_t, PacketWrapper> cache;
 
     MemoizedGameChatMessageBuilder(const GameProtocol::ChatToHostType gameStatus, const std::string_view prefix, const std::string_view message);
-    MemoizedGameChatMessageBuilder(const GameProtocol::ChatToHostType gameStatus, const uint32_t channel, const std::string_view prefix, const std::string_view message);
     ~MemoizedGameChatMessageBuilder();
 
-    PacketWrapper ToNew(uint8_t uid);
-    const PacketWrapper& To(uint8_t uid);
+    PacketWrapper ToNew(uint8_t uid, uint8_t channel);
+    const PacketWrapper& To(uint8_t uid, uint8_t channel);
   };
 
   // receive functions

@@ -51,6 +51,7 @@ CAsyncObserver::CAsyncObserver(shared_ptr<CGame> nGame, CConnection* nConnection
     m_Game(nGame),
     m_GameHistory(nGame->GetGameHistory()),
     m_FromRealm(nFromRealm),
+    m_IsObserver(false),
     m_MapChecked(false),
     m_MapReady(false),
     m_StateSynchronized(true),
@@ -83,6 +84,7 @@ CAsyncObserver::CAsyncObserver(shared_ptr<CGame> nGame, CConnection* nConnection
     m_LastProgressReportLog(0),
     m_Name(std::move(nName))
 {
+  m_IsObserver = m_Color == nGame->GetMap()->GetVersionMaxSlots();
   m_Socket->SetLogErrors(true);
 }
 
@@ -729,7 +731,7 @@ void CAsyncObserver::EventChat(const CIncomingChatMessage& incomingChatMessage)
       string prefix = "[" + ToFormattedTimeStamp(m_GameTicks / 1000) + "] [" + m_Name + "]: ";
       relaySuccess = game->SendSpectatorChat(this, prefix, incomingChatMessage.GetMessage());
     }
-    if (shouldRelay && !(relaySuccess && targetType == CHAT_RECV_OBS)) {
+    if (shouldRelay && !relaySuccess && m_IsObserver && targetType != CHAT_RECV_OBS) {
       SendChat("You are in spectator mode, and may only chat with other spectators.");
     }
     if (shouldRelay && relaySuccess) {
@@ -768,7 +770,11 @@ void CAsyncObserver::EventLeft(const uint32_t clientReason)
     return;
   }
   if (m_StartedLoading) {
-    Print(GetLogPrefix() + "left the game at [" + ToFormattedTimeStamp(m_GameTicks / 1000) + "] (" + GameProtocol::LeftCodeToString(clientReason) + ")");
+    string reason;
+    if (clientReason == PLAYERLEAVE_GPROXY) {
+      reason = " (" + GameProtocol::LeftCodeToString(clientReason) + ")";
+    }
+    Print(GetLogPrefix() + "left the game at [" + ToFormattedTimeStamp(m_GameTicks / 1000) + "]" + reason);
     /*
     if (m_GameHistory->m_PlayingBuffer.size() <= m_Offset) {
       Print(GetLogPrefix() + "next frame was not available");
@@ -819,8 +825,7 @@ void CAsyncObserver::SendChat(const string& message)
   if (!m_StartedLoading) {
     Send(GameProtocol::SEND_W3GS_CHAT_FROM_HOST_LOBBY(m_UID, CreateByteArray(m_UID), GameProtocol::Magic::ChatType::CHAT_LOBBY, message));
   } else {
-    uint32_t targetCode = static_cast<uint32_t>(3u + m_Color);
-    Send(GameProtocol::SEND_W3GS_CHAT_FROM_HOST_IN_GAME(m_UID, CreateByteArray(m_UID), GameProtocol::Magic::ChatType::CHAT_IN_GAME, targetCode, message));
+    Send(GameProtocol::SEND_W3GS_CHAT_FROM_HOST_IN_GAME(m_UID, CreateByteArray(m_UID), GameProtocol::Magic::ChatType::CHAT_IN_GAME, GetChatChannel(), message));
   }
 }
 

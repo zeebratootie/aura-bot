@@ -108,6 +108,7 @@ namespace GameUser
     uint8_t                          m_UID;                          // the player's UID
     uint8_t                          m_OldUID;
     uint8_t                          m_PseudonymUID;
+    uint8_t                          m_ChatChannel;
     bool                             m_GameVersionIsExact;
     Version                          m_GameVersion;
     std::string                      m_GameName;                     // game name for spoof-checking - this will be unique depending on the CRealm instance and when the user joined (in case of rename)
@@ -172,6 +173,7 @@ namespace GameUser
     [[nodiscard]] inline uint8_t                  GetUID() const { return m_UID; }
     [[nodiscard]] inline uint8_t                  GetOldUID() const { return m_OldUID; }
     [[nodiscard]] inline uint8_t                  GetPseudonymUID() const { return m_PseudonymUID; }
+    [[nodiscard]] inline uint8_t                  GetChatChannel() const { return m_ChatChannel; }
     [[nodiscard]] inline bool                     GetGameVersionIsExact() const { return m_GameVersionIsExact; }
     [[nodiscard]] inline Version                  GetGameVersion() const { return m_GameVersion; }
     [[nodiscard]] std::string                     GetGameVersionString() const;
@@ -341,6 +343,7 @@ namespace GameUser
     inline void SetReserved(bool nReserved) { m_Reserved = nReserved; }
     inline void SetIsObserver(bool nObserver) { m_Observer = nObserver; }
     inline void SetPseudonymUID(uint8_t nUID) { m_PseudonymUID = nUID; }
+    inline void SetChatChannel(uint8_t nChatChannel) { m_ChatChannel = nChatChannel; }
     inline void SetPowerObserver(bool nPowerObserver) { m_PowerObserver = nPowerObserver; }
     inline void SetWhoisShouldBeSent(bool nWhoisShouldBeSent) { m_WhoisShouldBeSent = nWhoisShouldBeSent; }
     inline void SetDownloadAllowed(bool nDownloadAllowed) { m_DownloadAllowed = nDownloadAllowed; }
