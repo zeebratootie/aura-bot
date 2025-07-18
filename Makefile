@@ -103,7 +103,7 @@ endif
 
 LDLIBS_SYS += -ldl
 
-CPPFLAGS += -DSQLITE_CUSTOM_INCLUDE=sqlite3opt.h -DCRC32_USE_LOOKUP_TABLE_SLICING_BY_16
+CPPFLAGS += -DUTF_CPP_CPLUSPLUS=201703L -DSQLITE_CUSTOM_INCLUDE=sqlite3opt.h -DCRC32_USE_LOOKUP_TABLE_SLICING_BY_16
 CPPFLAGS += $(DFLAGS)
 CPPFLAGS += -I. -Ilib/ -Ideps/bncsutil/src/ -Ideps/StormLib/src/ -Ideps/miniupnpc/include/ -Icpr-src/include/ -Idpp-src/include/
 
