@@ -203,7 +203,7 @@ void CMDNS::PushRecord(shared_ptr<const CGame> game)
     if (err) Print("[MDNS] DNSServiceAddRecord ERR: " + CMDNS::ErrorCodeToString(err));
   }
   if (!err) {
-    PRINT_IF(LogLevel::kInfo, "[MDNS] Recorded <" + gameName + ">")
+    PRINT_IF(LogLevel::kInfo, "[MDNS] Recorded <" + gameName + ">");
   }
 }
 

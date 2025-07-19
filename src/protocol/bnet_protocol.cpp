@@ -574,7 +574,7 @@ namespace BNETProtocol
     return gameConfig;
   }
 
-  optional<BNETProtocol::WhoisInfo> PARSE_WHOIS_INFO(const string& message, const PvPGNLocale realmLocale)
+  optional<BNETProtocol::WhoisInfo> PARSE_WHOIS_INFO(string_view message, const PvPGNLocale realmLocale)
   {
     // TODO: Refactor PARSE_WHOIS_INFO to accept string_view instead
     optional<BNETProtocol::WhoisInfo> result;
@@ -628,7 +628,7 @@ namespace BNETProtocol
                 ) == BNETProtocol::WhoisTexts::enUS::LOCATION_PRIVATE_GAME
               )
             ) {
-              string gameName = message.substr(
+              string_view gameName = message.substr(
                 tagEndPosNext + (
                   SIZE_LOCATION_PREFIX +
                   SIZE_LOCATION_PRIVATE_GAME
@@ -652,7 +652,7 @@ namespace BNETProtocol
                 SIZE_LOCATION_PUBLIC_GAME
               ) == BNETProtocol::WhoisTexts::enUS::LOCATION_PUBLIC_GAME
             ) {
-              string gameName = message.substr(
+              string_view gameName = message.substr(
                 tagEndPosNext + (
                   SIZE_LOCATION_PREFIX +
                   SIZE_LOCATION_PUBLIC_GAME
@@ -676,7 +676,7 @@ namespace BNETProtocol
                 SIZE_LOCATION_CHAT
               ) == BNETProtocol::WhoisTexts::enUS::LOCATION_CHAT
             ) {
-              string gameName = message.substr(
+              string_view gameName = message.substr(
                 tagEndPosNext + (
                   SIZE_LOCATION_PREFIX +
                   SIZE_LOCATION_CHAT
@@ -750,7 +750,7 @@ namespace BNETProtocol
                 ) == BNETProtocol::WhoisTexts::esES::LOCATION_PRIVATE_GAME
               )
             ) {
-              string gameName = message.substr(
+              string_view gameName = message.substr(
                 tagEndPosNext + (
                   SIZE_LOCATION_PREFIX +
                   SIZE_LOCATION_PRIVATE_GAME
@@ -774,7 +774,7 @@ namespace BNETProtocol
                 SIZE_LOCATION_PUBLIC_GAME
               ) == BNETProtocol::WhoisTexts::esES::LOCATION_PUBLIC_GAME
             ) {
-              string gameName = message.substr(
+              string_view gameName = message.substr(
                 tagEndPosNext + (
                   SIZE_LOCATION_PREFIX +
                   SIZE_LOCATION_PUBLIC_GAME
@@ -798,7 +798,7 @@ namespace BNETProtocol
                 SIZE_LOCATION_CHAT
               ) == BNETProtocol::WhoisTexts::esES::LOCATION_CHAT
             ) {
-              string gameName = message.substr(
+              string_view gameName = message.substr(
                 tagEndPosNext + (
                   SIZE_LOCATION_PREFIX +
                   SIZE_LOCATION_CHAT
@@ -872,7 +872,7 @@ namespace BNETProtocol
                 ) == BNETProtocol::WhoisTexts::deDE::LOCATION_PRIVATE_GAME
               )
             ) {
-              string gameName = message.substr(
+              string_view gameName = message.substr(
                 tagEndPosNext + (
                   SIZE_LOCATION_PREFIX +
                   SIZE_LOCATION_PRIVATE_GAME
@@ -896,7 +896,7 @@ namespace BNETProtocol
                 SIZE_LOCATION_PUBLIC_GAME
               ) == BNETProtocol::WhoisTexts::deDE::LOCATION_PUBLIC_GAME
             ) {
-              string gameName = message.substr(
+              string_view gameName = message.substr(
                 tagEndPosNext + (
                   SIZE_LOCATION_PREFIX +
                   SIZE_LOCATION_PUBLIC_GAME
@@ -920,7 +920,7 @@ namespace BNETProtocol
                 SIZE_LOCATION_CHAT
               ) == BNETProtocol::WhoisTexts::deDE::LOCATION_CHAT
             ) {
-              string gameName = message.substr(
+              string_view gameName = message.substr(
                 tagEndPosNext + (
                   SIZE_LOCATION_PREFIX +
                   SIZE_LOCATION_CHAT
@@ -998,7 +998,7 @@ namespace BNETProtocol
     return packet;
   }
 
-  vector<uint8_t> SEND_SID_GETADVLISTEX(const string& gameName, const string& gamePassword)
+  vector<uint8_t> SEND_SID_GETADVLISTEX(string_view gameName, string_view gamePassword)
   {
     vector<uint8_t> packet = {BNETProtocol::Magic::BNET_HEADER, BNETProtocol::Magic::GETADVLISTEX, 0, 0, /* short */ 0, 0, /* short */ 0, 0, /* unknown */ 0, 0, 0, 0, /* unknown */  0, 0, 0, 0};
     const uint8_t MaxGames[] = {255, 255, 255, 255};
@@ -1017,7 +1017,7 @@ namespace BNETProtocol
     return vector<uint8_t>{BNETProtocol::Magic::BNET_HEADER, BNETProtocol::Magic::ENTERCHAT, 6, 0, 0, 0};
   }
 
-  vector<uint8_t> SEND_SID_JOINCHANNEL(const string& channel)
+  vector<uint8_t> SEND_SID_JOINCHANNEL(string_view channel)
   {
     vector<uint8_t> packet = {BNETProtocol::Magic::BNET_HEADER, BNETProtocol::Magic::JOINCHANNEL, 0, 0};
 
@@ -1038,7 +1038,7 @@ namespace BNETProtocol
     return packet;
   }
 
-  vector<uint8_t> SEND_SID_CHAT_PUBLIC(const string& message)
+  vector<uint8_t> SEND_SID_CHAT_PUBLIC(string_view message)
   {
     vector<uint8_t> packet = {BNETProtocol::Magic::BNET_HEADER, BNETProtocol::Magic::CHATMESSAGE, 0, 0};
     AppendByteArrayString(packet, message, true); // null-terminator
@@ -1055,7 +1055,7 @@ namespace BNETProtocol
     return packet;
   }
 
-  vector<uint8_t> SEND_SID_CHAT_WHISPER(const string& message, const string& user)
+  vector<uint8_t> SEND_SID_CHAT_WHISPER(string_view message, string_view user)
   {
     // /w USER MESSAGE
     vector<uint8_t> packet = {BNETProtocol::Magic::BNET_HEADER, BNETProtocol::Magic::CHATMESSAGE, 0, 0, 0x2f, 0x77, 0x20};
@@ -1105,7 +1105,7 @@ namespace BNETProtocol
     return packet;
   }
 
-  vector<uint8_t> SEND_SID_STARTADVEX3(uint8_t state, const uint32_t mapGameType, const uint32_t gameFlags, const array<uint8_t, 2>& mapWidth, const array<uint8_t, 2>& mapHeight, const string& gameName, const string& hostName, uint32_t upTime, const string& mapPath, const array<uint8_t, 4>& mapBlizzHash, const optional<array<uint8_t, 20>>& maybeSHA1, uint32_t hostCounter, uint8_t maxSupportedSlots)
+  vector<uint8_t> SEND_SID_STARTADVEX3(uint8_t state, const uint32_t mapGameType, const uint32_t gameFlags, const array<uint8_t, 2>& mapWidth, const array<uint8_t, 2>& mapHeight, string_view gameName, string_view hostName, uint32_t upTime, string_view mapPath, const array<uint8_t, 4>& mapBlizzHash, const optional<array<uint8_t, 20>>& maybeSHA1, uint32_t hostCounter, uint8_t maxSupportedSlots)
   {
     string hostCounterString = ToHexString(hostCounter);
     if (hostCounterString.size() < 8) {
@@ -1152,7 +1152,7 @@ namespace BNETProtocol
     return packet;
   }
 
-  vector<uint8_t> SEND_SID_NOTIFYJOIN(const string& gameName)
+  vector<uint8_t> SEND_SID_NOTIFYJOIN(string_view gameName)
   {
     vector<uint8_t> packet = {BNETProtocol::Magic::BNET_HEADER, BNETProtocol::Magic::NOTIFYJOIN, 0, 0, 0, 0, 0, 0, 14, 0, 0, 0};
     AppendByteArrayString(packet, gameName, true);            // Game Name
@@ -1170,7 +1170,7 @@ namespace BNETProtocol
     return packet;
   }
 
-  vector<uint8_t> SEND_SID_LOGONRESPONSE(const vector<uint8_t>& clientToken, const vector<uint8_t>& serverToken, const vector<uint8_t>& passwordHash, const string& accountName)
+  vector<uint8_t> SEND_SID_LOGONRESPONSE(const vector<uint8_t>& clientToken, const vector<uint8_t>& serverToken, const vector<uint8_t>& passwordHash, string_view accountName)
   {
     vector<uint8_t> packet;
     packet.push_back(BNETProtocol::Magic::BNET_HEADER);                       // BNET header constant
@@ -1199,7 +1199,7 @@ namespace BNETProtocol
     return packet;
   }
 
-  vector<uint8_t> SEND_SID_AUTH_INFO(const bool isExpansion, const Version& war3Version, uint32_t localeID, uint32_t languageID, const array<uint8_t, 4>& localeShort, const string& countryShort, const string& country)
+  vector<uint8_t> SEND_SID_AUTH_INFO(const bool isExpansion, const Version& war3Version, uint32_t localeID, uint32_t languageID, const array<uint8_t, 4>& localeShort, string_view countryShort, string_view country)
   {
     const uint8_t ProtocolID[]    = {0, 0, 0, 0};
     const uint8_t PlatformID[]    = {54, 56, 88, 73};              // "IX86"
@@ -1232,7 +1232,7 @@ namespace BNETProtocol
     return packet;
   }
 
-  vector<uint8_t> SEND_SID_AUTH_CHECK(const array<uint8_t, 4>& clientToken, const bool isExpansion, const array<uint8_t, 4>& exeVersion, const array<uint8_t, 4>& exeVersionHash, const vector<uint8_t>& keyInfoROC, const vector<uint8_t>& keyInfoTFT, const string& exeInfo, const string& keyOwnerName)
+  vector<uint8_t> SEND_SID_AUTH_CHECK(const array<uint8_t, 4>& clientToken, const bool isExpansion, const array<uint8_t, 4>& exeVersion, const array<uint8_t, 4>& exeVersionHash, const vector<uint8_t>& keyInfoROC, const vector<uint8_t>& keyInfoTFT, string_view exeInfo, string_view keyOwnerName)
   {
     vector<uint8_t> packet;
     uint32_t numKeys = 1;
@@ -1254,7 +1254,7 @@ namespace BNETProtocol
     return packet;
   }
 
-  vector<uint8_t> SEND_SID_AUTH_ACCOUNTLOGON(const array<uint8_t, 32>& clientPublicKey, const string& accountName)
+  vector<uint8_t> SEND_SID_AUTH_ACCOUNTLOGON(const array<uint8_t, 32>& clientPublicKey, string_view accountName)
   {
     vector<uint8_t> packet;
     packet.push_back(BNETProtocol::Magic::BNET_HEADER);              // BNET header constant
@@ -1279,7 +1279,7 @@ namespace BNETProtocol
     return packet;
   }
 
-  vector<uint8_t> SEND_SID_AUTH_ACCOUNTSIGNUP(const string& userName, const array<uint8_t, 20>& clientPasswordProof)
+  vector<uint8_t> SEND_SID_AUTH_ACCOUNTSIGNUP(string_view userName, const array<uint8_t, 20>& clientPasswordProof)
   {
     vector<uint8_t> packet;
     packet.push_back(BNETProtocol::Magic::BNET_HEADER);                              // BNET header constant

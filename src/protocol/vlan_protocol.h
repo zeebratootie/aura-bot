@@ -28,7 +28,7 @@ namespace VLANProtocol
   // send functions
 
   [[nodiscard]] std::vector<uint8_t> SEND_VLAN_SEARCHGAME(bool TFT, const Version& war3Version );
-  [[nodiscard]] std::vector<uint8_t> SEND_VLAN_GAMEINFO(bool TFT, const Version& war3Version, uint32_t mapGameType, uint32_t gameFlags, std::array<uint8_t, 2> mapWidth, std::array<uint8_t, 2> mapHeight, std::string gameName, std::string hostName, uint32_t elapsedTime, std::string mapPath, std::array<uint8_t, 4> mapBlizzHash, uint32_t slotsTotal, uint32_t slotsOpen, std::array<uint8_t, 4> ip, uint16_t port, uint32_t hostCounter, uint32_t entryKey);
+  [[nodiscard]] std::vector<uint8_t> SEND_VLAN_GAMEINFO(bool TFT, const Version& war3Version, uint32_t mapGameType, uint32_t gameFlags, std::array<uint8_t, 2> mapWidth, std::array<uint8_t, 2> mapHeight, std::string gameName, std::string hostName, uint32_t elapsedTime, std::string_view mapPath, std::array<uint8_t, 4> mapBlizzHash, uint32_t slotsTotal, uint32_t slotsOpen, std::array<uint8_t, 4> ip, uint16_t port, uint32_t hostCounter, uint32_t entryKey);
   [[nodiscard]] std::vector<uint8_t> SEND_VLAN_CREATEGAME(bool TFT, const Version& war3Version, uint32_t hostCounter, std::array<uint8_t, 4> ip, uint16_t port);
   [[nodiscard]] std::vector<uint8_t> SEND_VLAN_REFRESHGAME(uint32_t hostCounter, uint32_t players, uint32_t playerSlots, std::array<uint8_t, 4> ip, uint16_t port);
   [[nodiscard]] std::vector<uint8_t> SEND_VLAN_DECREATEGAME(uint32_t hostCounter, std::array<uint8_t, 4> ip, uint16_t port);
@@ -92,12 +92,12 @@ public:
   [[nodiscard]] uint32_t GetGameFlags( )                               { return m_GameFlags; }
   [[nodiscard]] uint16_t GetMapWidth( )                               { return m_MapWidth; }
   [[nodiscard]] uint16_t GetMapHeight( )                              { return m_MapHeight; }
-  [[nodiscard]] const std::string& GetGameName( )                            { return m_GameName; }
+  [[nodiscard]] std::string_view GetGameName( )                            { return m_GameName; }
   [[nodiscard]] const std::vector<uint8_t>& GetStatString( )                 { return m_StatString; }
-  [[nodiscard]] const std::string& GetHostName( )                            { return m_HostName; }
+  [[nodiscard]] std::string_view GetHostName( )                            { return m_HostName; }
   [[nodiscard]] int64_t GetReceivedTime( )                           { return m_ReceivedTime; }
   [[nodiscard]] uint32_t GetElapsedTime( )                            { return m_ElapsedTime; }
-  [[nodiscard]] const std::string& GetMapPath( )                             { return m_MapPath; }
+  [[nodiscard]] std::string_view GetMapPath( )                             { return m_MapPath; }
   [[nodiscard]] const std::vector<uint8_t>& GetMapScriptsBlizzHash( )                     { return m_MapScriptsBlizzHash; }
   [[nodiscard]] uint32_t GetSlotsTotal( )                             { return m_SlotsTotal; }
   [[nodiscard]] uint32_t GetSlotsOpen( )                              { return m_SlotsOpen; }

@@ -41,7 +41,7 @@ struct GameStat
   std::optional<std::array<uint8_t, 20>>          m_MapScriptsSHA1;
 
   GameStat();
-  GameStat(uint32_t gameFlags, uint16_t mapWidth, uint16_t mapHeight, const std::string& mapPath, const std::string& hostName, const std::array<uint8_t, 4>& mapBlizzHash, const std::optional<std::array<uint8_t, 20>>& mapSHA1);
+  GameStat(uint32_t gameFlags, uint16_t mapWidth, uint16_t mapHeight, std::string_view mapPath, std::string_view hostName, const std::array<uint8_t, 4>& mapBlizzHash, const std::optional<std::array<uint8_t, 20>>& mapSHA1);
   GameStat(const uint8_t* ptr, size_t size);
 
   ~GameStat();

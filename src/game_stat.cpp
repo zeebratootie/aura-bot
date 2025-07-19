@@ -39,7 +39,7 @@ GameStat::GameStat()
   m_MapScriptsBlizzHash.fill(0);
 }
 
-GameStat::GameStat(uint32_t gameFlags, uint16_t mapWidth, uint16_t mapHeight, const string& mapPath, const string& hostName, const array<uint8_t, 4>& mapBlizzHash, const optional<array<uint8_t, 20>>& maybeSHA1)
+GameStat::GameStat(uint32_t gameFlags, uint16_t mapWidth, uint16_t mapHeight, string_view mapPath, string_view hostName, const array<uint8_t, 4>& mapBlizzHash, const optional<array<uint8_t, 20>>& maybeSHA1)
 : m_IsValid(true),
   m_GameFlags(gameFlags),
   m_MapWidth(mapWidth),

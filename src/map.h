@@ -432,7 +432,7 @@ public:
   [[nodiscard]] inline bool                              GetMPQSucceeded() const { return m_MapMPQResult.has_value() && m_MapMPQResult.value(); }
   [[nodiscard]] inline bool                              GetMPQErrored() const { return m_MapMPQResult.has_value() && !m_MapMPQResult.value(); }
   [[nodiscard]] inline const std::string&                GetConfigName() const { return m_CFGName; }
-  [[nodiscard]] inline const std::string&                GetClientPath() const { return m_ClientMapPath; }
+  [[nodiscard]] std::string_view                         GetClientPath() const { return m_ClientMapPath; }
   [[nodiscard]] inline uint32_t                          GetMapSize() const { return m_MapSize; }
   [[nodiscard]] inline float                             GetMapSizeMB() const { return (float)m_MapSize / (float)(1024. * 1024.); }
   [[nodiscard]] uint32_t                                 GetMapSizeClamped(const Version& version) const;

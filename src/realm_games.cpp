@@ -81,7 +81,7 @@ bool GameSearchQuery::GetIsMatch(const Version& gameVersion, const NetworkGameIn
     if (!mismatchReasons.empty()) {
       Print(
         "[SEARCH] Found game [" + string(gameInfo.GetGameName()) + "] by [" + string(gameInfo.GetHostName()) + "], "
-        "but " + JoinStrings(mismatchReasons, false) + "."
+        "but " + JoinStrings(mismatchReasons) + "."
       );
       return false;
     }

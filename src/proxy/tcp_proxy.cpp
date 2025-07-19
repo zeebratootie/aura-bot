@@ -83,7 +83,7 @@ TCPProxyStatus CTCPProxy::TransferBuffer(fd_set* fd, CStreamIOSocket* fromSocket
 
   if (pendingBytes >= kHighWatermark || (*pausedRecvFlag && pendingBytes > kLowWatermark)) {
     if (m_Aura->GetTicksIsAfterDelay(fromSocket->GetLastRecv(), timeout)) {
-      PRINT_IF(LogLevel::kDebug, "Terminating stalled proxy.")
+      PRINT_IF(LogLevel::kDebug, "Terminating stalled proxy.");
       m_DeleteMe = true;
       return TCPProxyStatus::kDestroy;
     }
@@ -99,7 +99,7 @@ TCPProxyStatus CTCPProxy::TransferBuffer(fd_set* fd, CStreamIOSocket* fromSocket
     return TCPProxyStatus::kOk;
   }
   if (m_Aura->GetTicksIsAfterDelay(fromSocket->GetLastRecv(), timeout)) {
-    PRINT_IF(LogLevel::kDebug, "Terminating inactive proxy.")
+    PRINT_IF(LogLevel::kDebug, "Terminating inactive proxy.");
     m_DeleteMe = true;
     return TCPProxyStatus::kDestroy;
   }

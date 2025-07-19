@@ -775,7 +775,7 @@ void CMap::ReadFileFromArchive(vector<uint8_t>& container, const string& fileSub
     string localizedPath = CMap::GetLocalizedInMPQPath(m_GameLocaleMod.value(), fileSubPath);
     ReadFileFromArchiveExact(container, localizedPath);
     if (!container.empty()) {
-      PRINT_IF(LogLevel::kInfo, "[MAP] found [" + localizedPath + "]")
+      PRINT_IF(LogLevel::kInfo, "[MAP] found [" + localizedPath + "]");
       return;
     }
   }
@@ -788,7 +788,7 @@ void CMap::ReadFileFromArchive(string& container, const string& fileSubPath) con
     string localizedPath = CMap::GetLocalizedInMPQPath(m_GameLocaleMod.value(), fileSubPath);
     ReadFileFromArchiveExact(container, localizedPath);
     if (!container.empty()) {
-      PRINT_IF(LogLevel::kInfo, "[MAP] found [" + localizedPath + "]")
+      PRINT_IF(LogLevel::kInfo, "[MAP] found [" + localizedPath + "]");
       return;
     }
   }
@@ -1032,7 +1032,7 @@ optional<MapEssentials> CMap::ParseMPQ()
           mapEssentials->options = RawMapFlags & (MAPOPT_MELEE | MAPOPT_FIXEDPLAYERSETTINGS | MAPOPT_CUSTOMFORCES);
           if (mapEssentials->options & MAPOPT_FIXEDPLAYERSETTINGS) mapEssentials->options |= MAPOPT_CUSTOMFORCES;
 
-          DPRINT_IF(LogLevel::kTrace, "[MAP] calculated <map.options = " + to_string(mapEssentials->options) + ">")
+          DPRINT_IF(LogLevel::kTrace, "[MAP] calculated <map.options = " + to_string(mapEssentials->options) + ">");
 
           if (!(mapEssentials->options & MAPOPT_CUSTOMFORCES)) {
             mapEssentials->numTeams = static_cast<uint8_t>(RawMapNumPlayers);
@@ -1049,7 +1049,7 @@ optional<MapEssentials> CMap::ParseMPQ()
             if (!(mapEssentials->options & MAPOPT_CUSTOMFORCES)) {
               PlayerMask = 1 << i;
             }
-            DPRINT_IF(LogLevel::kTrace, "[MAP] calculated team " + to_string(i) + " mask = " + ToHexString(PlayerMask))
+            DPRINT_IF(LogLevel::kTrace, "[MAP] calculated team " + to_string(i) + " mask = " + ToHexString(PlayerMask));
 
             for (auto& Slot : mapEssentials->slots) {
               if (0 != (PlayerMask & (1 << static_cast<uint32_t>((Slot).GetColor())))) {
@@ -1086,7 +1086,7 @@ optional<MapEssentials> CMap::ParseMPQ()
           }
 
           for (const auto& slot : mapEssentials->slots) {
-            DPRINT_IF(LogLevel::kTrace, "[MAP] calculated <map.slot_" + to_string(SlotNum) + " = " + ByteArrayToDecString(slot.GetProtocolArray()) + ">")
+            DPRINT_IF(LogLevel::kTrace, "[MAP] calculated <map.slot_" + to_string(SlotNum) + " = " + ByteArrayToDecString(slot.GetProtocolArray()) + ">");
             ++SlotNum;
           }
 #endif
@@ -1134,7 +1134,7 @@ optional<MapEssentials> CMap::ParseMPQ()
       mapEssentials->previewImgSize = previewImgSize.value();
     }
   } else { // end m_MapLoaderIsPartial
-    DPRINT_IF(LogLevel::kTrace, "[MAP] using mapcfg for <map.options>, <map.width>, <map.height>, <map.slot_N>, <map.num_players>, <map.num_teams>")
+    DPRINT_IF(LogLevel::kTrace, "[MAP] using mapcfg for <map.options>, <map.width>, <map.height>, <map.slot_N>, <map.num_players>, <map.num_teams>");
   }
 
   if (m_MapIsLua) {
@@ -1206,18 +1206,18 @@ optional<MapEssentials> CMap::ParseMPQ()
       // make sure to instantiate MapFragmentHashes anyway, so that mapEssentials is in a valid state
       // (note: contents are wrapped in std::optional)
       if (mapCryptoProcessor->second.errored) {
-        PRINT_IF(LogLevel::kWarning, "[MAP] unable to calculate <map.scripts_hash.blizz.v" + ToVersionString(version) + ">, and <map.scripts_hash.sha1.v" + ToVersionString(version) + ">")
+        PRINT_IF(LogLevel::kWarning, "[MAP] unable to calculate <map.scripts_hash.blizz.v" + ToVersionString(version) + ">, and <map.scripts_hash.sha1.v" + ToVersionString(version) + ">");
         continue;
       }
       auto mapCryptoResults = mapEssentials->fragmentHashes.find(version);
       EnsureFixedByteArray(mapCryptoResults->second.blizz, mapCryptoProcessor->second.blizz, false);
-      DPRINT_IF(LogLevel::kTrace, "[MAP] calculated <map.scripts_hash.blizz.v" + ToVersionString(version) + " = " + ByteArrayToDecString(mapCryptoResults->second.blizz.value()) + ">")
+      DPRINT_IF(LogLevel::kTrace, "[MAP] calculated <map.scripts_hash.blizz.v" + ToVersionString(version) + " = " + ByteArrayToDecString(mapCryptoResults->second.blizz.value()) + ">");
 
       mapCryptoProcessor->second.sha1.Final();
       mapCryptoResults->second.sha1.emplace();
       mapCryptoResults->second.sha1->fill(0);
       mapCryptoProcessor->second.sha1.GetHash(mapCryptoResults->second.sha1->data());
-      DPRINT_IF(LogLevel::kTrace, "[MAP] calculated <map.scripts_hash.sha1.v" + ToVersionString(version) + " = " + ByteArrayToDecString(mapCryptoResults->second.sha1.value()) + ">")
+      DPRINT_IF(LogLevel::kTrace, "[MAP] calculated <map.scripts_hash.sha1.v" + ToVersionString(version) + " = " + ByteArrayToDecString(mapCryptoResults->second.sha1.value()) + ">");
     }
 
     if (!m_JASSValid && m_ErrorMessage.empty()) {
@@ -1881,7 +1881,7 @@ bool CMap::AcquireGameVersion(CConfig* CFG)
 bool CMap::TryLoadMapFilePersistent(optional<uint32_t>& fileSize, optional<uint32_t>& crc32)
 {
   if (m_MapServerPath.empty()) {
-    DPRINT_IF(LogLevel::kTrace2, "m_MapServerPath missing - map data not loaded")
+    DPRINT_IF(LogLevel::kTrace2, "m_MapServerPath missing - map data not loaded");
     return false;
   }
   filesystem::path resolvedPath(m_MapServerPath);
@@ -1890,7 +1890,7 @@ bool CMap::TryLoadMapFilePersistent(optional<uint32_t>& fileSize, optional<uint3
   }
   m_MapFileContents = m_Aura->ReadFile(resolvedPath, MAX_READ_FILE_SIZE);
   if (!HasMapFileContents()) {
-    PRINT_IF(LogLevel::kInfo, "[MAP] Failed to read [" + PathToString(resolvedPath) + "]")
+    PRINT_IF(LogLevel::kInfo, "[MAP] Failed to read [" + PathToString(resolvedPath) + "]");
     return false;
   }
 
@@ -1898,13 +1898,13 @@ bool CMap::TryLoadMapFilePersistent(optional<uint32_t>& fileSize, optional<uint3
   fileSize = (uint32_t)m_MapFileContents->size();
 #ifdef DEBUG
   array<uint8_t, 4> mapFileSizeBytes = CreateFixedByteArray(fileSize.value(), false);
-  DPRINT_IF(LogLevel::kTrace, "[MAP] calculated <map.size = " + ByteArrayToDecString(mapFileSizeBytes) + ">")
+  DPRINT_IF(LogLevel::kTrace, "[MAP] calculated <map.size = " + ByteArrayToDecString(mapFileSizeBytes) + ">");
 #endif
 
   crc32 = CRC32::CalculateCRC((uint8_t*)m_MapFileContents->data(), m_MapFileContents->size());
   optional<array<uint8_t, 4>> crc32Bytes;
   EnsureFixedByteArray(crc32Bytes, crc32.value(), true); // Big endian, matching SHA1
-  DPRINT_IF(LogLevel::kTrace, "[MAP] calculated <map.file_hash.crc32 = " + ByteArrayToDecString(crc32Bytes.value()) + ">")
+  DPRINT_IF(LogLevel::kTrace, "[MAP] calculated <map.file_hash.crc32 = " + ByteArrayToDecString(crc32Bytes.value()) + ">");
 
   return true;
 }
@@ -1912,7 +1912,7 @@ bool CMap::TryLoadMapFilePersistent(optional<uint32_t>& fileSize, optional<uint3
 bool CMap::TryLoadMapFileChunked(optional<uint32_t>& fileSize, optional<uint32_t>& crc32, optional<array<uint8_t, 20>>& sha1)
 {
   if (m_MapServerPath.empty()) {
-    DPRINT_IF(LogLevel::kTrace2, "m_MapServerPath missing - map data not loaded")
+    DPRINT_IF(LogLevel::kTrace2, "m_MapServerPath missing - map data not loaded");
     return false;
   }
   filesystem::path resolvedPath(m_MapServerPath);
@@ -1929,7 +1929,7 @@ bool CMap::TryLoadMapFileChunked(optional<uint32_t>& fileSize, optional<uint32_t
   m_Aura->m_SHA.Final();
 
   if (!result.first || result.second == 0) {
-    PRINT_IF(LogLevel::kInfo, "[MAP] Failed to read [" + PathToString(resolvedPath) + "]")
+    PRINT_IF(LogLevel::kInfo, "[MAP] Failed to read [" + PathToString(resolvedPath) + "]");
     m_Aura->m_SHA.Reset();
     return false;
   }
@@ -1937,18 +1937,18 @@ bool CMap::TryLoadMapFileChunked(optional<uint32_t>& fileSize, optional<uint32_t
   fileSize = result.second;
 #ifdef DEBUG
   array<uint8_t, 4> mapFileSizeBytes = CreateFixedByteArray(fileSize.value(), false);
-  DPRINT_IF(LogLevel::kTrace, "[MAP] calculated <map.size = " + ByteArrayToDecString(mapFileSizeBytes) + ">")
+  DPRINT_IF(LogLevel::kTrace, "[MAP] calculated <map.size = " + ByteArrayToDecString(mapFileSizeBytes) + ">");
 #endif
 
   crc32 = rollingCRC32;
   optional<array<uint8_t, 4>> crc32Bytes;
   EnsureFixedByteArray(crc32Bytes, rollingCRC32, true); // Big endian, matching SHA1
-  DPRINT_IF(LogLevel::kTrace, "[MAP] calculated <map.file_hash.crc32 = " + ByteArrayToDecString(crc32Bytes.value()) + ">")
+  DPRINT_IF(LogLevel::kTrace, "[MAP] calculated <map.file_hash.crc32 = " + ByteArrayToDecString(crc32Bytes.value()) + ">");
 
   sha1.emplace();
   sha1->fill(0);
   m_Aura->m_SHA.GetHash(sha1->data());
-  DPRINT_IF(LogLevel::kTrace, "[MAP] calculated <map.file_hash.sha1 = " + ByteArrayToDecString(sha1.value()) + ">")
+  DPRINT_IF(LogLevel::kTrace, "[MAP] calculated <map.file_hash.sha1 = " + ByteArrayToDecString(sha1.value()) + ">");
 
   m_Aura->m_SHA.Reset();
   return true;
@@ -1982,7 +1982,7 @@ bool CMap::CheckMapFileIntegrity()
     m_MapFileIsValid = false;
   }
   if (!sizeOK || !crcOK || !shaOK) {
-    PRINT_IF(LogLevel::kWarning, "Map file [" + PathToString(m_MapServerPath) + "] integrity check failure - file has been tampered")
+    PRINT_IF(LogLevel::kWarning, "Map file [" + PathToString(m_MapServerPath) + "] integrity check failure - file has been tampered");
   }
   return m_MapFileIsValid;
 }

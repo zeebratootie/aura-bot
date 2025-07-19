@@ -53,9 +53,9 @@ public:
   ~CSaveGame();
 
   [[nodiscard]] const std::filesystem::path& GetServerPath()const { return m_ServerPath; }
-  [[nodiscard]] const std::string& GetClientPath() const { return m_ClientPath; }
-  [[nodiscard]] const std::string& GetClientMapPath() const { return m_ClientMapPath; }
-  [[nodiscard]] const std::string& GetGameName()  const { return m_GameName; }
+  [[nodiscard]] std::string_view GetClientPath() const { return m_ClientPath; }
+  [[nodiscard]] std::string_view GetClientMapPath() const { return m_ClientMapPath; }
+  [[nodiscard]] std::string_view GetGameName()  const { return m_GameName; }
   [[nodiscard]] uint8_t GetNumSlots() const { return m_NumSlots; }
   [[nodiscard]] uint8_t GetNumHumanSlots() const;
   [[nodiscard]] const std::vector<CGameSlot>& GetSlots() const { return m_Slots; }

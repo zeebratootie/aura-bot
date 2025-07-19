@@ -53,7 +53,7 @@ bool CSaveGame::Load()
 {
   m_Packed->Load(m_ServerPath, false);
   if (!m_Packed->GetValid() || m_Packed->GetFlags() != 0) {
-    PRINT_IF(LogLevel::kWarning, "[SAVEGAME] invalid file type (flags mismatch)")
+    PRINT_IF(LogLevel::kWarning, "[SAVEGAME] invalid file type (flags mismatch)");
     Unload();
     return false;
   }
@@ -102,12 +102,12 @@ bool CSaveGame::Parse()
   ISS.read(reinterpret_cast<char*>(&m_NumSlots), 1);      // number of slots
 
   if (m_NumSlots == 0 || m_NumSlots > MAX_SLOTS_MODERN) {
-    PRINT_IF(LogLevel::kWarning, "[SAVEGAME] invalid savegame (slot count invalid)")
+    PRINT_IF(LogLevel::kWarning, "[SAVEGAME] invalid savegame (slot count invalid)");
     return false;
   }
 
   if (m_NumSlots > MAX_SLOTS_LEGACY && !m_Aura->m_SupportsModernSlots) {
-    PRINT_IF(LogLevel::kWarning, "[SAVEGAME] invalid savegame (more than 12 slots requires support for v1.29+)")
+    PRINT_IF(LogLevel::kWarning, "[SAVEGAME] invalid savegame (more than 12 slots requires support for v1.29+)");
     return false;
   }
 
@@ -125,13 +125,13 @@ bool CSaveGame::Parse()
   ISS.read(reinterpret_cast<char*>(&saveHash), 4);      // magic number
 
   if (ISS.eof() || ISS.fail()) {
-    PRINT_IF(LogLevel::kWarning, "[SAVEGAME] failed to parse savegame header")
+    PRINT_IF(LogLevel::kWarning, "[SAVEGAME] failed to parse savegame header");
     return false;
   }
 
   m_GameStat = GameStat::Parse(statString);
   if (!m_GameStat.GetIsValid()) {
-    PRINT_IF(LogLevel::kWarning, "[SAVEGAME] failed to parse savegame stat data (blizz hash is <" + ByteArrayToDecString(m_GameStat.GetMapScriptsBlizzHash()) + ">)")
+    PRINT_IF(LogLevel::kWarning, "[SAVEGAME] failed to parse savegame stat data (blizz hash is <" + ByteArrayToDecString(m_GameStat.GetMapScriptsBlizzHash()) + ">)");
     m_Valid = true;
     return false;
   }

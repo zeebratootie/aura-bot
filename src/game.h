@@ -395,7 +395,7 @@ public:
   uint32_t                                               GetGameType() const;
   inline uint32_t                                        GetGameFlags() const { return m_GameFlags; }
   uint32_t                                               CalcGameFlags() const;
-  std::string                                            GetSourceFilePath() const;
+  std::string_view                                       GetSourceFilePath() const;
   std::array<uint8_t, 4>                                 GetSourceFileHashBlizz(const Version& version) const;
   std::array<uint8_t, 20>                                GetMapSHA1(const Version& version) const;
   std::array<uint8_t, 2>                                 GetAnnounceWidth() const;
@@ -492,7 +492,7 @@ public:
   bool                                                   SendAllChat(const std::string& message) const;
   bool                                                   SendObserverChat(uint8_t fromUID, const std::string& message) const;
   bool                                                   SendObserverChat(const std::string& message) const;
-  bool                                                   SendSpectatorChat(const CAsyncObserver* excludeSpectator, const std::string& prefix, const std::string& message) const;
+  bool                                                   SendSpectatorChat(const CAsyncObserver* excludeSpectator, const std::string& prefix, std::string_view message) const;
   bool                                                   SendSpectatorChat(const std::string& prefix, const std::string& message) const;
   void                                                   SendAllSlotInfo();
   void                                                   SendVirtualHostPlayerInfo(CConnection* user) const;

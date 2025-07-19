@@ -593,18 +593,18 @@ void CNet::UpdateBeforeGames(fd_set* fd, fd_set* send_fd)
       if (socket) {
         if (m_Config.m_ProxyReconnect > 0) {
           CConnection* incomingConnection = new CConnection(m_Aura, localPort, socket);
-          DPRINT_IF(LogLevel::kTrace2, "[AURA] incoming connection from " + incomingConnection->GetIPString())
+          DPRINT_IF(LogLevel::kTrace2, "[AURA] incoming connection from " + incomingConnection->GetIPString());
           m_IncomingConnections[localPort].push_back(incomingConnection);
         } else if (m_Aura->m_Lobbies.empty() && m_Aura->m_JoinInProgressGames.empty()) {
-          DPRINT_IF(LogLevel::kTrace2, "[AURA] connection to port " + to_string(localPort) + " rejected.")
+          DPRINT_IF(LogLevel::kTrace2, "[AURA] connection to port " + to_string(localPort) + " rejected.");
           delete socket;
         } else {
           CConnection* incomingConnection = new CConnection(m_Aura, localPort, socket);
-          DPRINT_IF(LogLevel::kTrace2, "[AURA] incoming connection from " + incomingConnection->GetIPString())
+          DPRINT_IF(LogLevel::kTrace2, "[AURA] incoming connection from " + incomingConnection->GetIPString());
           m_IncomingConnections[localPort].push_back(incomingConnection);
         }
         if (m_IncomingConnections[localPort].size() >= MAX_INCOMING_CONNECTIONS) {
-          PRINT_IF(LogLevel::kWarning, "[AURA] " + to_string(m_IncomingConnections[localPort].size()) + " connections at port " + to_string(localPort) + " - rejecting further connections")
+          PRINT_IF(LogLevel::kWarning, "[AURA] " + to_string(m_IncomingConnections[localPort].size()) + " connections at port " + to_string(localPort) + " - rejecting further connections");
         }
       }
 
@@ -1052,7 +1052,7 @@ void CNet::HandleUDP(UDPPkt* pkt)
 
   const Version requestVersion = GAMEVER(1, pkt->buf[8]);
 
-  DPRINT_IF(LogLevel::kTrace3, "[NET] IP " + ipAddress + " searching games from port " + to_string(remotePort) + "...")
+  DPRINT_IF(LogLevel::kTrace3, "[NET] IP " + ipAddress + " searching games from port " + to_string(remotePort) + "...");
 
   for (const auto& game : m_Aura->GetJoinableGames()) {
     if (!game->GetUDPEnabled() || !game->GetIsStageAcceptingJoins()) {
@@ -1062,7 +1062,7 @@ void CNet::HandleUDP(UDPPkt* pkt)
       continue;
     }
     if (pkt->buf[8] == 0 || game->GetIsSupportedGameVersion(requestVersion)) {
-      DPRINT_IF(LogLevel::kTrace3, "[NET] Sent game info to " + ipAddress + ":" + to_string(remotePort) + "...")
+      DPRINT_IF(LogLevel::kTrace3, "[NET] Sent game info to " + ipAddress + ":" + to_string(remotePort) + "...");
       game->ReplySearch(pkt->sender, pkt->socket, requestVersion);
 
       // When we get GAME_SEARCH from a remote port other than 6112, we still announce to port 6112.
@@ -1222,7 +1222,7 @@ uint8_t CNet::RequestUPnP(const NetProtocol protocolCode, const uint16_t externa
     IGNORE_ENUM_LAST(NetProtocol)
   }
 
-  PRINT_IF(LogLevel::kNotice, "[NET] Requesting UPnP port-mapping (" + protocol + ") " + to_string(externalPort) + " -> " + to_string(internalPort))
+  PRINT_IF(LogLevel::kNotice, "[NET] Requesting UPnP port-mapping (" + protocol + ") " + to_string(externalPort) + " -> " + to_string(internalPort));
 
   devlist = upnpDiscover(2000, nullptr, nullptr, 0, 0, 2, 0);
   uint8_t success = 0;
@@ -1475,7 +1475,7 @@ void CNet::ReportHealthCheck()
   if (publicIPv4 != nullptr && hasDirectAttempts) {
     string portForwardInstructions;
     if (m_HealthCheckVerbose && m_HealthCheckContext->GetSourceGame() != nullptr && m_HealthCheckContext->GetSourceGame()->GetIsLobbyStrict()) {
-      portForwardInstructions = "About port-forwarding: Setup your router to forward external port(s) {" + JoinStrings(failedPorts, false) + "} to internal port(s) {" + JoinStrings(GetPotentialGamePorts(), false) + "}";
+      portForwardInstructions = "About port-forwarding: Setup your router to forward external port(s) {" + JoinStrings(failedPorts) + "} to internal port(s) {" + JoinStrings(GetPotentialGamePorts()) + "}";
     }
     if (anyDirectSuccess) {
       Print("[NET] This bot CAN be reached through the IPv4 Internet. Address: " + AddressToString(*publicIPv4));
@@ -1528,7 +1528,7 @@ void CNet::ReportHealthCheck()
       }
     }
   }
-  m_HealthCheckContext->SendAll(JoinStrings(ChatReport, " | ", false));
+  m_HealthCheckContext->SendAll(JoinStrings(ChatReport, " | "));
   ResetHealthCheck();
 }
 
@@ -1980,7 +1980,7 @@ void CNet::RegisterGameSeeker(CConnection* connection, IncomingConnectionType nT
 {
   CStreamIOSocket* socket = connection->GetSocket();
   if (!socket) return;
-  DPRINT_IF(LogLevel::kTrace, "[NET] registering game seeker from " + connection->GetIPString() + " (type " + ToDecString(nType) + ")")
+  DPRINT_IF(LogLevel::kTrace, "[NET] registering game seeker from " + connection->GetIPString() + " (type " + ToDecString(nType) + ")");
   CGameSeeker* seeker = new CGameSeeker(connection, nType);
   m_GameSeekers[seeker->GetPort()].push_back(seeker);
   connection->SetSocket(nullptr);

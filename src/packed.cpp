@@ -96,11 +96,11 @@ bool CPacked::Load(const filesystem::path& filePath, const bool allBlocks)
 {
 	m_Valid = true;
   if (!FileRead(filePath, m_Compressed, MAX_READ_FILE_SIZE)) {
-    PRINT_IF(LogLevel::kWarning, "[PACKED] load failed to load data from file [" + PathToString(filePath) + "]")
+    PRINT_IF(LogLevel::kWarning, "[PACKED] load failed to load data from file [" + PathToString(filePath) + "]");
     m_Valid = false;
     return m_Valid;
   }
-  PRINT_IF(LogLevel::kInfo, "[PACKED] loading data from file [" + PathToString(filePath) + "]")
+  PRINT_IF(LogLevel::kInfo, "[PACKED] loading data from file [" + PathToString(filePath) + "]");
   Decompress(allBlocks);
   return m_Valid;
 }
@@ -118,11 +118,11 @@ bool CPacked::Extract(const filesystem::path& inputPath, const filesystem::path&
 {
 	m_Valid = true;
   if (!FileRead(inputPath, m_Compressed, MAX_READ_FILE_SIZE)) {
-    PRINT_IF(LogLevel::kWarning, "[PACKED] extract failed to load data from file [" + PathToString(inputPath) + "]")
+    PRINT_IF(LogLevel::kWarning, "[PACKED] extract failed to load data from file [" + PathToString(inputPath) + "]");
     m_Valid = false;
     return m_Valid;
   }
-  PRINT_IF(LogLevel::kInfo, "[PACKED] extracting data from file [" + PathToString(inputPath) + "] to file [" + PathToString(outputPath) + "]")
+  PRINT_IF(LogLevel::kInfo, "[PACKED] extracting data from file [" + PathToString(inputPath) + "] to file [" + PathToString(outputPath) + "]");
   Decompress(true);
   return FileWrite(outputPath, (unsigned char *)m_Decompressed.c_str(), m_Decompressed.size());
 }
@@ -131,11 +131,11 @@ bool CPacked::Pack(const bool TFT, const filesystem::path& inputPath, const file
 {
 	m_Valid = true;
   if (!FileRead(inputPath, m_Decompressed, MAX_READ_FILE_SIZE)) {
-    PRINT_IF(LogLevel::kWarning, "[PACKED] pack failed to load data from file [" + PathToString(inputPath) + "]")
+    PRINT_IF(LogLevel::kWarning, "[PACKED] pack failed to load data from file [" + PathToString(inputPath) + "]");
     m_Valid = false;
     return m_Valid;
   }
-  PRINT_IF(LogLevel::kInfo, "[PACKET] packing data from file [" + PathToString(inputPath) + "] to file [" + PathToString(outputPath) + "]")
+  PRINT_IF(LogLevel::kInfo, "[PACKET] packing data from file [" + PathToString(inputPath) + "] to file [" + PathToString(outputPath) + "]");
 	Compress(TFT);
 
 	if (!m_Valid) return false;
@@ -148,7 +148,7 @@ void CPacked::Decompress(const bool allBlocks)
     m_Valid = false;
     return;
   }
-  DPRINT_IF(LogLevel::kTrace, "[PACKED] decompressing data")
+  DPRINT_IF(LogLevel::kTrace, "[PACKED] decompressing data");
 
 	// format found at http://www.thehelper.net/forums/showthread.php?t=42787
 	istringstream ISS(m_Compressed);
@@ -158,7 +158,7 @@ void CPacked::Decompress(const bool allBlocks)
 	getline(ISS, GarbageString, '\0');
 
 	if (GarbageString != "Warcraft III recorded game\x01A") {
-    PRINT_IF(LogLevel::kWarning, "[PACKED] not a valid packed file")
+    PRINT_IF(LogLevel::kWarning, "[PACKED] not a valid packed file");
 		m_Valid = false;
 		return;
 	}
@@ -173,7 +173,7 @@ void CPacked::Decompress(const bool allBlocks)
 		ISS.seekg(2, ios::cur);					// unknown
 		ISS.seekg(2, ios::cur);					// version number
 
-    PRINT_IF(LogLevel::kWarning, "[PACKED] header version is too old")
+    PRINT_IF(LogLevel::kWarning, "[PACKED] header version is too old");
 		m_Valid = false;
 		return;
 	} else {
@@ -189,15 +189,15 @@ void CPacked::Decompress(const bool allBlocks)
 	ISS.seekg(4, ios::cur);						// CRC
 
 	if (ISS.fail()) {
-    PRINT_IF(LogLevel::kWarning, "[PACKED] failed to read header")
+    PRINT_IF(LogLevel::kWarning, "[PACKED] failed to read header");
 		m_Valid = false;
 		return;
 	}
 
 	if (allBlocks) {
-		DPRINT_IF(LogLevel::kTrace, "[PACKED] reading " + to_string(m_NumBlocks) + " blocks")
+		DPRINT_IF(LogLevel::kTrace, "[PACKED] reading " + to_string(m_NumBlocks) + " blocks");
   } else {
-		DPRINT_IF(LogLevel::kTrace, "[PACKED] reading 1/" + to_string(m_NumBlocks) + " blocks")
+		DPRINT_IF(LogLevel::kTrace, "[PACKED] reading 1/" + to_string(m_NumBlocks) + " blocks");
   }
 
 	// read blocks
@@ -212,7 +212,7 @@ void CPacked::Decompress(const bool allBlocks)
 		ISS.seekg(4, ios::cur);	// checksum
 
 		if (ISS.fail()) {
-      PRINT_IF(LogLevel::kWarning, "[PACKED] failed to read block header")
+      PRINT_IF(LogLevel::kWarning, "[PACKED] failed to read block header");
 			m_Valid = false;
 			return;
 		}
@@ -225,7 +225,7 @@ void CPacked::Decompress(const bool allBlocks)
 		ISS.read((char*)CompressedData, BlockCompressed);
 
 		if (ISS.fail()) {
-			PRINT_IF(LogLevel::kWarning, "[PACKED] failed to read block data")
+			PRINT_IF(LogLevel::kWarning, "[PACKED] failed to read block data");
 			delete[] DecompressedData;
 			delete[] CompressedData;
 			m_Valid = false;
@@ -236,7 +236,7 @@ void CPacked::Decompress(const bool allBlocks)
 		int Result = tzuncompress(DecompressedData, &BlockDecompressedLong, CompressedData, BlockCompressedLong);
 
 		if (Result != Z_OK) {
-      PRINT_IF(LogLevel::kWarning, "[PACKED] tzuncompress error " + to_string(Result))
+      PRINT_IF(LogLevel::kWarning, "[PACKED] tzuncompress error " + to_string(Result));
 			delete[] DecompressedData;
 			delete[] CompressedData;
 			m_Valid = false;
@@ -244,7 +244,7 @@ void CPacked::Decompress(const bool allBlocks)
 		}
 
 		if (BlockDecompressedLong != (uLongf)BlockDecompressed) {
-      PRINT_IF(LogLevel::kWarning, "[PACKED] block decompressed size mismatch, actual = " + to_string(BlockDecompressedLong) + ", expected = " + to_string(BlockDecompressed))
+      PRINT_IF(LogLevel::kWarning, "[PACKED] block decompressed size mismatch, actual = " + to_string(BlockDecompressedLong) + ", expected = " + to_string(BlockDecompressed));
 			delete[] DecompressedData;
 			delete[] CompressedData;
 			m_Valid = false;
@@ -261,25 +261,25 @@ void CPacked::Decompress(const bool allBlocks)
     }
 	}
 
-  DPRINT_IF(LogLevel::kTrace, "[PACKED] decompressed " + to_string(m_Decompressed.size()) + " bytes")
+  DPRINT_IF(LogLevel::kTrace, "[PACKED] decompressed " + to_string(m_Decompressed.size()) + " bytes");
 
 	if (allBlocks || m_NumBlocks == 1) {
 		if (m_DecompressedSize > m_Decompressed.size()) {
-      PRINT_IF(LogLevel::kWarning, "[PACKED] not enough decompressed data")
+      PRINT_IF(LogLevel::kWarning, "[PACKED] not enough decompressed data");
 			m_Valid = false;
 			return;
 		}
 
 		// the last block is padded with zeros, discard them
 
-    DPRINT_IF(LogLevel::kTrace, "[PACKED] discarding " + to_string(m_Decompressed.size() - m_DecompressedSize) + " bytes")
+    DPRINT_IF(LogLevel::kTrace, "[PACKED] discarding " + to_string(m_Decompressed.size() - m_DecompressedSize) + " bytes");
 		m_Decompressed.erase(m_DecompressedSize);
 	}
 }
 
 void CPacked::Compress(const bool TFT)
 {
-  DPRINT_IF(LogLevel::kTrace, "[PACKED] compressing data")
+  DPRINT_IF(LogLevel::kTrace, "[PACKED] compressing data");
 
 	// format found at http://www.thehelper.net/forums/showthread.php?t=42787
 

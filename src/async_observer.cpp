@@ -93,9 +93,9 @@ CAsyncObserver::~CAsyncObserver()
   m_GameHistory.reset();
 
   if (HasLeftReason()) {
-    Print(GetLogPrefix() + "destroyed - " + GetLeftReason());
+    Print(Concat(GetLogPrefix(), "destroyed - ", GetLeftReason()));
   } else {
-    Print(GetLogPrefix() + "destroyed");
+    Print(Concat(GetLogPrefix(), "destroyed"));
   }
 
   for (const auto& ptr : m_Aura->m_ActiveContexts) {
@@ -229,7 +229,7 @@ AsyncObserverStatus CAsyncObserver::Update(fd_set* fd, fd_set* send_fd, int64_t 
                   break;
               }
               if (!skipActions) {
-                Print(GetLogPrefix() + "got action <" + ByteArrayToHexString(Data.data() + 8, Length - 8) + ">");
+                Print(Concat(GetLogPrefix(), "got action <", ByteArrayToHexString(Data.data() + 8, Length - 8), ">"));
               }
               break;
             }
@@ -289,7 +289,7 @@ AsyncObserverStatus CAsyncObserver::Update(fd_set* fd, fd_set* send_fd, int64_t 
           // GProxy unsupported for observers
           //shared_ptr<CGame> game = m_Game.lock();
           if (/*game && game->GetIsProxyReconnectable() && */Bytes[1] == GPSProtocol::Magic::INIT) {
-            Print(GetLogPrefix() + "client started GProxy handshake ");
+            Print(Concat(GetLogPrefix(), "client started GProxy handshake "));
           }
           break;
         }
@@ -338,7 +338,7 @@ AsyncObserverStatus CAsyncObserver::Update(fd_set* fd, fd_set* send_fd, int64_t 
     if (PushGameFrames()) {
       /*
       const size_t delta = SubtractClampZero(m_ActionFrameCounter, beforeCounter);
-      if (beforeCounter <= 50 || delta > 1) Print(GetLogPrefix() + "pushed " + to_string(delta) + " action frames");
+      if (beforeCounter <= 50 || delta > 1) Print(Concat(GetLogPrefix(), "pushed ", to_string(delta), " action frames"));
       //*/
       if (m_FrameRate > 1) {
         // High watermark
@@ -348,7 +348,7 @@ AsyncObserverStatus CAsyncObserver::Update(fd_set* fd, fd_set* send_fd, int64_t 
         ) {
           ResetClientFrameRate();
           ResetFrameRateToClientSafe();
-          SendChat("Your playback speed is limited to " + to_string(m_FrameRate) + "x");
+          SendChat(Concat("Your playback speed is limited to ", to_string(m_FrameRate), "x"));
         }
         if (canSendChat) {
           if (m_Aura->GetTimeIsAfterDelay(m_LastProgressReportTime, m_Aura->GetTicksIsAfterDelay(m_FinishedLoadingTicks, 120000) ? 75 : 30)) {
@@ -394,7 +394,7 @@ void CAsyncObserver::CheckPlayBackOver()
   FlushGameFrames();
   if (m_GameHistory->m_PlayingBuffer.size() <= m_Offset) {
     m_PlaybackEnded = true;
-    Print(GetLogPrefix() + "playback ended");
+    Print(Concat(GetLogPrefix(), "playback ended"));
     SendChat("Playback ended. Game will exit automatically in 10 seconds.");
 
     // Kick after 10 seconds
@@ -448,7 +448,7 @@ bool CAsyncObserver::PushGameFrames(bool isFlush)
   auto it = begin(m_GameHistory->m_PlayingBuffer) + m_Offset;
   auto itEnd = begin(m_GameHistory->m_PlayingBuffer) + m_GameHistory->GetSpectatorOffset();
   while (it != itEnd && (m_Latency <= gameDurationWanted || it->GetType() == GAME_FRAME_TYPE_LATENCY)) {
-    //Print(GetLogPrefix() + "sending " + it->GetTypeName() + " frame");
+    //Print(Concat(GetLogPrefix(), "sending ", it->GetTypeName(), " frame"));
     switch (it->GetType()) {
       case GAME_FRAME_TYPE_GPROXY:
         // if stored, GAME_FRAME_TYPE_GPROXY always precedes GAME_FRAME_TYPE_ACTIONS
@@ -515,7 +515,7 @@ bool CAsyncObserver::UpdateClientGameState(const uint32_t checkSum)
   if (!m_StateSynchronized) return false;
 
   if (!m_Game.expired() && m_Game.lock()->GetSyncCounter() < m_SyncCounter) {
-    string text = GetLogPrefix() + "incorrectly ahead of sync";
+    string text = Concat(GetLogPrefix(), "incorrectly ahead of sync");
     Print(text);
     m_Aura->LogPersistent(text);
     return false;
@@ -575,7 +575,7 @@ void CAsyncObserver::EventDesync()
   while (!m_CheckSums.empty()) {
     m_CheckSums.pop();
   }
-  string text = GetLogPrefix() + "desynchronized on " + ToOrdinalName(m_SyncCounter) + " checksum - sent " + to_string(m_Offset) + " total frames (" + to_string(m_ActionFrameCounter) + " actions)";
+  string text = Concat(GetLogPrefix(), "desynchronized on ", ToOrdinalName(m_SyncCounter), " checksum - sent ", to_string(m_Offset), " total frames (", to_string(m_ActionFrameCounter), " actions)");
   Print(text);
   m_Aura->LogPersistent(text);
 
@@ -602,7 +602,7 @@ void CAsyncObserver::EventMapReady()
     if (auto game = m_Game.lock()) {
       int64_t remainingSeconds = (int64_t)game->m_Config.m_SpectatorDelay - m_GameHistory->m_Duration / 1000;
       if (remainingSeconds > 0) {
-        SendChat("Please wait for spectator delay (" + to_string(remainingSeconds) + " seconds...)");
+        SendChat(Concat("Please wait for spectator delay (", to_string(remainingSeconds), " seconds...)"));
       }
     }
   }
@@ -620,7 +620,7 @@ bool CAsyncObserver::CheckStartLoading()
 
 void CAsyncObserver::StartLoading()
 {
-  Print(GetLogPrefix() + "started loading");
+  Print(Concat(GetLogPrefix(), "started loading"));
   Send(GameProtocol::SEND_W3GS_COUNTDOWN_START());
   Send(GameProtocol::SEND_W3GS_COUNTDOWN_END());
   m_StartedLoading = true;
@@ -628,7 +628,7 @@ void CAsyncObserver::StartLoading()
 
 void CAsyncObserver::EventGameLoaded()
 {
-  Print(GetLogPrefix() + "finished loading");
+  Print(Concat(GetLogPrefix(), "finished loading"));
   Send(m_GameHistory->m_LoadingRealBuffer);
   Send(m_GameHistory->m_LoadingVirtualBuffer);
 }
@@ -638,7 +638,7 @@ void CAsyncObserver::EventChat(const CIncomingChatMessage& incomingChatMessage)
   const bool isLobbyChat = incomingChatMessage.GetType() == GameProtocol::ChatToHostType::CTH_MESSAGE_LOBBY;
   if (isLobbyChat == m_StartedLoading) {
     // Racing condition
-    PRINT_IF(LogLevel::kDebug, "Chat message from [" + GetName() + "] ignored (game stage mismatch)")
+    PRINT_IF(LogLevel::kDebug, Concat("Chat message from [", GetName(), "] ignored (game stage mismatch)"));
     return;
   }
 
@@ -646,7 +646,7 @@ void CAsyncObserver::EventChat(const CIncomingChatMessage& incomingChatMessage)
   const uint8_t targetType = static_cast<uint8_t>(incomingChatMessage.GetExtraFlags());
 
   if (!isLobbyChat && m_Aura->m_Config.m_LogGameChat == LOG_GAME_CHAT_ALWAYS) {
-    Print(GetLogPrefix() + "[" + GetName() + "] " + incomingChatMessage.GetMessage());
+    Print(Concat(GetLogPrefix(), "[", GetName(), "] ", incomingChatMessage.GetMessage()));
   }
 
   CGameConfig* gameConfig;
@@ -671,7 +671,7 @@ void CAsyncObserver::EventChat(const CIncomingChatMessage& incomingChatMessage)
     //const uint8_t activeSmartCommand = cmdHistory->GetSmartCommand();
     //cmdHistory->ClearSmartCommand();
     if (commandsEnabled) {
-      const string message = incomingChatMessage.GetMessage();
+      string message(incomingChatMessage.GetMessage());
       string cmdToken, command, target;
       uint8_t tokenMatch = ExtractMessageTokensAny(message, gameConfig->m_PrivateCmdToken, gameConfig->m_BroadcastCmdToken, cmdToken, command, target);
       isCommand = tokenMatch != COMMAND_TOKEN_MATCH_NONE;
@@ -734,7 +734,7 @@ void CAsyncObserver::EventChat(const CIncomingChatMessage& incomingChatMessage)
     }
     bool relaySuccess = false;
     if (shouldRelay && game) {
-      string prefix = "[" + ToFormattedTimeStamp(m_GameTicks / 1000) + "] [" + m_Name + "]: ";
+      string prefix = Concat("[", ToFormattedTimeStamp(m_GameTicks / 1000), "] [", m_Name, "]: ");
       relaySuccess = game->SendSpectatorChat(this, prefix, incomingChatMessage.GetMessage());
     }
     if (shouldRelay && !relaySuccess && m_IsObserver && targetType != CHAT_RECV_OBS) {
@@ -778,18 +778,18 @@ void CAsyncObserver::EventLeft(const uint32_t clientReason)
   if (m_StartedLoading) {
     string reason;
     if (clientReason == PLAYERLEAVE_GPROXY) {
-      reason = " (" + GameProtocol::LeftCodeToString(clientReason) + ")";
+      reason = " (", GameProtocol::LeftCodeToString(clientReason), ")";
     }
-    Print(GetLogPrefix() + "left the game at [" + ToFormattedTimeStamp(m_GameTicks / 1000) + "]" + reason);
+    Print(Concat(GetLogPrefix(), "left the game at [", ToFormattedTimeStamp(m_GameTicks / 1000), "]", reason));
     /*
     if (m_GameHistory->m_PlayingBuffer.size() <= m_Offset) {
-      Print(GetLogPrefix() + "next frame was not available");
+      Print(Concat(GetLogPrefix(), "next frame was not available"));
     } else {
-      Print(GetLogPrefix() + "next frame was " + m_GameHistory->m_PlayingBuffer[m_Offset].GetTypeName());
+      Print(Concat(GetLogPrefix(), "next frame was ", m_GameHistory->m_PlayingBuffer[m_Offset].GetTypeName()));
     }
     */
   } else {
-    Print(GetLogPrefix() + "left the lobby");
+    Print(Concat(GetLogPrefix(), "left the lobby"));
   }
   SetLeftReasonGeneric("left voluntarily");
   SetDeleteMe(true);
@@ -841,25 +841,25 @@ void CAsyncObserver::SendGameLoadedReport()
   size_t numSpectators = game ? game->GetNumSpectators() : 1;
   string otherSpectators;
   if (numSpectators > 1) {
-    otherSpectators = " with " + to_string(numSpectators - 1) + " other user(s)";
+    otherSpectators = Concat(" with ", to_string(numSpectators - 1), " other user(s)");
   }
   if (m_GameHistory->GetIsFinished()) {
     int64_t playedAgo = (m_Aura->GetLoopTicks() - m_GameHistory->GetFinishedTicks()) / 1000;
     string playedAgoFragment;
     if (playedAgo > 0) {
-      playedAgoFragment = ToDurationString(playedAgo) + " ago";
+      playedAgoFragment = Concat(ToDurationString(playedAgo), " ago");
     } else {
       playedAgoFragment = "just now";
     }
     SendChat("Watching replay");
-    SendChat("Game was played " + playedAgoFragment + ". Duration: " + ToFormattedTimeStamp(m_GameHistory->GetDuration() / 1000));
+    SendChat(Concat("Game was played ", playedAgoFragment, ". Duration: ", ToFormattedTimeStamp(m_GameHistory->GetDuration() / 1000)));
   } else {
     int64_t delay = m_GameHistory->GetSpectatorDelay();
     string delayHint;
     if (delay > 0) {
-      delayHint = " (delay is " + ToDurationString(delay / 1000) + ")";
+      delayHint = " (delay is ", ToDurationString(delay / 1000), ")";
     }
-    SendChat("Watching game" + otherSpectators + delayHint);
+    SendChat(Concat("Watching game", otherSpectators + delayHint));
   }
   if (m_FrameRate > 1) {
     SendChat("Use !sync to watch at 1x, !ff to fast-forward");
@@ -930,16 +930,16 @@ void CAsyncObserver::SendProgressReport()
 
   bool isFastForward = round(clientFrameRate) > 1;
 
-  string message = ToFormattedString(PERCENT_FACTOR * progress) + "%";
+  string message = Concat(ToFormattedString(PERCENT_FACTOR * progress), "%");
   if (isFastForward) {
-    message.append(" - Fast-forwarding at " + to_string(static_cast<int64_t>(round(clientFrameRate))) + "x");
+    message.append(Concat(" - Fast-forwarding at ", to_string(static_cast<int64_t>(round(clientFrameRate))), "x"));
   }
   if (catchUpFrameRate > epsilon) {
     // Estimate time for catching up with live (or finished) game,
     // assuming that latency will be constant.
     uint64_t etaSeconds = DoubleToUnsigned((double)m_Latency * (double)((GetGoalActionFrames() - clientFrame)) / catchUpFrameRate / (double)1000.0);
     // Let it fit in chat log (F12)
-    message.append(" - ETA " + ToDurationString(etaSeconds));
+    message.append(Concat(" - ETA ", ToDurationString(etaSeconds)));
   }
   SendChat(message);
 
@@ -950,6 +950,6 @@ void CAsyncObserver::SendProgressReport()
 
 string CAsyncObserver::GetLogPrefix() const
 {
-  if (!m_Game.expired()) return m_Game.lock()->GetLogPrefix() + "[SPECTATOR] [" + m_Name + "] ";
-  return "[SPECTATOR] [" + m_Name + "] ";
+  if (!m_Game.expired()) return m_Game.lock()->GetLogPrefix(), "[SPECTATOR] [", m_Name, "] ";
+  return Concat("[SPECTATOR] [", m_Name, "] ");
 }

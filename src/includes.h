@@ -127,20 +127,24 @@ std::string::size_type constexpr GetStringLength(const char* str)
 #define IGNORE_ENUM_LAST(EnumType) IGNORE_CASE(EnumType::LAST)
 
 #define PRINT_IF(T, U) \
+  do {\
     static_assert(T < LogLevel::LAST, "Use DPRINT_IF for tracing log levels");\
     if (m_Aura->MatchLogLevel(T)) {\
         Print(U); \
-    }
+    }\
+  } while (0)
 
 #ifdef DEBUG
 #define DPRINT_IF(T, U) \
+  do {\
     static_assert(T < LogLevel::LAST, "Invalid tracing log level");\
     static_assert(T >= LogLevel::kTrace, "Use PRINT_IF for regular log levels");\
     if (m_Aura->MatchLogLevel(T)) {\
         Print(U); \
-    }
+    }\
+  } while (0)
 #else
-#define DPRINT_IF(T, U)
+#define DPRINT_IF(T, U) do {} while (0)
 #endif
 
 #define GAMEVER(T, U) Version((uint8_t)(T), (uint8_t)(U))

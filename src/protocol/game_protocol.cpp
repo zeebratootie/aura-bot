@@ -243,7 +243,7 @@ namespace GameProtocol
   // MemoizedGameChatMessageBuilder
   //
 
-  MemoizedGameChatMessageBuilder::MemoizedGameChatMessageBuilder(const GameProtocol::ChatToHostType nGameStatus, const std::string_view nPrefix, const string_view nMessage)
+  MemoizedGameChatMessageBuilder::MemoizedGameChatMessageBuilder(const GameProtocol::ChatToHostType nGameStatus, string_view nPrefix, string_view nMessage)
    : gameStatus(nGameStatus),
      prefix(nPrefix),
      message(nMessage)
@@ -481,7 +481,7 @@ namespace GameProtocol
     return packet;
   }
 
-  std::vector<uint8_t> SEND_W3GS_REQJOIN(const uint32_t HostCounter, const uint32_t EntryKey, const std::string& Name)
+  std::vector<uint8_t> SEND_W3GS_REQJOIN(const uint32_t HostCounter, const uint32_t EntryKey, std::string_view Name)
   {
     const uint8_t              Zeros[]  = {0, 0, 0, 0};
     std::vector<uint8_t> packet;
@@ -535,7 +535,7 @@ namespace GameProtocol
     return packet;
   }
 
-  std::vector<uint8_t> SEND_W3GS_PLAYERINFO(const Version& version, uint8_t UID, const string& name, const std::array<uint8_t, 4>& externalIP, const std::array<uint8_t, 4>& internalIP)
+  std::vector<uint8_t> SEND_W3GS_PLAYERINFO(const Version& version, uint8_t UID, string_view name, const std::array<uint8_t, 4>& externalIP, const std::array<uint8_t, 4>& internalIP)
   {
     if (name.empty() || name.size() > MAX_PLAYER_NAME_SIZE) {
       Print("[GAMEPROTO] Invalid player name");
@@ -580,7 +580,7 @@ namespace GameProtocol
     return packet;
   }
 
-  std::vector<uint8_t> SEND_W3GS_PLAYERINFO_EXCLUDE_IP(const Version& version, uint8_t UID, const string& name)
+  std::vector<uint8_t> SEND_W3GS_PLAYERINFO_EXCLUDE_IP(const Version& version, uint8_t UID, string_view name)
   {
     array<uint8_t, 4> Zeros = {0, 0, 0, 0};
     return SEND_W3GS_PLAYERINFO(version, UID, name, Zeros, Zeros);
@@ -834,7 +834,7 @@ namespace GameProtocol
     return packet;
   }
 
-  std::vector<uint8_t> SEND_W3GS_GAMEINFO(const bool isExpansion, const Version& war3Version, const uint32_t mapGameType, const uint32_t gameFlags, const std::array<uint8_t, 2>& mapWidth, const std::array<uint8_t, 2>& mapHeight, const string& gameName, const string& hostName, uint32_t upTime, const string& mapPath, const std::array<uint8_t, 4>& mapBlizzHash, uint32_t slotsTotal, uint32_t slotsAvailableOff, uint16_t port, uint32_t hostCounter, uint32_t entryKey)
+  std::vector<uint8_t> SEND_W3GS_GAMEINFO(const bool isExpansion, const Version& war3Version, const uint32_t mapGameType, const uint32_t gameFlags, const std::array<uint8_t, 2>& mapWidth, const std::array<uint8_t, 2>& mapHeight, string_view gameName, string_view hostName, uint32_t upTime, string_view mapPath, const std::array<uint8_t, 4>& mapBlizzHash, uint32_t slotsTotal, uint32_t slotsAvailableOff, uint16_t port, uint32_t hostCounter, uint32_t entryKey)
   {
     if (gameName.empty() || hostName.empty() || mapPath.empty()) {
       Print("[GAMEPROTO] name/path not passed to SEND_W3GS_GAMEINFO");
@@ -874,7 +874,7 @@ namespace GameProtocol
     return packet;
   }
 
-  std::vector<uint8_t> SEND_W3GS_GAMEINFO_TEMPLATE(uint16_t* gameVersionOffset, uint16_t* dynamicInfoOffset, const bool isExpansion, const uint32_t mapGameType, const uint32_t mapFlags, const std::array<uint8_t, 2>& mapWidth, const std::array<uint8_t, 2>& mapHeight, const string& gameName, const string& hostName, const string& mapPath, const std::array<uint8_t, 4>& mapBlizzHash, uint32_t slotsTotal, uint32_t hostCounter, uint32_t entryKey)
+  std::vector<uint8_t> SEND_W3GS_GAMEINFO_TEMPLATE(uint16_t* gameVersionOffset, uint16_t* dynamicInfoOffset, const bool isExpansion, const uint32_t mapGameType, const uint32_t mapFlags, const std::array<uint8_t, 2>& mapWidth, const std::array<uint8_t, 2>& mapHeight, string_view gameName, string_view hostName, string_view mapPath, const std::array<uint8_t, 4>& mapBlizzHash, uint32_t slotsTotal, uint32_t hostCounter, uint32_t entryKey)
   {
     if (gameName.empty() || hostName.empty() || mapPath.empty()) {
       Print("[GAMEPROTO] name/path not passed to SEND_W3GS_GAMEINFO");
@@ -956,7 +956,7 @@ namespace GameProtocol
     return packet;
   }
 
-  std::vector<uint8_t> SEND_W3GS_MAPCHECK(const string& mapPath, const uint32_t mapSize, const std::array<uint8_t, 4>& mapCRC32, const std::array<uint8_t, 4>& mapScriptsHashBlizz, const std::optional<array<uint8_t, 20>>& mapScriptsHashSHA1)
+  std::vector<uint8_t> SEND_W3GS_MAPCHECK(string_view mapPath, const uint32_t mapSize, const std::array<uint8_t, 4>& mapCRC32, const std::array<uint8_t, 4>& mapScriptsHashBlizz, const std::optional<array<uint8_t, 20>>& mapScriptsHashSHA1)
   {
     if (mapPath.empty()) {
       Print("[GAMEPROTO] invalid parameters passed to SEND_W3GS_MAPCHECK");
@@ -1229,9 +1229,9 @@ void CIncomingJoinRequest::UpdateCensored(OnUnsafeNameHandler unsafeNameHandler,
   m_Censored = m_Name.size() != m_OriginalName.size();
 }
 
-string CIncomingJoinRequest::CensorName(const std::string& originalName, const bool pipeConsideredHarmful)
+string CIncomingJoinRequest::CensorName(std::string_view originalName, const bool pipeConsideredHarmful)
 {
-  string name = originalName;
+  string name(originalName);
 
   // Note: Do not always ban |, since it's used for so-called barcode names in Battle.net
   unordered_set<char> charsToRemoveAnyWhere = {

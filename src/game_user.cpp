@@ -64,34 +64,42 @@ using namespace std;
 using namespace GameUser;
 
 #define LOG_APP_IF(T, U) \
+  do {\
     static_assert(T < LogLevel::LAST, "Use DLOG_APP_IF for tracing log levels");\
     if (m_Aura->MatchLogLevel(T)) {\
-        m_Game.get().LogApp(U, LOG_C); \
-    }
+      m_Game.get().LogApp(U, LOG_C); \
+    }\
+  } while (0)
 
 #define LOG_APP_CUSTOM(T, U, V) \
+  do {\
     static_assert(T < LogLevel::LAST, "Use DLOG_APP_CUSTOM for tracing log levels");\
     if (m_Aura->MatchLogLevel(T)) {\
-        m_Game.get().LogApp(U, V); \
-    }
+      m_Game.get().LogApp(U, V); \
+    }\
+  } while (0)
 
 #ifdef DEBUG
 #define DLOG_APP_IF(T, U) \
+  do {\
     static_assert(T < LogLevel::LAST, "Invalid tracing log level");\
     static_assert(T >= LogLevel::kTrace, "Use LOG_APP_IF for regular log levels");\
     if (m_Aura->MatchLogLevel(T)) {\
-        m_Game.get().LogApp(U, LOG_C); \
-    }
+      m_Game.get().LogApp(U, LOG_C); \
+    }\
+  } while (0)
 
 #define DLOG_APP_CUSTOM(T, U, V) \
+  do {\
     static_assert(T < LogLevel::LAST, "Invalid tracing log level");\
     static_assert(T >= LogLevel::kTrace, "Use LOG_APP_CUSTOM for regular log levels");\
     if (m_Aura->MatchLogLevel(T)) {\
-        m_Game.get().LogApp(U, V); \
-    }
+      m_Game.get().LogApp(U, V); \
+    }\
+  } while (0)
 #else
-#define DLOG_APP_IF(T, U)
-#define DLOG_APP_CUSTOM(T, U, V)
+#define DLOG_APP_IF(T, U) do {} while (0)
+#define DLOG_APP_CUSTOM(T, U, V) do {} while (0)
 #endif
 
 //
@@ -277,9 +285,9 @@ uint8_t CGameUser::GetChatChannel(bool forcePrivate) const
 string CGameUser::GetGameVersionString() const
 {
   if (m_GameVersionIsExact) {
-    return "v" + ToVersionString(GetGameVersion());
+    return Concat("v", ToVersionString(GetGameVersion()));
   } else {
-    return "v" + ToVersionString(GetGameVersion()) + "?";
+    return Concat("v", ToVersionString(GetGameVersion()), "?");
   }
 }
 
@@ -292,10 +300,10 @@ string CGameUser::GetDisplayName() const
 {
   if (m_Game.get().GetIsHiddenPlayerNames() && !(m_Observer && m_Game.get().GetGameLoaded())) {
     if (m_PseudonymUID == 0xFF) {
-      return "Player " + ToDecString(m_UID);
+      return Concat("Player ", ToDecString(m_UID));
     } else {
       // After CGame::RunPlayerObfuscation()
-      return "Player " + ToDecString(m_PseudonymUID) + "?";
+      return Concat("Player ", ToDecString(m_PseudonymUID), "?");
     }
   }
   return m_Name;
@@ -352,7 +360,7 @@ void CGameUser::ReleaseOnHoldActionsCount(size_t count)
   size_t doneCount = GetPingEqualizerFrame().AddQueuedActionsCount(GetOnHoldActions(), count);
   if (doneCount > 0 && GetHasAPMQuota()) {
     if (!GetAPMQuota().TryConsume(static_cast<double>(doneCount))) {
-      Print(m_Game.get().GetLogPrefix() + "[APMLimit] Malfunction detected - " + to_string(doneCount) + " actions released, " + to_string(GetOnHoldActionsCount()) + " remaining)");
+      Print(Concat(m_Game.get().GetLogPrefix(), "[APMLimit] Malfunction detected - ", to_string(doneCount), " actions released, ", to_string(GetOnHoldActionsCount()), " remaining)"));
     }
   }
 }
@@ -583,7 +591,7 @@ bool CGameUser::Update(fd_set* fd, int64_t timeout)
 
           case GameProtocol::Magic::OUTGOING_KEEPALIVE: {
             if (m_SyncCounter >= m_Game.get().GetSyncCounter()) {
-              LOG_APP_CUSTOM(LogLevel::kWarning, "player [" + m_Name + "] incorrectly ahead of sync", LOG_C | LOG_P);
+              LOG_APP_CUSTOM(LogLevel::kWarning, Concat("player [", m_Name, "] incorrectly ahead of sync"), LOG_C | LOG_P);
               m_Game.get().EventUserDisconnectGameProtocolError(this, false);
               Abort = true;
             } else {
@@ -671,32 +679,32 @@ bool CGameUser::Update(fd_set* fd, int64_t timeout)
           }
 
           case GameProtocol::Magic::DESYNC: {
-            LOG_APP_CUSTOM(LogLevel::kNotice, "player [" + m_Name + "] sent GameProtocol::Magic::DESYNC", LOG_C | LOG_P);
+            LOG_APP_CUSTOM(LogLevel::kNotice, Concat("player [", m_Name, "] sent GameProtocol::Magic::DESYNC"), LOG_C | LOG_P);
             break;
           }
 
           case GameProtocol::Magic::GAME_OVER: {
-            LOG_APP_CUSTOM(LogLevel::kNotice, "player [" + m_Name + "] sent GameProtocol::Magic::GAME_OVER", LOG_C | LOG_P);
+            LOG_APP_CUSTOM(LogLevel::kNotice, Concat("player [", m_Name, "] sent GameProtocol::Magic::GAME_OVER"), LOG_C | LOG_P);
             break;
           }
 
           case GameProtocol::Magic::LEAVE_ACK: {
-            LOG_APP_CUSTOM(LogLevel::kNotice, "player [" + m_Name + "] sent GameProtocol::Magic::LEAVE_ACK", LOG_C | LOG_P);
+            LOG_APP_CUSTOM(LogLevel::kNotice, Concat("player [", m_Name, "] sent GameProtocol::Magic::LEAVE_ACK"), LOG_C | LOG_P);
             break;
           }
 
           case GameProtocol::Magic::CLIENT_INFO: {
-            LOG_APP_CUSTOM(LogLevel::kNotice, "player [" + m_Name + "] sent GameProtocol::Magic::CLIENT_INFO", LOG_C | LOG_P);
+            LOG_APP_CUSTOM(LogLevel::kNotice, Concat("player [", m_Name, "] sent GameProtocol::Magic::CLIENT_INFO"), LOG_C | LOG_P);
             break;
           }
 
           case GameProtocol::Magic::PEER_SET: {
-            LOG_APP_CUSTOM(LogLevel::kNotice, "player [" + m_Name + "] sent GameProtocol::Magic::PEER_SET", LOG_C | LOG_P);
+            LOG_APP_CUSTOM(LogLevel::kNotice, Concat("player [", m_Name, "] sent GameProtocol::Magic::PEER_SET"), LOG_C | LOG_P);
             break;
           }
 
           case GameProtocol::Magic::MAPPART_ERR: {
-            LOG_APP_CUSTOM(LogLevel::kNotice, "player [" + m_Name + "] sent GameProtocol::Magic::MAPPART_ERR", LOG_C | LOG_P);
+            LOG_APP_CUSTOM(LogLevel::kNotice, Concat("player [", m_Name, "] sent GameProtocol::Magic::MAPPART_ERR"), LOG_C | LOG_P);
             break;
           }
 
@@ -794,10 +802,10 @@ bool CGameUser::Update(fd_set* fd, int64_t timeout)
       if (Realm) {
         if (m_Game.get().GetDisplayMode() == GAME_DISPLAY_PUBLIC || Realm->GetIsPvPGN()) {
           if (m_Game.get().GetSentPriorityWhois()) {
-            Realm->QueuePriorityWhois("/whois " + m_Name);
+            Realm->QueuePriorityWhois(Concat("/whois ", m_Name));
             m_Game.get().SetSentPriorityWhois(true);
           } else {
-            Realm->QueueCommand("/whois " + m_Name);
+            Realm->QueueCommand(Concat("/whois ", m_Name));
           }
         } else if (m_Game.get().GetDisplayMode() == GAME_DISPLAY_PRIVATE) {
           Realm->QueueWhisper(R"(Spoof check by replying to this message with "sc" [ /r sc ])", m_Name);
@@ -868,7 +876,7 @@ void CGameUser::EventGProxyClientInit(const uint32_t version)
     game.GetIsProxyReconnectableLong(), game.m_Aura->m_Net.m_Config.m_ReconnectWaitTicks, game.GetGameID()
   );
 
-  Print(game.GetLogPrefix() + "player [" + m_Name + "] will reconnect at port " + to_string(port) + " if disconnected");
+  Print(Concat(game.GetLogPrefix(), "player [", m_Name, "] will reconnect at port ", to_string(port), " if disconnected"));
 }
 
 void CGameUser::EventGProxyExtendedClientInit(const vector<uint8_t>& data)
@@ -876,16 +884,16 @@ void CGameUser::EventGProxyExtendedClientInit(const vector<uint8_t>& data)
   GProxyExtendedClientResult extendedMode = m_GProxy->ConfirmExtended(data);
   switch (extendedMode) {
     case GProxyExtendedClientResult::kInvalid:
-      Print(m_Game.get().GetLogPrefix() + "player [" + m_Name + "] sent premature GProxy Extended handshake");
+      Print(Concat(m_Game.get().GetLogPrefix(), "player [", m_Name, "] sent premature GProxy Extended handshake"));
       break;
     case GProxyExtendedClientResult::kAlready:
-      Print(m_Game.get().GetLogPrefix() + "player [" + m_Name + "] sent multiple GProxy Extended handshakes");
+      Print(Concat(m_Game.get().GetLogPrefix(), "player [", m_Name, "] sent multiple GProxy Extended handshakes"));
       break;
     case GProxyExtendedClientResult::kNormal:
-      Print(m_Game.get().GetLogPrefix() + "player [" + m_Name + "] is using GProxy Extended");
+      Print(Concat(m_Game.get().GetLogPrefix(), "player [", m_Name, "] is using GProxy Extended"));
       break;
     case GProxyExtendedClientResult::kCheckGameID:
-      Print(m_Game.get().GetLogPrefix() + "player [" + m_Name + "] is using GProxy Extended+");
+      Print(Concat(m_Game.get().GetLogPrefix(), "player [", m_Name, "] is using GProxy Extended+"));
       break;
     }
 }
@@ -893,7 +901,7 @@ void CGameUser::EventGProxyExtendedClientInit(const vector<uint8_t>& data)
 void CGameUser::EventGProxyChangeKey(const uint32_t key)
 {
   m_GProxy->SynchronizeReconnectKeyFromClient(key);
-  Print(m_Game.get().GetLogPrefix() + "player [" + m_Name + "] updated their reconnect key");
+  Print(Concat(m_Game.get().GetLogPrefix(), "player [", m_Name, "] updated their reconnect key"));
 }
 
 double CGameUser::GetAPM() const
@@ -925,11 +933,11 @@ void CGameUser::EventGProxyAck(const size_t lastPacket)
   if (!m_GProxy->UnqueuePackets(lastPacket)) {
 #ifdef DEBUG
     if (!m_FinishedLoading) {
-      DPRINT_IF(LogLevel::kTrace, m_Game.get().GetLogPrefix() + "[GPROXY] player [" + m_Name + "] sent GPS_ACK before loading the game")
+      DPRINT_IF(LogLevel::kTrace, Concat(m_Game.get().GetLogPrefix(), "[GPROXY] player [", m_Name, "] sent GPS_ACK before loading the game"));
     } else if (!m_Game.get().GetGameLoaded()) {
-      DPRINT_IF(LogLevel::kTrace, m_Game.get().GetLogPrefix() + "[GPROXY] player [" + m_Name + "] sent GPS_ACK before the game is fully loaded")
+      DPRINT_IF(LogLevel::kTrace, Concat(m_Game.get().GetLogPrefix(), "[GPROXY] player [", m_Name, "] sent GPS_ACK before the game is fully loaded"));
     } else {
-      DPRINT_IF(LogLevel::kTrace, m_Game.get().GetLogPrefix() + "[GPROXY] player [" + m_Name + "] sent bad lastPacket " + to_string(lastPacket) + " < " + to_string(GetGProxy()->GetUnqueuedPacketsCount()))
+      DPRINT_IF(LogLevel::kTrace, Concat(m_Game.get().GetLogPrefix(), "[GPROXY] player [", m_Name, "] sent bad lastPacket ", to_string(lastPacket), " < ", to_string(GetGProxy()->GetUnqueuedPacketsCount())));
     }
 #endif
   }
@@ -960,12 +968,12 @@ void CGameUser::EventGProxyReconnect(CConnection* connection, const uint32_t las
     m_TotalDisconnectTicks += m_Aura->GetLoopTicks() - m_LastDisconnectTicks.value();
   }
   if (GetGProxy()->GetIsExtended()) {
-    m_Game.get().SendAllChat("Player [" + GetDisplayName() + "] reconnected with GProxyDLL!");
+    m_Game.get().SendAllChat(Concat("Player [", GetDisplayName(), "] reconnected with GProxyDLL!"));
   } else {
-    m_Game.get().SendAllChat("Player [" + GetDisplayName() + "] reconnected with GProxy++!");
+    m_Game.get().SendAllChat(Concat("Player [", GetDisplayName(), "] reconnected with GProxy++!"));
   }
   if (m_Game.get().m_Aura->MatchLogLevel(LogLevel::kNotice)) {
-    Print(m_Game.get().GetLogPrefix() + "user reconnected: [" + GetName() + "@" + string(GetRealmHostName()) + "#" + ToDecString(GetUID()) + "] from [" + GetIPString() + "] (" + m_Socket->GetName() + ")");
+    Print(Concat(m_Game.get().GetLogPrefix(), "user reconnected: [", GetName(), "@", string(GetRealmHostName()), "#", ToDecString(GetUID()), "] from [", GetIPString(), "] (", m_Socket->GetName(), ")"));
   }
 }
 
@@ -1003,15 +1011,15 @@ string CGameUser::GetDelayText(bool displaySync) const
     if (GetIsRTTMeasuredConsistent()) {
       pingText = to_string(rtt);
     } else {
-      pingText = "*" + to_string(rtt);
+      pingText = Concat("*", to_string(rtt));
     }
     if (equalizerDelay > 0) {
       if (!m_Game.get().m_Aura->m_Net.m_Config.m_LiteralRTT) equalizerDelay /= 2;
-      pingText += "(" + to_string(equalizerDelay) + ")";
+      pingText += Concat("(", to_string(equalizerDelay), ")");
     }
   }
   if (!displaySync || !m_Game.get().GetGameLoaded() || GetNormalSyncCounter() >= m_Game.get().GetSyncCounter()) {
-    if (anyPings) return pingText + "ms";
+    if (anyPings) return Concat(pingText, "ms");
     return pingText;
   }
   float syncDelay = static_cast<float>(m_Game.get().GetActiveLatency()) * static_cast<float>(m_Game.get().GetSyncCounter() - GetNormalSyncCounter());
@@ -1023,11 +1031,11 @@ string CGameUser::GetDelayText(bool displaySync) const
   }
 
   if (!anyPings) {
-    return "+" + to_string(static_cast<uint32_t>(syncDelay)) + "ms";
+    return Concat("+", to_string(static_cast<uint32_t>(syncDelay)), "ms");
   } else if (syncDelay <= 0) {
-    return pingText + "ms";
+    return Concat(pingText, "ms");
   } else {
-    return pingText + "+" + to_string(static_cast<uint32_t>(syncDelay)) + "ms";
+    return Concat(pingText, "+", to_string(static_cast<uint32_t>(syncDelay)), "ms");
   }
 }
 
@@ -1051,14 +1059,14 @@ string CGameUser::GetSyncText() const
   string behindTimeText;
   if (GetNormalSyncCounter() < m_Game.get().GetSyncCounter()) {
     float normalSyncDelay = static_cast<float>(m_Game.get().GetActiveLatency()) * static_cast<float>(m_Game.get().GetSyncCounter() - GetNormalSyncCounter());
-    behindTimeText = ToFormattedString(normalSyncDelay / 1000) + "s behind";
+    behindTimeText = Concat(ToFormattedString(normalSyncDelay / 1000), "s behind");
   }
   if (isNormalized && GetSyncCounter() < m_Game.get().GetSyncCounter()) {
     float totalSyncDelay = static_cast<float>(m_Game.get().GetActiveLatency()) * static_cast<float>(m_Game.get().GetSyncCounter() - GetSyncCounter());
     if (behindTimeText.empty()) {
-      behindTimeText += ToFormattedString(totalSyncDelay / 1000) + "s behind unnormalized";
+      behindTimeText += Concat(ToFormattedString(totalSyncDelay / 1000), "s behind unnormalized");
     } else {
-      behindTimeText += " (" + ToFormattedString(totalSyncDelay / 1000) + "s unnormalized)";
+      behindTimeText += Concat(" (", ToFormattedString(totalSyncDelay / 1000), "s unnormalized)");
     }
   }
   return behindTimeText;

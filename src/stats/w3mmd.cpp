@@ -268,7 +268,7 @@ bool CW3MMD::HandleTokens(uint8_t fromUID, uint32_t valueID, vector<string> Toke
   } else if (actionType == "Blank") {
     // ignore
   } else if (actionType == "Custom") {
-    LogMetaData(m_Game.get().GetEffectiveTicks(), "custom: " + JoinStrings(Tokens, false));
+    LogMetaData(m_Game.get().GetEffectiveTicks(), "custom: " + JoinStrings(Tokens));
   } else {
     LogMetaData(m_Game.get().GetEffectiveTicks(), "unknown action type [" + actionType + "] found, ignoring");
   }

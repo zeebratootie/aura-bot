@@ -50,7 +50,7 @@ CDiscord::CDiscord(CConfig& nCFG)
     m_Client(nullptr),
     m_PendingCallbackCount(0),
     m_WaitingToConnect(true),
-    m_NickName(string()),
+    //m_NickName(string()),
     m_Config(CDiscordConfig(nCFG)),
     m_ExitingSoon(false)
 {

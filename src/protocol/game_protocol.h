@@ -189,11 +189,11 @@ namespace GameProtocol
   // send functions
 
   [[nodiscard]] std::vector<uint8_t> SEND_W3GS_PING_FROM_HOST(const int64_t ticks);
-  [[nodiscard]] std::vector<uint8_t> SEND_W3GS_REQJOIN(const uint32_t HostCounter, const uint32_t EntryKey, const std::string& Name);
+  [[nodiscard]] std::vector<uint8_t> SEND_W3GS_REQJOIN(const uint32_t HostCounter, const uint32_t EntryKey, std::string_view Name);
   [[nodiscard]] std::vector<uint8_t> SEND_W3GS_SLOTINFOJOIN(uint8_t UID, const std::array<uint8_t, 2>& port, const std::array<uint8_t, 4>& externalIP, const std::vector<CGameSlot>& slots, uint32_t randomSeed, uint8_t layoutStyle, uint8_t playerSlots);
   [[nodiscard]] std::vector<uint8_t> SEND_W3GS_REJECTJOIN(uint32_t reason);
-  [[nodiscard]] std::vector<uint8_t> SEND_W3GS_PLAYERINFO(const Version& version, uint8_t UID, const std::string& name, const std::array<uint8_t, 4>& externalIP, const std::array<uint8_t, 4>& internalIP);
-  [[nodiscard]] std::vector<uint8_t> SEND_W3GS_PLAYERINFO_EXCLUDE_IP(const Version& version, uint8_t UID, const std::string& name);
+  [[nodiscard]] std::vector<uint8_t> SEND_W3GS_PLAYERINFO(const Version& version, uint8_t UID, std::string_view name, const std::array<uint8_t, 4>& externalIP, const std::array<uint8_t, 4>& internalIP);
+  [[nodiscard]] std::vector<uint8_t> SEND_W3GS_PLAYERINFO_EXCLUDE_IP(const Version& version, uint8_t UID, std::string_view name);
   [[nodiscard]] std::vector<uint8_t> SEND_W3GS_PLAYERLEAVE_OTHERS(uint8_t UID, uint32_t leftCode);
   [[nodiscard]] std::vector<uint8_t> SEND_W3GS_GAMELOADED_OTHERS(uint8_t UID);
   [[nodiscard]] std::vector<uint8_t> SEND_W3GS_SLOTINFO(const std::vector<CGameSlot>& slots, uint32_t randomSeed, uint8_t layoutStyle, uint8_t playerSlots);
@@ -212,12 +212,12 @@ namespace GameProtocol
   [[nodiscard]] PacketWrapper SENDWRAP_W3GS_CHAT_SELF_LOBBY(uint8_t fromUID, std::string_view prefix, std::string_view message);
   [[nodiscard]] std::vector<uint8_t> SEND_W3GS_START_LAG(const std::vector<GameUser::CGameUser*>& users, const int64_t ticks);
   [[nodiscard]] std::vector<uint8_t> SEND_W3GS_STOP_LAG(const GameUser::CGameUser* user, const int64_t ticks);
-  [[nodiscard]] std::vector<uint8_t> SEND_W3GS_GAMEINFO(const bool isExpansion, const Version& war3Version, const uint32_t mapGameType, const uint32_t mapFlags, const std::array<uint8_t, 2>& mapWidth, const std::array<uint8_t, 2>& mapHeight, const std::string& gameName, const std::string& hostName, uint32_t upTime, const std::string& mapPath, const std::array<uint8_t, 4>& mapBlizzHash, uint32_t slotsTotal, uint32_t slotsAvailableOff, uint16_t port, uint32_t hostCounter, uint32_t entryKey);
-  [[nodiscard]] std::vector<uint8_t> SEND_W3GS_GAMEINFO_TEMPLATE(uint16_t* gameVersionOffset, uint16_t* dynamicInfoOffset, const bool isExpansion, const uint32_t mapGameType, const uint32_t mapFlags, const std::array<uint8_t, 2>& mapWidth, const std::array<uint8_t, 2>& mapHeight, const std::string& gameName, const std::string& hostName, const std::string& mapPath, const std::array<uint8_t, 4>& mapBlizzHash, uint32_t slotsTotal, uint32_t hostCounter, uint32_t entryKey);
+  [[nodiscard]] std::vector<uint8_t> SEND_W3GS_GAMEINFO(const bool isExpansion, const Version& war3Version, const uint32_t mapGameType, const uint32_t mapFlags, const std::array<uint8_t, 2>& mapWidth, const std::array<uint8_t, 2>& mapHeight, std::string_view gameName, std::string_view hostName, uint32_t upTime, std::string_view mapPath, const std::array<uint8_t, 4>& mapBlizzHash, uint32_t slotsTotal, uint32_t slotsAvailableOff, uint16_t port, uint32_t hostCounter, uint32_t entryKey);
+  [[nodiscard]] std::vector<uint8_t> SEND_W3GS_GAMEINFO_TEMPLATE(uint16_t* gameVersionOffset, uint16_t* dynamicInfoOffset, const bool isExpansion, const uint32_t mapGameType, const uint32_t mapFlags, const std::array<uint8_t, 2>& mapWidth, const std::array<uint8_t, 2>& mapHeight, std::string_view gameName, std::string_view hostName, std::string_view mapPath, const std::array<uint8_t, 4>& mapBlizzHash, uint32_t slotsTotal, uint32_t hostCounter, uint32_t entryKey);
   [[nodiscard]] std::vector<uint8_t> SEND_W3GS_CREATEGAME(const bool isExpansion, const Version& war3Version, const uint32_t hostCounter);
   [[nodiscard]] std::vector<uint8_t> SEND_W3GS_REFRESHGAME(const uint32_t hostCounter, const uint32_t players, const uint32_t playerSlots);
   [[nodiscard]] std::vector<uint8_t> SEND_W3GS_DECREATEGAME(const uint32_t hostCounter);
-  [[nodiscard]] std::vector<uint8_t> SEND_W3GS_MAPCHECK(const std::string& mapPath, const uint32_t mapSize, const std::array<uint8_t, 4>& mapCRC32, const std::array<uint8_t, 4>& mapScriptsHashBlizz, const std::optional<std::array<uint8_t, 20>>& mapScriptsHashSHA1);
+  [[nodiscard]] std::vector<uint8_t> SEND_W3GS_MAPCHECK(std::string_view mapPath, const uint32_t mapSize, const std::array<uint8_t, 4>& mapCRC32, const std::array<uint8_t, 4>& mapScriptsHashBlizz, const std::optional<std::array<uint8_t, 20>>& mapScriptsHashSHA1);
   [[nodiscard]] std::vector<uint8_t> SEND_W3GS_STARTDOWNLOAD(uint8_t fromUID);
   [[nodiscard]] std::vector<uint8_t> SEND_W3GS_MAPPART(uint8_t fromUID, uint8_t toUID, size_t start, const FileChunkTransient& mapFileChunk);
   [[nodiscard]] std::vector<uint8_t> SEND_W3GS_MAPPART(uint8_t fromUID, uint8_t toUID, size_t start, const SharedByteArray& mapFileContents);
@@ -296,7 +296,7 @@ public:
   [[nodiscard]] inline std::array<uint8_t, 4> GetIPv4Internal() const { return m_IPv4Internal; }
 
   void                                        UpdateCensored(OnUnsafeNameHandler unsafeNameHandler, const bool pipeConsideredHarmful);
-  [[nodiscard]] static std::string            CensorName(const std::string& originalName, const bool pipeConsideredHarmful);
+  [[nodiscard]] static std::string            CensorName(std::string_view originalName, const bool pipeConsideredHarmful);
 };
 
 //
@@ -382,7 +382,7 @@ public:
   [[nodiscard]] inline uint8_t                            GetFromUID() const { return m_FromUID; }
   [[nodiscard]] inline const std::vector<uint8_t>&        GetToUIDs() const { return m_ToUIDs; }
   [[nodiscard]] inline uint8_t                            GetFlag() const { return m_Flag; }
-  [[nodiscard]] inline const std::string&                 GetMessage() const { return m_Message; }
+  [[nodiscard]] inline std::string_view                 GetMessage() const { return m_Message; }
   [[nodiscard]] inline uint8_t                            GetByte() const { return m_Byte; }
   [[nodiscard]] inline uint32_t                           GetExtraFlags() const { return m_ExtraFlags; }
 };

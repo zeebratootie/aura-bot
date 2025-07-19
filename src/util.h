@@ -54,6 +54,8 @@
 #include <fstream>
 #include <filesystem>
 #include <functional>
+#include <initializer_list>
+#include <utility>
 
 #pragma once
 
@@ -93,8 +95,51 @@ void TrimStringView(std::string_view& str);
 [[nodiscard]] std::string RemoveDuplicateWhiteSpace(const std::string& str);
 void EllideEmptyElementsInPlace(std::vector<std::string>& list);
 
+[[nodiscard]] inline std::string_view ToStringView(const char* s) {
+  return s ? std::string_view{s} : std::string_view{};
+}
+
+[[nodiscard]] inline std::string_view ToStringView(const std::string& s) {
+  return std::string_view{s};
+}
+
+[[nodiscard]] inline std::string_view ToStringView(std::string_view sv) {
+  return sv;
+}
+
+/*
+// Temporarily comment out to avoid overloading conflicts resulting in a bad refactor
+[[nodiscard]] inline std::string_view ToStringView(char c) {
+  return std::string_view(&c, 1);
+}
+*/
+
 template <typename T>
-[[nodiscard]] std::string ConcatStringView(std::string_view start, T append);
+std::string_view ToStringViewChecked(T&& arg) {
+  static_assert(
+    std::is_convertible_v<T, std::string_view> ||
+    std::is_same_v<std::decay_t<T>, char>,
+    "Concat() only accepts string-like arguments or char"
+  );
+  return ToStringView(std::forward<T>(arg));
+}
+
+[[nodiscard]] inline std::string ConcatInner(std::initializer_list<std::string_view> views) {
+  size_t totalSize = 0;
+  for (auto sv : views) totalSize += sv.size();
+
+  std::string result;
+  result.reserve(totalSize);
+  for (auto sv : views) result.append(sv);
+  return result;
+}
+
+template <typename... Args>
+[[nodiscard]] std::string Concat(Args&&... args) {
+  return ConcatInner({
+    ToStringViewChecked(std::forward<Args>(args))...
+  });
+}
 
 [[nodiscard]] std::string ToFormattedString(const double d, const uint8_t precision = 2);
 [[nodiscard]] std::string ToFormattedRealm();
@@ -212,9 +257,9 @@ void CheckOverflowMultiples(size_t divisor, size_t* minMultiple, size_t* maxMult
 [[nodiscard]] std::string TrimTrailingSlash(const std::string s);
 [[nodiscard]] std::string MaybeBase10(const std::string s);
 template<typename Container>
-[[nodiscard]] std::string JoinStrings(const Container& list, const std::string connector, const bool trailingConnector);
+[[nodiscard]] std::string JoinStrings(const Container& list, const std::string connector);
 template<typename Container>
-[[nodiscard]] std::string JoinStrings(const Container& list, const bool trailingComma);
+[[nodiscard]] std::string JoinStrings(const Container& list);
 [[nodiscard]] std::string IPv4ToString(const std::array<uint8_t, 4> ip);
 [[nodiscard]] bool SplitIPAddressAndPortOrDefault(const std::string& input, const uint16_t defaultPort, std::string& ip, uint16_t& port);
 

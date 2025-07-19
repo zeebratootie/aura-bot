@@ -126,18 +126,18 @@ IncomingConnectionStatus CConnection::Update(fd_set* fd, fd_set* send_fd, int64_
             CIncomingJoinRequest joinRequest = GameProtocol::RECEIVE_W3GS_REQJOIN(Data);
             if (!joinRequest.GetIsValid()) {
               // TODO: kTrace2
-              PRINT_IF(LogLevel::kDebug, "[AURA] Got invalid REQJOIN <" + ByteArrayToDecString(Bytes) + ">")
+              PRINT_IF(LogLevel::kDebug, "[AURA] Got invalid REQJOIN <" + ByteArrayToDecString(Bytes) + ">");
               Abort = true;
               break;
             }
-            DPRINT_IF(LogLevel::kTrace2, "[AURA] Got join request for #" + ToHexString(joinRequest.GetHostCounter()) + " (name: " + joinRequest.GetName() + ")")
+            DPRINT_IF(LogLevel::kTrace2, "[AURA] Got join request for #" + ToHexString(joinRequest.GetHostCounter()) + " (name: " + joinRequest.GetName() + ")");
             shared_ptr<CGame> targetLobby = m_Aura->GetLobbyOrObservableByHostCounter(joinRequest.GetHostCounter());
             if (!targetLobby) {
-              DPRINT_IF(LogLevel::kTrace, "[AURA] Join request for #" + ToHexString(joinRequest.GetHostCounter()) + " did not match a game")
+              DPRINT_IF(LogLevel::kTrace, "[AURA] Join request for #" + ToHexString(joinRequest.GetHostCounter()) + " did not match a game");
               break;
             }
             if (targetLobby->GetHostPort() != m_Port) {
-              DPRINT_IF(LogLevel::kTrace, "[AURA] Join request for #" + ToHexString(joinRequest.GetHostCounter()) + " ignored (bad port)")
+              DPRINT_IF(LogLevel::kTrace, "[AURA] Join request for #" + ToHexString(joinRequest.GetHostCounter()) + " ignored (bad port)");
               Abort = true;
               break;
             }
@@ -146,14 +146,14 @@ IncomingConnectionStatus CConnection::Update(fd_set* fd, fd_set* send_fd, int64_
                 m_Aura->m_Net.RegisterGameProxy(this, targetLobby);
                 result = IncomingConnectionStatus::kPromotedPassThrough;
               } else {
-                DPRINT_IF(LogLevel::kTrace, "[AURA] Join request for #" + ToHexString(joinRequest.GetHostCounter()) + "ignored (non-proxy mirror)")
+                DPRINT_IF(LogLevel::kTrace, "[AURA] Join request for #" + ToHexString(joinRequest.GetHostCounter()) + "ignored (non-proxy mirror)");
               }
               Abort = true;
               break;
             }
             joinRequest.UpdateCensored(targetLobby->m_Config.m_UnsafeNameHandler, targetLobby->m_Config.m_PipeConsideredHarmful);
             if (joinRequest.GetIsCensored()) {
-              DPRINT_IF(LogLevel::kTrace, "[AURA] User name censored: [" + joinRequest.GetOriginalName() + "] -> [" + joinRequest.GetName() + "]")
+              DPRINT_IF(LogLevel::kTrace, "[AURA] User name censored: [" + joinRequest.GetOriginalName() + "] -> [" + joinRequest.GetName() + "]");
             }
             const uint8_t joinResult = targetLobby->EventRequestJoin(this, joinRequest);
             if (joinResult == JOIN_RESULT_PLAYER) {

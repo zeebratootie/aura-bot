@@ -71,7 +71,7 @@ CIRC::CIRC(CConfig& nCFG)
     m_LastAntiIdleTime(APP_MIN_TICKS),
     m_WaitingToConnect(true),
     m_LoggedIn(false),
-    m_NickName(string()),
+    //m_NickName(string()),
     m_Config(CIRCConfig(nCFG))
 {
   //m_Socket->SetKeepAlive(true, IRC_TCP_KEEPALIVE_IDLE_TIME);
@@ -414,7 +414,7 @@ void CIRC::Send(string_view message)
     return;
   }
 
-  string line = ConcatStringView(message, LF);
+  string line = Concat(message, string_view(&LF, 1));
   m_Socket->PutBytes(line);
 }
 
@@ -427,12 +427,12 @@ void CIRC::SendUser(string_view message, string_view target)
   }
 
   while (message.size() > 450) {
-    string line = ConcatStringView(message.substr(0, 450), LF);
+    string line = Concat(message.substr(0, 450), string_view(&LF, 1));
     m_Socket->PutBytes("PRIVMSG " + string(target) + " :" + line);
     message.remove_prefix(450);
   }
   if (!message.empty()) {
-    string line = ConcatStringView(message, LF);
+    string line = Concat(message, string_view(&LF, 1));
     m_Socket->PutBytes("PRIVMSG " + string(target) + " :" + line);
   }
 }

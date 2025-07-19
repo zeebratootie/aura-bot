@@ -190,7 +190,7 @@ void EllideEmptyElementsInPlace(vector<string>& list)
 }
 
 template <typename T>
-string ConcatStringView(string_view start, T append)
+string Concat(string_view start, T append)
 {
   string result;
   if constexpr (is_same_v<T, char>) {
@@ -203,8 +203,8 @@ string ConcatStringView(string_view start, T append)
   return result;
 }
 
-template string ConcatStringView(string_view start, string_view append);
-template string ConcatStringView(string_view start, char append);
+template string Concat(string_view start, string_view append);
+template string Concat(string_view start, char append);
 
 string ToFormattedString(const double d, const uint8_t precision)
 {
@@ -1588,42 +1588,65 @@ string MaybeBase10(const string s)
 }
 
 template<typename Container>
-string JoinStrings(const Container& list, const string connector, const bool trailingConnector)
+string JoinStrings(const Container& list, const string connector)
 {
   using T = typename Container::value_type;
   static_assert(is_same_v<T, string> || is_same_v<T, uint16_t> || is_same_v<T, uint32_t>, "Container must contain string or uint16_t or uint32_t");
 
+  size_t size = 0;
   string results;
   for (const auto& element : list) {
     if constexpr (is_same_v<T, string>) {
-      results += element + connector;
+      size += element.size();
     } else {
-      results += to_string(element) + connector;
+      size += 4;
     }
   }
 
-  if (!trailingConnector && !list.empty()) {
-    results.erase(results.length() - connector.length());
+  if (size == 0) {
+    return results;
+  }
+
+  size += connector.size() * (list.size() - 1);
+  results.reserve(size);
+
+  auto it = list.cbegin();
+  auto itEnd = list.cend();
+  if constexpr (is_same_v<T, string>) {
+    results += (*it);
+  } else {
+    results += to_string(*it);
+  }  
+  ++it;
+
+  while (it != itEnd) {
+    results += connector;
+    if constexpr (is_same_v<T, string>) {
+      results += (*it);
+    } else {
+      results += to_string(*it);
+    }
+    ++it;
   }
 
   return results;
 }
 
 template<typename Container>
-string JoinStrings(const Container& list, const bool trailingComma)
+string JoinStrings(const Container& list)
 {
-  return JoinStrings(list, ", ", trailingComma);
+  return JoinStrings(list, ", ");
 }
 
 #define INSTANTIATE_JOIN_STRINGLIKE(T)\
-template string JoinStrings(const vector<T>& list, const string connector, const bool trailingConnector);\
-template string JoinStrings(const vector<T>& list, const bool trailingComma);\
-template string JoinStrings(const set<T>& list, const string connector, const bool trailingConnector);\
-template string JoinStrings(const set<T>& list, const bool trailingComma);
+template string JoinStrings(const vector<T>& list, const string connector);\
+template string JoinStrings(const vector<T>& list);\
+template string JoinStrings(const set<T>& list, const string connector);\
+template string JoinStrings(const set<T>& list);
 
 #define INSTANTIATE_JOIN_STRINGS_ARRAY(SIZE)\
-template string JoinStrings(const array<string, SIZE>& list, const string connector, const bool trailingConnector);\
-template string JoinStrings(const array<string, SIZE>& list, const bool trailingComma);
+template string JoinStrings(const array<string, SIZE>& list, const string connector);\
+template string JoinStrings(const array<string, SIZE>& list);
 
 INSTANTIATE_JOIN_STRINGLIKE(string)
 INSTANTIATE_JOIN_STRINGLIKE(uint16_t)

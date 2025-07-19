@@ -70,7 +70,7 @@
     do { \
         m_ErrorLast = true; \
         if (m_StrictMode) m_CriticalError = true; \
-        Print(std::string("[CONFIG] Error - Invalid value provided for <") + K + std::string(">. Allowed values: ") + JoinStrings(U, false) + "."); \
+        Print(std::string("[CONFIG] Error - Invalid value provided for <") + K + std::string(">. Allowed values: ") + JoinStrings(U) + "."); \
         return T; \
     } while(0);
 

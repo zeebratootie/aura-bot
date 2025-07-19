@@ -618,7 +618,7 @@ CAura::CAura(CConfig& CFG, const CCLI& nCLI)
 
   vector<string> invalidKeys = CFG.GetInvalidKeys(definedRealms);
   if (!invalidKeys.empty()) {
-    Print("[CONFIG] warning - some keys are misnamed: " + JoinStrings(invalidKeys, false));
+    Print("[CONFIG] warning - some keys are misnamed: " + JoinStrings(invalidKeys));
   }
 
   if (m_Realms.empty() && m_Config.m_EnableBNET.value_or(true))
@@ -1602,7 +1602,7 @@ bool CAura::ReloadConfigs()
   CDataBaseConfig{CFG}; // suppress warnings for invalid DB keys
   vector<string> invalidKeys = CFG.GetInvalidKeys(definedRealms);
   if (!invalidKeys.empty()) {
-    Print("[CONFIG] warning - the following keys are invalid/misnamed: " + JoinStrings(invalidKeys, false));
+    Print("[CONFIG] warning - the following keys are invalid/misnamed: " + JoinStrings(invalidKeys));
   }
 
   optional<Version> NowDataVersion = m_Config.m_Warcraft3DataVersion;

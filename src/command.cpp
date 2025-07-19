@@ -110,7 +110,7 @@ CCommandContext::CCommandContext(ServiceType serviceType, CAura* nAura, CCommand
 
     m_Permissions(USER_PERMISSIONS_NONE),
 
-    m_ServerName(string()),
+    //m_ServerName(string()),
 
     m_Output(nOutputStream),
     m_PartiallyDestroyed(false)
@@ -166,7 +166,7 @@ CCommandContext::CCommandContext(ServiceType serviceType, CAura* nAura, CCommand
     m_Permissions(USER_PERMISSIONS_NONE),
 
     m_ServerName(nAura->m_IRC.m_Config.m_HostName),
-    m_ReverseHostName(string(reverseHostName)),
+    m_ReverseHostName(reverseHostName),
 
     m_Output(nOutputStream),
     m_PartiallyDestroyed(false)
@@ -232,7 +232,7 @@ CCommandContext::CCommandContext(ServiceType serviceType, CAura* nAura, CCommand
 
     m_Permissions(USER_PERMISSIONS_NONE),
 
-    m_ServerName(string()),
+    //m_ServerName(string()),
 
     m_Output(nOutputStream),
     m_PartiallyDestroyed(false)
@@ -280,7 +280,7 @@ CCommandContext::CCommandContext(ServiceType serviceType, CAura* nAura, CCommand
     m_Permissions(USER_PERMISSIONS_NONE),
 
     m_ServerName(nAura->m_IRC.m_Config.m_HostName),
-    m_ReverseHostName(string(reverseHostName)),
+    m_ReverseHostName(reverseHostName),
 
     m_Output(nOutputStream),
     m_PartiallyDestroyed(false)
@@ -342,7 +342,7 @@ CCommandContext::CCommandContext(ServiceType serviceType, CAura* nAura, string_v
     m_IsBroadcast(nIsBroadcast),
     m_Permissions(USER_PERMISSIONS_NONE),
 
-    m_ServerName(string()),
+    //m_ServerName(string()),
 
     m_Output(nOutputStream),
     m_PartiallyDestroyed(false)
@@ -748,7 +748,7 @@ vector<string> CCommandContext::JoinReplyListCompact(const vector<string>& strin
       bufferedLine.clear();
     }
   } else {
-    result.push_back(JoinStrings(stringList, false));
+    result.push_back(JoinStrings(stringList));
   }
 
   return result;
@@ -1733,7 +1733,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
 
       bool sendAll = GetGameSource().GetIsEmpty() || (GetIsGameUser() && GetGameUser()->GetCanUsePublicChat());
       if (anyPing) {
-        SendReply(JoinStrings(pingsText, false), sendAll ? CHAT_SEND_TARGET_ALL : 0);
+        SendReply(JoinStrings(pingsText), sendAll ? CHAT_SEND_TARGET_ALL : 0);
       } else if (m_Aura->m_Net.m_Config.m_HasBufferBloat && targetGame->IsDownloading()) {
         SendReply("Ping not measured yet (wait for map download.)", sendAll ? CHAT_SEND_TARGET_ALL : 0);
       } else {
@@ -2051,8 +2051,8 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
         break;
       }
 
-      const string MapPath = targetGame->GetMap()->GetClientPath();
-      size_t LastSlash = MapPath.rfind('\\');
+      string_view mapPath = targetGame->GetMap()->GetClientPath();
+      string_view::size_type lastSlashIndex = mapPath.rfind('\\');
 
       auto realmUserResult = GetParseTargetRealmUser(target, false, true);
       if (!realmUserResult.GetSuccess()) {
@@ -2071,10 +2071,10 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
       // Name of sender and receiver should be included in the message,
       // so that they can be checked in successful whisper acks from the server (BNETProtocol::IncomingChatEvent::WHISPERSENT)
       // Note that the server doesn't provide any way to recognize whisper targets if the whisper fails.
-      if (LastSlash != string::npos && LastSlash <= MapPath.length() - 6) {
-        m_ActionMessage = targetName + ", " + GetSender() + " invites you to play [" + MapPath.substr(LastSlash + 1) + "]. Join game \"" + targetGame->GetCustomGameName(targetRealm) + "\"";
+      if (lastSlashIndex != string::npos && lastSlashIndex <= mapPath.length() - 6) {
+        m_ActionMessage = Concat(targetName, ", ", GetSender(), " invites you to play [", string(mapPath.substr(lastSlashIndex + 1)), "]. Join game \"", targetGame->GetCustomGameName(targetRealm), "\"");
       } else {
-        m_ActionMessage = targetName + ", " + GetSender() + " invites you to join game \"" + targetGame->GetCustomGameName(targetRealm) + "\"";
+        m_ActionMessage = Concat(targetName, ", ", GetSender(), " invites you to join game \"", targetGame->GetCustomGameName(targetRealm), "\"");
       }
 
       targetRealm->QueueWhisper(m_ActionMessage, targetName, shared_from_this(), true);
@@ -2223,7 +2223,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
       if (target.empty()) {
         SendReply(GetSender() + " rolled " + gotRolls[0] + ".", sendAll ? CHAT_SEND_TARGET_ALL : 0);
       } else {
-        SendReply(GetSender() + " rolled " + to_string(rollCount) + "d" + to_string(rollFaces) + ". Got: " + JoinStrings(gotRolls, false) + ".", sendAll ? CHAT_SEND_TARGET_ALL : 0);
+        SendReply(GetSender() + " rolled " + to_string(rollCount) + "d" + to_string(rollFaces) + ". Got: " + JoinStrings(gotRolls) + ".", sendAll ? CHAT_SEND_TARGET_ALL : 0);
       }
       break;
     }
@@ -2446,7 +2446,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
         string intermediate = words[0];
         words[0] = words[words.size() - 1];
         words[words.size() - 1] = intermediate;
-        name = JoinStrings(words, " ", false);
+        name = JoinStrings(words, " ");
         matchType = m_Aura->m_DB->FindData(MAP_TYPE_TWRPG, MAP_DATA_TYPE_ANY, name, false);
         if (matchType == MAP_DATA_TYPE_NONE) {
           ErrorReply("[" + target + "] not found.");
@@ -2630,7 +2630,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
           SendReply("Closed " + to_string(Args.size()) + " slot(s).");
         }
       } else {
-        ErrorReply("Slot(s) " + JoinStrings(failedSlots, false) + " cannot be closed.");
+        ErrorReply("Slot(s) " + JoinStrings(failedSlots) + " cannot be closed.");
       }
       break;
     }
@@ -2811,7 +2811,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
         }
       }
 
-      SendAll("Added user(s) to the hold list: " + JoinStrings(addedList, false));
+      SendAll("Added user(s) to the hold list: " + JoinStrings(addedList));
       break;
     }
 
@@ -2883,7 +2883,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
           continue;
         targetGame->RemoveFromReserved(PlayerName);
       }
-      SendAll("Removed user(s) from the reservations list: " + JoinStrings(Args, false));
+      SendAll("Removed user(s) from the reservations list: " + JoinStrings(Args));
       break;
     }
 
@@ -3194,7 +3194,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
         spikeToleranceInner.push_back("Observers: " + to_string(observerSyncRange->first) + "-" + to_string(observerSyncRange->second) + " ms.");
       }
       if (!spikeToleranceInner.empty()) {
-        SendReply("Spike tolerance updated. " + JoinStrings(spikeToleranceInner, " ", false), targetGame->GetIsLobbyStrict() || !targetGame->GetIsHiddenPlayerNames() ? CHAT_SEND_TARGET_ALL : 0);
+        SendReply("Spike tolerance updated. " + JoinStrings(spikeToleranceInner, " "), targetGame->GetIsLobbyStrict() || !targetGame->GetIsHiddenPlayerNames() ? CHAT_SEND_TARGET_ALL : 0);
       }
       if (targetGame->m_Config.m_LatencyEqualizerEnabled && targetGame->m_PingEqualizerMaxFrames <= 1) {
         targetGame->m_Config.m_LatencyEqualizerEnabled = false;
@@ -3315,7 +3315,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
           SendReply("Opened " + to_string(Args.size()) + " slot(s).");
         }
       } else {
-        ErrorReply("Slot(s) " + JoinStrings(failedSlots, false) + " cannot be opened.");
+        ErrorReply("Slot(s) " + JoinStrings(failedSlots) + " cannot be opened.");
       }
       break;
     }
@@ -4256,7 +4256,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
       if (CheckResult.empty()) {
         SendReply("[" + targetName + "@" + targetHostName + "] is not banned from any server.");
       } else {
-        SendReply("[" + targetName + "@" + targetHostName + "] is banned from " + to_string(CheckResult.size()) + " server(s): " + JoinStrings(CheckResult, false));
+        SendReply("[" + targetName + "@" + targetHostName + "] is banned from " + to_string(CheckResult.size()) + " server(s): " + JoinStrings(CheckResult));
       }
       break;
     }
@@ -4286,7 +4286,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
         SendReply("No users are banned on " + targetRealm->GetCanonicalDisplayName());
         break;
       }
-      SendReply("Banned: " + JoinStrings(bannedUsers, false));
+      SendReply("Banned: " + JoinStrings(bannedUsers));
       break;
     }
 
@@ -4401,7 +4401,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
         SendReply("No alternate accounts found.");
       } else {
         vector<string> allAltsVector = vector<string>(allAlts.begin(), allAlts.end());
-        SendReply("Alternate accounts: " + JoinStrings(allAltsVector, false));
+        SendReply("Alternate accounts: " + JoinStrings(allAltsVector));
       }
       break;
     }
@@ -6051,7 +6051,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
       if (failPlayers.empty()) {
         SendReply("Draft captains assigned.");
       } else {
-        ErrorReply("Draft mode enabled, but failed to assign captains: " + JoinStrings(failPlayers, false));
+        ErrorReply("Draft mode enabled, but failed to assign captains: " + JoinStrings(failPlayers));
       }
       break;
     }
@@ -6833,9 +6833,9 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
         // so that they can be checked in successful whisper acks from the server (BNETProtocol::IncomingChatEvent::WHISPERSENT)
         // Note that the server doesn't provide any way to recognize whisper targets if the whisper fails.
         if (m_ServerName.empty()) {
-          m_ActionMessage = inputName + ", " + GetSender() + " tells you: <<" + subMessage + ">>";
+          m_ActionMessage = Concat(inputName, ", ", GetSender(), " tells you: <<", subMessage, ">>");
         } else {
-          m_ActionMessage = inputName + ", " + GetSender() + " at " + m_ServerName + " tells you: <<" + subMessage + ">>";
+          m_ActionMessage = Concat(inputName, ", ", GetSender(), " at ", m_ServerName, " tells you: <<", subMessage, ">>");
         }
         matchingRealm->QueueWhisper(m_ActionMessage, inputName, shared_from_this(), true);
       } else if (targetType == ServiceType::kGame) {
@@ -7543,8 +7543,8 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
         ErrorReply("No staff has been designated in " + targetRealm->GetCanonicalDisplayName());
         break;
       }
-      if (!admins.empty()) SendReply("Root admins: " + JoinStrings(admins, false));
-      if (!moderators.empty()) SendReply("Moderators: " + JoinStrings(moderators, false));
+      if (!admins.empty()) SendReply("Root admins: " + JoinStrings(admins));
+      if (!moderators.empty()) SendReply("Moderators: " + JoinStrings(moderators));
       break;
     }
 
@@ -7668,7 +7668,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
         ErrorReply("Game #" + to_string(gameID) + " not found in database.");
         break;
       }
-      SendReply("Game players: " + JoinStrings(gameSummary->GetPlayerNames(), false));
+      SendReply("Game players: " + JoinStrings(gameSummary->GetPlayerNames()));
       SendReply("Slot IDs: " + ByteArrayToDecString(gameSummary->GetSIDs()));
       SendReply("Player IDs: " + ByteArrayToDecString(gameSummary->GetUIDs()));
       SendReply("Colors: " + ByteArrayToDecString(gameSummary->GetColors()));

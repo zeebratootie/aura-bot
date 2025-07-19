@@ -82,7 +82,7 @@ using namespace std;
     do {\
         m_ErrorLast = true;\
         if (m_StrictMode) m_CriticalError = true;\
-        Print(string("[CONFIG] Error - Invalid value ") + GetKeyValue(K) + string(" Allowed values: ") + JoinStrings(U, false) + ".");\
+        Print(string("[CONFIG] Error - Invalid value ") + GetKeyValue(K) + string(" Allowed values: ") + JoinStrings(U) + ".");\
         return T;\
     } while(0)
 

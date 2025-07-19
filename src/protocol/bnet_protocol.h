@@ -305,7 +305,7 @@ namespace BNETProtocol
        tag(nTag)
      {};
 
-    WhoisInfo(const uint8_t nStatus, const uint8_t nTag, const std::string& nName, const std::string& nLocation)
+    WhoisInfo(const uint8_t nStatus, const uint8_t nTag, std::string_view nName, std::string_view nLocation)
      : status(nStatus),
        tag(nTag),
        name(nName),
@@ -352,7 +352,7 @@ namespace BNETProtocol
   [[nodiscard]] std::vector<std::string> RECEIVE_SID_CLANMEMBERLIST(const std::vector<uint8_t>& data);
   [[nodiscard]] std::optional<CConfig> RECEIVE_HOSTED_GAME_CONFIG(const std::vector<uint8_t>& data);
 
-  [[nodiscard]] std::optional<BNETProtocol::WhoisInfo> PARSE_WHOIS_INFO(const std::string& message, const PvPGNLocale realmLocale);
+  [[nodiscard]] std::optional<BNETProtocol::WhoisInfo> PARSE_WHOIS_INFO(std::string_view message, const PvPGNLocale realmLocale);
 
   // send functions
 
@@ -360,25 +360,25 @@ namespace BNETProtocol
   [[nodiscard]] std::vector<uint8_t> SEND_SID_ZERO();
   [[nodiscard]] std::vector<uint8_t> SEND_SID_STOPADV();
   [[nodiscard]] std::vector<uint8_t> SEND_SID_GETADVLISTEX();
-  [[nodiscard]] std::vector<uint8_t> SEND_SID_GETADVLISTEX(const std::string& gameName, const std::string& gamePassword);
+  [[nodiscard]] std::vector<uint8_t> SEND_SID_GETADVLISTEX(std::string_view gameName, std::string_view gamePassword);
   [[nodiscard]] std::vector<uint8_t> SEND_SID_ENTERCHAT();
-  [[nodiscard]] std::vector<uint8_t> SEND_SID_JOINCHANNEL(const std::string& channel);
-  [[nodiscard]] std::vector<uint8_t> SEND_SID_CHAT_PUBLIC(const std::string& message);
-  [[nodiscard]] std::vector<uint8_t> SEND_SID_CHAT_WHISPER(const std::string& message, const std::string& user);
+  [[nodiscard]] std::vector<uint8_t> SEND_SID_JOINCHANNEL(std::string_view channel);
+  [[nodiscard]] std::vector<uint8_t> SEND_SID_CHAT_PUBLIC(std::string_view message);
+  [[nodiscard]] std::vector<uint8_t> SEND_SID_CHAT_WHISPER(std::string_view message, std::string_view user);
   [[nodiscard]] std::vector<uint8_t> SEND_SID_CHAT_PUBLIC(const std::vector<uint8_t>& message);
   [[nodiscard]] std::vector<uint8_t> SEND_SID_CHAT_WHISPER(const std::vector<uint8_t>& message, const std::vector<uint8_t>& user);
   [[nodiscard]] std::vector<uint8_t> SEND_SID_CHECKAD();
   [[nodiscard]] std::vector<uint8_t> SEND_SID_PUBLICHOST(const std::array<uint8_t, 4> address, uint16_t port);
-  [[nodiscard]] std::vector<uint8_t> SEND_SID_STARTADVEX3(uint8_t state, const uint32_t mapGameType, const uint32_t gameFlags, const std::array<uint8_t, 2>& mapWidth, const std::array<uint8_t, 2>& mapHeight, const std::string& gameName, const std::string& hostName, uint32_t upTime, const std::string& mapPath, const std::array<uint8_t, 4>& mapBlizzHash, const std::optional<std::array<uint8_t, 20>>& mapSHA1, uint32_t hostCounter, uint8_t maxSupportedSlots);
-  [[nodiscard]] std::vector<uint8_t> SEND_SID_NOTIFYJOIN(const std::string& gameName);
+  [[nodiscard]] std::vector<uint8_t> SEND_SID_STARTADVEX3(uint8_t state, const uint32_t mapGameType, const uint32_t gameFlags, const std::array<uint8_t, 2>& mapWidth, const std::array<uint8_t, 2>& mapHeight, std::string_view gameName, std::string_view hostName, uint32_t upTime, std::string_view mapPath, const std::array<uint8_t, 4>& mapBlizzHash, const std::optional<std::array<uint8_t, 20>>& mapSHA1, uint32_t hostCounter, uint8_t maxSupportedSlots);
+  [[nodiscard]] std::vector<uint8_t> SEND_SID_NOTIFYJOIN(std::string_view gameName);
   [[nodiscard]] std::vector<uint8_t> SEND_SID_PING(const std::array<uint8_t, 4>& pingValue);
-  [[nodiscard]] std::vector<uint8_t> SEND_SID_LOGONRESPONSE(const std::vector<uint8_t>& clientToken, const std::vector<uint8_t>& serverToken, const std::vector<uint8_t>& passwordHash, const std::string& accountName);
+  [[nodiscard]] std::vector<uint8_t> SEND_SID_LOGONRESPONSE(const std::vector<uint8_t>& clientToken, const std::vector<uint8_t>& serverToken, const std::vector<uint8_t>& passwordHash, std::string_view accountName);
   [[nodiscard]] std::vector<uint8_t> SEND_SID_NETGAMEPORT(uint16_t serverPort);
-  [[nodiscard]] std::vector<uint8_t> SEND_SID_AUTH_INFO(const bool isExpansion, const Version& war3Version, uint32_t localeID, uint32_t languageID, const std::array<uint8_t, 4>& localeShort, const std::string& countryShort, const std::string& country);
-  [[nodiscard]] std::vector<uint8_t> SEND_SID_AUTH_CHECK(const std::array<uint8_t, 4>& clientToken, const bool isExpansion, const std::array<uint8_t, 4>& exeVersion, const std::array<uint8_t, 4>& exeVersionHash, const std::vector<uint8_t>& keyInfoROC, const std::vector<uint8_t>& keyInfoTFT, const std::string& exeInfo, const std::string& keyOwnerName);
-  [[nodiscard]] std::vector<uint8_t> SEND_SID_AUTH_ACCOUNTLOGON(const std::array<uint8_t, 32>& clientPublicKey, const std::string& accountName);
+  [[nodiscard]] std::vector<uint8_t> SEND_SID_AUTH_INFO(const bool isExpansion, const Version& war3Version, uint32_t localeID, uint32_t languageID, const std::array<uint8_t, 4>& localeShort, std::string_view countryShort, std::string_view country);
+  [[nodiscard]] std::vector<uint8_t> SEND_SID_AUTH_CHECK(const std::array<uint8_t, 4>& clientToken, const bool isExpansion, const std::array<uint8_t, 4>& exeVersion, const std::array<uint8_t, 4>& exeVersionHash, const std::vector<uint8_t>& keyInfoROC, const std::vector<uint8_t>& keyInfoTFT, std::string_view exeInfo, std::string_view keyOwnerName);
+  [[nodiscard]] std::vector<uint8_t> SEND_SID_AUTH_ACCOUNTLOGON(const std::array<uint8_t, 32>& clientPublicKey, std::string_view accountName);
   [[nodiscard]] std::vector<uint8_t> SEND_SID_AUTH_ACCOUNTLOGONPROOF(const std::array<uint8_t, 20>& clientPasswordProof);
-  [[nodiscard]] std::vector<uint8_t> SEND_SID_AUTH_ACCOUNTSIGNUP(const std::string& userName, const std::array<uint8_t, 20>& clientPasswordProof);
+  [[nodiscard]] std::vector<uint8_t> SEND_SID_AUTH_ACCOUNTSIGNUP(std::string_view userName, const std::array<uint8_t, 20>& clientPasswordProof);
   [[nodiscard]] std::vector<uint8_t> SEND_SID_FRIENDLIST();
   [[nodiscard]] std::vector<uint8_t> SEND_SID_CLANMEMBERLIST();
 };
