@@ -143,6 +143,7 @@ CGameConfig::CGameConfig(CConfig& CFG)
   m_LobbyCountDownStartValue               = CFG.GetUint32("hosting.game_start.count_down_ticks", 5);
 
   m_SaveGameAllowed                        = CFG.GetBool("hosting.save_game.allowed", true);
+  m_PauseGameAllowed                       = CFG.GetBool("hosting.pause_game.allowed", true);
 
   m_LatencyDriftMax                        = CFG.GetUint16("hosting.latency.drift.max", 50);
 
@@ -324,6 +325,7 @@ CGameConfig::CGameConfig(CGameConfig* nRootConfig, shared_ptr<CMap> nMap, shared
   INHERIT_MAP_OR_CUSTOM(m_LobbyCountDownStartValue, m_LobbyCountDownStartValue, m_LobbyCountDownStartValue)
 
   INHERIT_MAP_OR_CUSTOM(m_SaveGameAllowed, m_SaveGameAllowed, m_SaveGameAllowed)
+  INHERIT_MAP_OR_CUSTOM(m_PauseGameAllowed, m_PauseGameAllowed, m_PauseGameAllowed)
 
   INHERIT(m_LatencyDriftMax)
 

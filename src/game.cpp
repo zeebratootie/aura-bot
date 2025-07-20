@@ -6811,6 +6811,18 @@ void CGame::EventGameStartedLoading()
     for (auto& user : m_Users) {
       user->SetCannotSave();
     }
+    for (auto& fakeUser : m_FakeUsers) {
+      fakeUser->SetCannotSave();
+    }
+  }
+
+  if (!m_Config.m_PauseGameAllowed) {
+    for (auto& user : m_Users) {
+      user->SetCannotPause();
+    }
+    for (auto& fakeUser : m_FakeUsers) {
+      fakeUser->SetCannotPause();
+    }
   }
 
   for (auto& user : m_Users) {

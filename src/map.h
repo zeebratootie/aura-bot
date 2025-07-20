@@ -321,6 +321,7 @@ public:
   std::optional<uint32_t>                         m_LobbyCountDownStartValue;
 
   std::optional<bool>                             m_SaveGameAllowed;
+  std::optional<bool>                             m_PauseGameAllowed;
 
   std::optional<uint16_t>                         m_Latency;
   std::optional<bool>                             m_LatencyEqualizerEnabled;

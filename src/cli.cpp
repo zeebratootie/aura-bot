@@ -697,6 +697,9 @@ CLIResult CCLI::Parse(const int argc, char** argv)
   app.add_flag(  "--allow-save,--no-allow-save{false}", m_GameSaveAllowed,
     "Customizes whether saving the game is allowed."
   );
+  app.add_flag(  "--allow-pause,--no-allow-pause{false}", m_GamePauseAllowed,
+    "Customizes whether pausing the game is allowed."
+  );
 
   app.add_option("--winners-source", m_GameResultSource,
     "Customizes how Aura will determine the winner(s) of the hosted lobby. "

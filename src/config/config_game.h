@@ -76,6 +76,7 @@ struct CGameConfig
   uint32_t                         m_LobbyCountDownStartValue;   // number at which !start count down begins
 
   bool                             m_SaveGameAllowed;
+  bool                             m_PauseGameAllowed;
 
   uint16_t                         m_LatencyDriftMax;                           // the maximum allowed frame drift in ms
 

@@ -198,6 +198,7 @@ public:
   std::optional<uint32_t>                         m_LobbyCountDownStartValue;
 
   std::optional<bool>                             m_SaveGameAllowed;
+  std::optional<bool>                             m_PauseGameAllowed;
 
   std::optional<uint8_t>                          m_AutoStartPlayers;
   std::optional<int64_t>                          m_AutoStartSeconds;

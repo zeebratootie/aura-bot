@@ -1697,6 +1697,7 @@ void CGameSetup::AcquireCLISimple(const CCLI* nCLI)
   WriteOpt(m_CheckJoinable) << nCLI->m_GameCheckJoinable;
   WriteOpt(m_NotifyJoins) << nCLI->m_GameNotifyJoins;
   WriteOpt(m_SaveGameAllowed) << nCLI->m_GameSaveAllowed;
+  WriteOpt(m_PauseGameAllowed) << nCLI->m_GamePauseAllowed;
   WriteOpt(m_ChecksReservation) << nCLI->m_GameCheckReservation;
 
   WriteOpt(m_AutoStartPlayers) << nCLI->m_GameAutoStartPlayers;

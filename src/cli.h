@@ -167,6 +167,7 @@ public:
   std::optional<bool>                         m_GameLobbyReplaceable;
   std::optional<bool>                         m_GameLobbyAutoRehosted;
   std::optional<bool>                         m_GameSaveAllowed;
+  std::optional<bool>                         m_GamePauseAllowed;
   std::optional<bool>                         m_GameCheckReservation;
   std::optional<std::string>                  m_GameHCL;
   std::optional<bool>                         m_GameFreeForAll;

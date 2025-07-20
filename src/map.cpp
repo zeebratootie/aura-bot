@@ -2250,6 +2250,9 @@ void CMap::LoadGameConfigOverrides(CConfig& CFG)
   if (CFG.Exists("map.hosting.save_game.allowed")) {
     m_SaveGameAllowed = CFG.GetBool("map.hosting.save_game.allowed", false);
   }
+  if (CFG.Exists("map.hosting.pause_game.allowed")) {
+    m_PauseGameAllowed = CFG.GetBool("map.hosting.pause_game.allowed", false);
+  }
 
   if (CFG.Exists("map.hosting.latency.default")) {
     m_Latency = CFG.GetUint16("map.hosting.latency.default", 100);
