@@ -1084,6 +1084,8 @@ void CCLI::OverrideConfig(CAura* nAura) const
   ReadOpt(m_CheckJASS) >> nAura->m_Config.m_ValidateJASS;
   ReadOpt(m_ExtractJASS) >> nAura->m_Config.m_ExtractJASS;
   ReadOpt(m_ExitOnStandby) >> nAura->m_Config.m_ExitOnStandby;
+  ReadOpt(m_BNET) >> nAura->m_Config.m_EnableBNET;
+  ReadOpt(m_IRC) >> nAura->m_IRC.m_Config.m_Enabled;
   ReadOpt(m_Discord) >> nAura->m_Discord.m_Config.m_Enabled;
   ReadOpt(m_LAN) >> nAura->m_GameDefaultConfig->m_UDPEnabled;
   ReadOpt(m_UseMapCFGCache) >> nAura->m_Config.m_EnableCFGCache;

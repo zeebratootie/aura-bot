@@ -61,7 +61,7 @@ CGameController::CGameController(const IndexedGameSlot& idxSlot)
     m_SID(idxSlot.first),
     m_Color(idxSlot.second->GetColor()),
     m_Team(idxSlot.second->GetTeam()),
-    m_GameResult(GAME_RESULT_UNDECIDED),
+    m_GameResult(GamePlayerResult::kUndecided),
     m_Name(CGameController::GetAIName(idxSlot.second->GetComputerType())),
     m_LoadingTime(0)
 {
@@ -74,7 +74,7 @@ CGameController::CGameController(const uint8_t type, const IndexedGameSlot& idxS
     m_SID(idxSlot.first),
     m_Color(idxSlot.second->GetColor()),
     m_Team(idxSlot.second->GetTeam()),
-    m_GameResult(GAME_RESULT_UNDECIDED),
+    m_GameResult(GamePlayerResult::kUndecided),
     m_Name(type == AI_TYPE_AMAI ? CGameController::GetAMAIName(idxSlot.second->GetComputerType()) : CGameController::GetAIName(idxSlot.second->GetComputerType())),
     m_LoadingTime(0)
 {
@@ -87,7 +87,7 @@ CGameController::CGameController(const GameUser::CGameUser* user, const IndexedG
     m_SID(idxSlot.first),
     m_Color(idxSlot.second->GetColor()),
     m_Team(idxSlot.second->GetTeam()),
-    m_GameResult(GAME_RESULT_UNDECIDED),
+    m_GameResult(GamePlayerResult::kUndecided),
     m_Name(user->GetName()),
     m_Server(user->GetRealmHostName()),
     m_IP(user->GetIPStringStrict()),
@@ -102,7 +102,7 @@ CGameController::CGameController(const CGameVirtualUser* virtualUser, const Inde
     m_SID(idxSlot.first),
     m_Color(idxSlot.second->GetColor()),
     m_Team(idxSlot.second->GetTeam()),
-    m_GameResult(GAME_RESULT_UNDECIDED),
+    m_GameResult(GamePlayerResult::kUndecided),
     m_Name(virtualUser->GetName()),
     m_LoadingTime(0)
 {

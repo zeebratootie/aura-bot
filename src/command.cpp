@@ -2072,7 +2072,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
       // so that they can be checked in successful whisper acks from the server (BNETProtocol::IncomingChatEvent::WHISPERSENT)
       // Note that the server doesn't provide any way to recognize whisper targets if the whisper fails.
       if (lastSlashIndex != string::npos && lastSlashIndex <= mapPath.length() - 6) {
-        m_ActionMessage = Concat(targetName, ", ", GetSender(), " invites you to play [", string(mapPath.substr(lastSlashIndex + 1)), "]. Join game \"", targetGame->GetCustomGameName(targetRealm), "\"");
+        m_ActionMessage = Concat(targetName, ", ", GetSender(), " invites you to play [", mapPath.substr(lastSlashIndex + 1), "]. Join game \"", targetGame->GetCustomGameName(targetRealm), "\"");
       } else {
         m_ActionMessage = Concat(targetName, ", ", GetSender(), " invites you to join game \"", targetGame->GetCustomGameName(targetRealm), "\"");
       }
@@ -6448,8 +6448,10 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
       UseImplicitHostedGame();
       shared_ptr<CGame> targetGame = GetTargetGame();
 
-      if (!targetGame || !targetGame->GetGameLoaded())
+      if (!targetGame || !targetGame->GetGameLoaded()) {
+        ErrorReply("This command must be used in a started game.");
         break;
+      }
 
       if ((!GetIsGameUser() || targetGame->GetNumJoinedPlayers() >= 2) && !CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
         ErrorReply("You are not the game owner, and therefore cannot save the game.");
@@ -6496,6 +6498,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
     // !RESUME
     //
 
+    case HashCode("unpause"):
     case HashCode("resume"): {
       UseImplicitHostedGame();
       shared_ptr<CGame> targetGame = GetTargetGame();
@@ -6519,7 +6522,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
       }
 
       if (targetGame->m_FakeUsers.empty() || !targetGame->Resume(GetGameUser(), false)) {
-        ErrorReply("This game does not support the " + cmdToken + "resume command. Use the game menu instead.");
+        ErrorReply("This game does not support the " + cmdToken + "resume command. Use the game menu (F10) instead.");
         break;
       }
 

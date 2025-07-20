@@ -61,7 +61,7 @@ private:
   uint8_t                               m_SID;
   uint8_t                               m_Color;
   uint8_t                               m_Team;
-  uint8_t                               m_GameResult;
+  GamePlayerResult                      m_GameResult;
   std::string                           m_Name;
 
   // These are exclusive for GameControllerType::kUser
@@ -87,7 +87,7 @@ public:
   [[nodiscard]] inline uint8_t                                            GetSID() const { return m_SID; }
   [[nodiscard]] inline uint8_t                                            GetColor() const { return m_Color; }
   [[nodiscard]] inline uint8_t                                            GetTeam() const { return m_Team; }
-  [[nodiscard]] inline uint8_t                                            GetGameResult() const { return m_GameResult; }
+  [[nodiscard]] inline GamePlayerResult                                   GetGameResult() const { return m_GameResult; }
   [[nodiscard]] inline std::string                                        GetName() const { return m_Name; }
 
   [[nodiscard]] inline std::string                                        GetServer() const { return m_Server; }
@@ -102,7 +102,7 @@ public:
   [[nodiscard]] inline bool                                               GetHasLeftGame() const { return m_LeftGameTime.has_value(); }
   [[nodiscard]] inline uint64_t                                           GetLeftGameTime() const { return m_LeftGameTime.value(); }
 
-  inline void SetGameResult(uint8_t nGameResult) { m_GameResult = nGameResult; }
+  inline void SetGameResult(GamePlayerResult nGameResult) { m_GameResult = nGameResult; }
 
   inline void SetLoadingTime(uint64_t nLoadingTime) { m_LoadingTime = nLoadingTime; }
 

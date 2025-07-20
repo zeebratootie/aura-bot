@@ -147,7 +147,7 @@ public:
   void                                          ResetFrameRateToClientSafe() { m_FrameRate = m_MaxSafeClientFrameRate; }
 
   [[nodiscard]] inline bool                     HasLeftReason() { return !m_LeftReason.empty(); }
-  [[nodiscard]] inline std::string              GetLeftReason() { return m_LeftReason; }
+  [[nodiscard]] inline std::string_view         GetLeftReason() { return m_LeftReason; }
   inline void                                   SetLeftReason(const std::string& reason) { m_LeftReason = reason; }
   inline void                                   SetLeftReasonGeneric(const std::string& reason) { if (m_LeftReason.empty()) m_LeftReason = reason; }
 

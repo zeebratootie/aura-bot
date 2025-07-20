@@ -1980,7 +1980,7 @@ void CNet::RegisterGameSeeker(CConnection* connection, IncomingConnectionType nT
 {
   CStreamIOSocket* socket = connection->GetSocket();
   if (!socket) return;
-  DPRINT_IF(LogLevel::kTrace, "[NET] registering game seeker from " + connection->GetIPString() + " (type " + ToDecString(nType) + ")");
+  DPRINT_IF(LogLevel::kTrace, "[NET] registering game seeker from " + connection->GetIPString() + " (type " + ToDecString((uint8_t)nType) + ")");
   CGameSeeker* seeker = new CGameSeeker(connection, nType);
   m_GameSeekers[seeker->GetPort()].push_back(seeker);
   connection->SetSocket(nullptr);

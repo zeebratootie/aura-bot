@@ -189,23 +189,6 @@ void EllideEmptyElementsInPlace(vector<string>& list)
   }
 }
 
-template <typename T>
-string Concat(string_view start, T append)
-{
-  string result;
-  if constexpr (is_same_v<T, char>) {
-    result.reserve(start.size() + 1);
-  } else {
-    result.reserve(start.size() + append.size());
-  }
-  result += start;
-  result += append;
-  return result;
-}
-
-template string Concat(string_view start, string_view append);
-template string Concat(string_view start, char append);
-
 string ToFormattedString(const double d, const uint8_t precision)
 {
   ostringstream out;

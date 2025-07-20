@@ -576,7 +576,6 @@ namespace BNETProtocol
 
   optional<BNETProtocol::WhoisInfo> PARSE_WHOIS_INFO(string_view message, const PvPGNLocale realmLocale)
   {
-    // TODO: Refactor PARSE_WHOIS_INFO to accept string_view instead
     optional<BNETProtocol::WhoisInfo> result;
     const string::size_type spIndex = message.find(' ');
     const string::size_type msgSize = message.size();

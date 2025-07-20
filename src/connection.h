@@ -89,6 +89,7 @@ public:
 
   uint32_t SetFD(fd_set* fd, fd_set* send_fd, int32_t* nfds) const;
   void SetTimeout(const int64_t nTicks);
+  void SetTimeoutAtLatest(const int64_t nTicks);
 
   bool CloseConnection();
   [[nodiscard]] IncomingConnectionStatus Update(fd_set* fd, fd_set* send_fd, int64_t timeout);

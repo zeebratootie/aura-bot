@@ -107,18 +107,10 @@ void EllideEmptyElementsInPlace(std::vector<std::string>& list);
   return sv;
 }
 
-/*
-// Temporarily comment out to avoid overloading conflicts resulting in a bad refactor
-[[nodiscard]] inline std::string_view ToStringView(char c) {
-  return std::string_view(&c, 1);
-}
-*/
-
 template <typename T>
 std::string_view ToStringViewChecked(T&& arg) {
   static_assert(
-    std::is_convertible_v<T, std::string_view> ||
-    std::is_same_v<std::decay_t<T>, char>,
+    std::is_convertible_v<T, std::string_view>,
     "Concat() only accepts string-like arguments or char"
   );
   return ToStringView(std::forward<T>(arg));
@@ -136,6 +128,8 @@ std::string_view ToStringViewChecked(T&& arg) {
 
 template <typename... Args>
 [[nodiscard]] std::string Concat(Args&&... args) {
+  /*static_assert((std::is_lvalue_reference_v<Args> && ...),
+    "All arguments must be lvalues (no temporaries allowed)");*/
   return ConcatInner({
     ToStringViewChecked(std::forward<Args>(args))...
   });

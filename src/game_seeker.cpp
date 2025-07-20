@@ -66,6 +66,13 @@ void CGameSeeker::SetTimeout(const int64_t delta)
   m_TimeoutTicks = m_Aura->GetLoopTicks() + delta;
 }
 
+void CGameSeeker::SetTimeoutAtLatest(const int64_t atLatestTicks)
+{
+  if (!m_TimeoutTicks.has_value() || atLatestTicks < m_TimeoutTicks.value()) {
+    m_TimeoutTicks = atLatestTicks;
+  }
+}
+
 bool CGameSeeker::CloseConnection()
 {
   if (!m_Socket->GetConnected()) return false;
@@ -137,7 +144,13 @@ GameSeekerStatus CGameSeeker::Update(fd_set* fd, fd_set* send_fd, int64_t timeou
           if (Bytes[1] == GameProtocol::Magic::REQJOIN) {
             CIncomingJoinRequest joinRequest = GameProtocol::RECEIVE_W3GS_REQJOIN(Data);
             if (!joinRequest.GetIsValid()) {
-              Abort = true;
+              DPRINT_IF(LogLevel::kTrace2, "[AURA] Got invalid REQJOIN <" + ByteArrayToDecString(Bytes) + ">");
+              if (joinRequest.GetError() == JoinRequestError::kCannotParse) {
+                Abort = true;
+              } else {
+                Send(GameProtocol::SENDWRAP_W3GS_GHOST_LOBBY_ERROR(GameProtocol::JoinRequestErrorToString(joinRequest.GetError())));
+                SetTimeoutAtLatest(m_Aura->GetLoopTicks() + 8000);
+              }
               break;
             }
             shared_ptr<CGame> targetLobby = m_Aura->GetLobbyOrObservableByHostCounter(joinRequest.GetHostCounter());
@@ -227,3 +240,11 @@ void CGameSeeker::Send(const std::vector<uint8_t>& data)
     m_Socket->PutBytes(data);
   }
 }
+
+void CGameSeeker::Send(const GameProtocol::PacketWrapper& data)
+{
+  if (m_Socket && !m_Socket->HasError()) {
+    m_Socket->PutBytes(data.data);
+  }
+}
+

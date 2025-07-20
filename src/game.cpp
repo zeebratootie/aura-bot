@@ -3390,8 +3390,7 @@ void CGame::SendVirtualHostPlayerInfo(CConnection* user) const
     return;
   }
 
-  const std::array<uint8_t, 4> IP = {0, 0, 0, 0};
-  Send(user, GameProtocol::SEND_W3GS_PLAYERINFO(GetVersion(), m_VirtualHostUID, GetLobbyVirtualHostName(), IP, IP));
+  Send(user, GameProtocol::SEND_W3GS_PLAYERINFO_EXCLUDE_IP(GetVersion(), m_VirtualHostUID, GetLobbyVirtualHostName()));
 }
 
 vector<uint8_t> CGame::GetFakeUsersLobbyInfo() const
@@ -4072,7 +4071,7 @@ string CGame::GetAnnounceText(shared_ptr<const CRealm> realm) const
     capabilityWord = " hosted: ";
   }
 
-  return versionPrefix + typeWord + capabilityWord + m_Map->GetServerFileName() + startedPhrase;
+  return Concat(versionPrefix, typeWord, capabilityWord, m_Map->GetServerFileName(), startedPhrase);
 }
 
 uint16_t CGame::CalcHostPortFromType(const uint8_t type) const
@@ -5369,13 +5368,13 @@ GameUser::CGameUser* CGame::JoinPlayer(CConnection* connection, const CIncomingJ
 
   Player->Send(GameProtocol::SEND_W3GS_SLOTINFOJOIN(Player->GetUID(), Player->GetSocket()->GetPortLE(), Player->GetIPv4(), m_Slots, m_RandomSeed, GetLayout(), m_Map->GetMapNumControllers()));
 
-  SendIncomingPlayerInfo(Player);
+  SendIncomingPlayerInfo(Player); // sends info to other players
 
   // send virtual host info and fake users info (if present) to the new user.
 
   SendVirtualHostPlayerInfo(Player);
   SendFakeUsersInfo(Player);
-  SendJoinedPlayersInfo(Player);
+  SendJoinedPlayersInfo(Player); // only sends info regarding other players
 
   // send a map check packet to the new user.
   SendMapAndVersionCheck(Player, Player->GetGameVersion());
@@ -5420,9 +5419,9 @@ GameUser::CGameUser* CGame::JoinPlayer(CConnection* connection, const CIncomingJ
   }
 
   if (notifyString.empty()) {
-    LOG_APP_IF(LogLevel::kInfo, Concat("user joined (P", to_string(SID + 1), "): [", string(joinRequest.GetName()), "@", string(Player->GetRealmHostName()), "#", to_string(Player->GetUID()), "] from [", Player->GetIPString(), "] (", Player->GetSocket()->GetName(), ")", notifyString));
+    LOG_APP_IF(LogLevel::kInfo, Concat("user joined (P", ToDecString(SID + 1), "): [", joinRequest.GetName(), "@", Player->GetRealmHostName(), "#", to_string(Player->GetUID()), "] from [", Player->GetIPString(), "] (", Player->GetSocket()->GetName(), ")", notifyString));
   } else {
-    LOG_APP_IF(LogLevel::kNotice, Concat("user joined (P", to_string(SID + 1), "): [", string(joinRequest.GetName()), "@", string(Player->GetRealmHostName()), "#", to_string(Player->GetUID()), "] from [", Player->GetIPString(), "] (", Player->GetSocket()->GetName(), ")", notifyString));
+    LOG_APP_IF(LogLevel::kNotice, Concat("user joined (P", ToDecString(SID + 1), "): [", joinRequest.GetName(), "@", Player->GetRealmHostName(), "#", to_string(Player->GetUID()), "] from [", Player->GetIPString(), "] (", Player->GetSocket()->GetName(), ")", notifyString));
   }
   if (joinRequest.GetIsCensored()) {
     LOG_APP_IF(LogLevel::kNotice, Concat("user [", joinRequest.GetName(), "] is censored name - was [", joinRequest.GetOriginalName(), "]"));
@@ -5460,7 +5459,7 @@ void CGame::JoinObserver(CConnection* connection, const CIncomingJoinRequest& jo
 
   string realmHostName;
   if (fromRealm) realmHostName = fromRealm->GetServer();
-  LOG_APP_IF(LogLevel::kInfo, Concat("spectator joined [", string(joinRequest.GetName()), "@", realmHostName, "#", to_string(observer->GetUID()), "] from [", observer->GetIPString(), "]"));
+  LOG_APP_IF(LogLevel::kInfo, Concat("spectator joined [", joinRequest.GetName(), "@", realmHostName, "#", to_string(observer->GetUID()), "] from [", observer->GetIPString(), "]"));
 }
 
 void CGame::EventObserverMapSize(CAsyncObserver* user, const CIncomingMapFileSize& clientMap)
@@ -5553,7 +5552,7 @@ bool CGame::CheckIPFlood(string_view joinName, const sockaddr_storage* sourceAdd
   uint8_t maxPlayersFromSameIp = isLoopbackAddress(sourceAddress) ? m_Config.m_MaxPlayersLoopback : m_Config.m_MaxPlayersSameIP;
   if (static_cast<uint8_t>(usersSameIP.size()) >= maxPlayersFromSameIp) {
     if (GetIPFloodHandler() == OnIPFloodHandler::kNotify) {
-      SendAllChat(Concat("Player [", string(joinName), "] has the same IP address as: ", ToNameListSentence(usersSameIP)));
+      SendAllChat(Concat("Player [", joinName, "] has the same IP address as: ", ToNameListSentence(usersSameIP)));
     }
     return false;
   }
@@ -5566,14 +5565,11 @@ uint8_t CGame::EventRequestJoin(CConnection* connection, const CIncomingJoinRequ
     connection->Send(GameProtocol::SEND_W3GS_REJECTJOIN(REJECTJOIN_STARTED));
     return JOIN_RESULT_FAIL;
   }
-  if (joinRequest.GetName().empty() || joinRequest.GetName().size() > 15) {
-    LOG_APP_IF(LogLevel::kDebug, Concat("user [", joinRequest.GetOriginalName(), "] invalid name - [", connection->GetSocket()->GetName(), "] (", connection->GetIPString(), ")"));
-    connection->Send(GameProtocol::SEND_W3GS_REJECTJOIN(REJECTJOIN_FULL));
-    return JOIN_RESULT_FAIL;
-  }
-  if (joinRequest.GetIsCensored() && m_Config.m_UnsafeNameHandler == OnUnsafeNameHandler::kDeny) {
-    LOG_APP_IF(LogLevel::kDebug, Concat("user [", joinRequest.GetOriginalName(), "] unsafe name - [", connection->GetSocket()->GetName(), "] (", connection->GetIPString(), ")"));
-    connection->Send(GameProtocol::SEND_W3GS_REJECTJOIN(REJECTJOIN_FULL));
+  if (
+    joinRequest.GetName().empty() || joinRequest.GetName().size() > MAX_PLAYER_NAME_SIZE ||
+    (joinRequest.GetIsCensored() && m_Config.m_UnsafeNameHandler == OnUnsafeNameHandler::kDeny)
+  ) {
+    connection->Send(GameProtocol::SENDWRAP_W3GS_GHOST_LOBBY_ERROR("Your username is not allowed."));
     return JOIN_RESULT_FAIL;
   }
 
@@ -5600,7 +5596,7 @@ uint8_t CGame::EventRequestJoin(CConnection* connection, const CIncomingJoinRequ
 
   if (HostCounterID < 0x10 && joinRequest.GetEntryKey() != m_EntryKey) {
     // check if the user joining via LAN knows the entry key
-    LOG_APP_IF(LogLevel::kDebug, Concat("user [", string(joinRequest.GetName()), "@", JoinedRealm, "] used a wrong LAN key (", to_string(joinRequest.GetEntryKey()), ") - [", connection->GetSocket()->GetName(), "] (", connection->GetIPString(), ")"));
+    LOG_APP_IF(LogLevel::kDebug, Concat("user [", joinRequest.GetName(), "@", JoinedRealm, "] used a wrong LAN key (", to_string(joinRequest.GetEntryKey()), ") - [", connection->GetSocket()->GetName(), "] (", connection->GetIPString(), ")"));
     connection->Send(GameProtocol::SEND_W3GS_REJECTJOIN(REJECTJOIN_WRONGPASSWORD));
     return JOIN_RESULT_FAIL;
   }
@@ -5616,7 +5612,7 @@ uint8_t CGame::EventRequestJoin(CConnection* connection, const CIncomingJoinRequ
   }
 
   if (HostCounterID < 0x10 && HostCounterID != 0) {
-    LOG_APP_IF(LogLevel::kDebug, Concat("user [", string(joinRequest.GetName()), "@", JoinedRealm, "] is trying to join over reserved realm ", to_string(HostCounterID), " - [", connection->GetSocket()->GetName(), "] (", connection->GetIPString(), ")"));
+    LOG_APP_IF(LogLevel::kDebug, Concat("user [", joinRequest.GetName(), "@", JoinedRealm, "] is trying to join over reserved realm ", to_string(HostCounterID), " - [", connection->GetSocket()->GetName(), "] (", connection->GetIPString(), ")"));
     if (HostCounterID > 0x2) {
       connection->Send(GameProtocol::SEND_W3GS_REJECTJOIN(REJECTJOIN_WRONGPASSWORD));
       return JOIN_RESULT_FAIL;
@@ -5629,7 +5625,7 @@ uint8_t CGame::EventRequestJoin(CConnection* connection, const CIncomingJoinRequ
       if (!m_IsHiddenPlayerNames) {
         // FIXME: Someone can probably figure out whether a given player has joined a lobby by trying to impersonate them, and failing to.
         // An alternative would be no longer preventing joins and, potentially, disambiguating their names at CGame::ShowPlayerNamesGameStartLoading.
-        SendAllChat(Concat("Entry denied for another user with the same name: [", string(joinRequest.GetName()), "@", JoinedRealm, "]"));
+        SendAllChat(Concat("Entry denied for another user with the same name: [", joinRequest.GetName(), "@", JoinedRealm, "]"));
       }
       m_ReportedJoinFailNames.insert(joinLowerName);
     }
@@ -5651,7 +5647,7 @@ uint8_t CGame::EventRequestJoin(CConnection* connection, const CIncomingJoinRequ
   } else if (joinRequest.GetName() == m_OwnerName && !m_OwnerRealm.empty() && !JoinedRealm.empty() && m_OwnerRealm != JoinedRealm) {
     // Prevent owner homonyms from other realms from joining. This doesn't affect LAN.
     // But LAN has its own rules, e.g. a LAN owner that leaves the game is immediately demoted.
-    LOG_APP_IF(LogLevel::kDebug, Concat("user [", string(joinRequest.GetName()), "@", JoinedRealm, "] spoofer (matches owner name, but realm mismatch, expected ", m_OwnerRealm, ") - [", connection->GetSocket()->GetName(), "] (", connection->GetIPString(), ")"));
+    LOG_APP_IF(LogLevel::kDebug, Concat("user [", joinRequest.GetName(), "@", JoinedRealm, "] spoofer (matches owner name, but realm mismatch, expected ", m_OwnerRealm, ") - [", connection->GetSocket()->GetName(), "] (", connection->GetIPString(), ")"));
     connection->Send(GameProtocol::SEND_W3GS_REJECTJOIN(REJECTJOIN_FULL));
     return JOIN_RESULT_FAIL;
   }
@@ -5809,13 +5805,13 @@ bool CGame::CheckUserBanned(CConnection* connection, const CIncomingJoinRequest&
 
     // don't allow the user to spam the chat by attempting to join the game multiple times in a row
     if (m_ReportedJoinFailNames.find(joinRequest.GetName()) == end(m_ReportedJoinFailNames)) {
-      LOG_APP_IF(LogLevel::kInfo, Concat("user [", string(joinRequest.GetName()), "@", hostName, "|", connection->GetIPString(), "] entry denied - banned ", scopeFragment));
+      LOG_APP_IF(LogLevel::kInfo, Concat("user [", joinRequest.GetName(), "@", hostName, "|", connection->GetIPString(), "] entry denied - banned ", scopeFragment));
       if (!m_IsHiddenPlayerNames) {
-        SendAllChat(Concat("[", string(joinRequest.GetName()), "@", hostName, "] is trying to join the game, but is banned"));
+        SendAllChat(Concat("[", joinRequest.GetName(), "@", hostName, "] is trying to join the game, but is banned"));
       }
       m_ReportedJoinFailNames.insert(joinRequest.GetName());
     } else {
-      LOG_APP_IF(LogLevel::kDebug, Concat("user [", string(joinRequest.GetName()), "@", hostName, "|", connection->GetIPString(), "] entry denied - banned ", scopeFragment));
+      LOG_APP_IF(LogLevel::kDebug, Concat("user [", joinRequest.GetName(), "@", hostName, "|", connection->GetIPString(), "] entry denied - banned ", scopeFragment));
     }
   }
   return isBanned;
@@ -5847,13 +5843,13 @@ bool CGame::CheckIPBanned(CConnection* connection, const CIncomingJoinRequest& j
 
     // don't allow the user to spam the chat by attempting to join the game multiple times in a row
     if (m_ReportedJoinFailNames.find(joinRequest.GetName()) == end(m_ReportedJoinFailNames)) {
-      LOG_APP_IF(LogLevel::kInfo, Concat("user [", string(joinRequest.GetName()), "@", hostName, "|", connection->GetIPString(), "] entry denied - IP-banned ", scopeFragment));
+      LOG_APP_IF(LogLevel::kInfo, Concat("user [", joinRequest.GetName(), "@", hostName, "|", connection->GetIPString(), "] entry denied - IP-banned ", scopeFragment));
       if (!m_IsHiddenPlayerNames) {
-        SendAllChat(Concat("[", string(joinRequest.GetName()), "@", hostName, "] is trying to join the game, but is IP-banned"));
+        SendAllChat(Concat("[", joinRequest.GetName(), "@", hostName, "] is trying to join the game, but is IP-banned"));
       }
       m_ReportedJoinFailNames.insert(joinRequest.GetName());
     } else {
-      LOG_APP_IF(LogLevel::kDebug, Concat("user [", string(joinRequest.GetName()), "@", hostName, "|", connection->GetIPString(), "] entry denied - IP-banned ", scopeFragment));
+      LOG_APP_IF(LogLevel::kDebug, Concat("user [", joinRequest.GetName(), "@", hostName, "|", connection->GetIPString(), "] entry denied - IP-banned ", scopeFragment));
     }
   }
   return isBanned;
@@ -6621,7 +6617,7 @@ void CGame::EventUserMapSize(GameUser::CGameUser* user, const CIncomingMapFileSi
           fromURL = Concat(" from <", GetMapSiteURL(), ">");
         }
         if (willKick) {
-           kickFragment = " (Kick in ", to_string(m_Config.m_LacksMapKickDelay / 1000), " seconds...)";
+           kickFragment = Concat(" (Kick in ", to_string(m_Config.m_LacksMapKickDelay / 1000), " seconds...)");
         }
         SendChat(user, Concat(user->GetName(), ", please download the map", fromURL, " before joining.", kickFragment));
       }
@@ -7199,7 +7195,7 @@ void CGame::EventGameLoaded()
   if (players.size() <= 2) {
     m_PlayedBy = ToNameListSentence(players, true);
   } else {
-    m_PlayedBy = players[0]->GetName(), ", and others";
+    m_PlayedBy = Concat(players[0]->GetName(), ", and others");
   }
 
   if (Shortest && Longest) {
@@ -8005,7 +8001,7 @@ void CGame::ResolveVirtualUsers()
         }
       }
     } else {
-      LOG_APP_IF(LogLevel::kWarning, Concat("Join-in-progress feature disabled due to incompatibility with W3MMD <map.w3mmd.features.virtual_players = no>, <map.w3mmd.features.prioritize_players = no>"));
+      LOG_APP_IF(LogLevel::kWarning, "Join-in-progress feature disabled due to incompatibility with W3MMD <map.w3mmd.features.virtual_players = no>, <map.w3mmd.features.prioritize_players = no>");
     }
   }
 
@@ -10406,6 +10402,7 @@ bool CGame::TrySaveOnDisconnect(GameUser::CGameUser* user, const bool isVoluntar
     // In FFA games, it's okay to show the real name (instead of GetDisplayName()) when disconnected.
     SendAllChat(Concat("Game saved on ", user->GetName(), "'s disconnection."));
     SendAllChat("They may rejoin on reload if an ally sends them their save. Foes' save files will NOT work.");
+    SendAllChat("Game is on pause. (F10 to Resume).");
     return true;
   } else {
     LOG_APP_IF(LogLevel::kWarning, "Failed to automatically save game on leave");
@@ -10486,8 +10483,7 @@ bool CGame::CreateVirtualHost()
   // When this message is sent because an slot is made available by a leaving user,
   // we gotta ensure that the virtual host join message is sent after the user's leave message.
   if (!m_Users.empty()) {
-    const std::array<uint8_t, 4> IP = {0, 0, 0, 0};
-    SendAll(GameProtocol::SEND_W3GS_PLAYERINFO(GetVersion(), m_VirtualHostUID, GetLobbyVirtualHostName(), IP, IP));
+    SendAll(GameProtocol::SEND_W3GS_PLAYERINFO_EXCLUDE_IP(GetVersion(), m_VirtualHostUID, GetLobbyVirtualHostName()));
   }
   return true;
 }
@@ -10562,8 +10558,7 @@ CGameVirtualUser* CGame::CreateFakeUserInner(const uint8_t SID, const uint8_t UI
 {
   const bool isCustomForces = GetIsCustomForces();
   if (!m_Users.empty()) {
-    const std::array<uint8_t, 4> IP = {0, 0, 0, 0};
-    SendAll(GameProtocol::SEND_W3GS_PLAYERINFO(GetVersion(), UID, name, IP, IP));
+    SendAll(GameProtocol::SEND_W3GS_PLAYERINFO_EXCLUDE_IP(GetVersion(), UID, name));
   }
   m_Slots[SID] = CGameSlot(
     m_Slots[SID].GetType(),

@@ -78,7 +78,14 @@ uint32_t CConnection::SetFD(fd_set* fd, fd_set* send_fd, int32_t* nfds) const
 
 void CConnection::SetTimeout(const int64_t delta)
 {
-  m_TimeoutTicks = m_Aura->GetLoopTicks() + delta;
+  int64_t timeoutTicks = m_Aura->GetLoopTicks() + delta;
+}
+
+void CConnection::SetTimeoutAtLatest(const int64_t atLatestTicks)
+{
+  if (!m_TimeoutTicks.has_value() || atLatestTicks < m_TimeoutTicks.value()) {
+    m_TimeoutTicks = atLatestTicks;
+  }
 }
 
 bool CConnection::CloseConnection()
@@ -125,8 +132,11 @@ IncomingConnectionStatus CConnection::Update(fd_set* fd, fd_set* send_fd, int64_
           if (Bytes[1] == GameProtocol::Magic::REQJOIN) {
             CIncomingJoinRequest joinRequest = GameProtocol::RECEIVE_W3GS_REQJOIN(Data);
             if (!joinRequest.GetIsValid()) {
-              // TODO: kTrace2
-              PRINT_IF(LogLevel::kDebug, "[AURA] Got invalid REQJOIN <" + ByteArrayToDecString(Bytes) + ">");
+              DPRINT_IF(LogLevel::kTrace2, "[AURA] Got invalid REQJOIN <" + ByteArrayToDecString(Bytes) + ">");
+              if (joinRequest.GetError() != JoinRequestError::kCannotParse) {
+                Send(GameProtocol::SENDWRAP_W3GS_GHOST_LOBBY_ERROR(GameProtocol::JoinRequestErrorToString(joinRequest.GetError())));
+                SetTimeoutAtLatest(m_Aura->GetLoopTicks() + 8000);
+              }
               Abort = true;
               break;
             }
@@ -153,7 +163,7 @@ IncomingConnectionStatus CConnection::Update(fd_set* fd, fd_set* send_fd, int64_
             }
             joinRequest.UpdateCensored(targetLobby->m_Config.m_UnsafeNameHandler, targetLobby->m_Config.m_PipeConsideredHarmful);
             if (joinRequest.GetIsCensored()) {
-              DPRINT_IF(LogLevel::kTrace, "[AURA] User name censored: [" + joinRequest.GetOriginalName() + "] -> [" + joinRequest.GetName() + "]");
+              DPRINT_IF(LogLevel::kTrace, Concat("[AURA] User name censored: [", joinRequest.GetOriginalName(), "] -> [", joinRequest.GetName(), "]"));
             }
             const uint8_t joinResult = targetLobby->EventRequestJoin(this, joinRequest);
             if (joinResult == JOIN_RESULT_PLAYER) {
@@ -163,6 +173,8 @@ IncomingConnectionStatus CConnection::Update(fd_set* fd, fd_set* send_fd, int64_
             } else if (joinResult == JOIN_RESULT_OBSERVER) {
               result = IncomingConnectionStatus::kPromoted;
               m_Type = IncomingConnectionType::kObserver;
+            } else if (joinResult == JOIN_RESULT_FAIL_DELAYED) {
+              result = IncomingConnectionStatus::kPromoted; // hack
             }
             Abort = true;
           } else if (GameProtocol::Magic::SEARCHGAME <= Bytes[1] && Bytes[1] <= GameProtocol::Magic::DECREATEGAME) {

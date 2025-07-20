@@ -54,13 +54,13 @@ vector<string> GameResults::GetWinnersNames() const
 void GameResults::Confirm()
 {
   for (auto& winner : winners) {
-    winner->SetGameResult(GAME_RESULT_WINNER);
+    winner->SetGameResult(GamePlayerResult::kWinner);
   }
   for (auto& loser : losers) {
-    loser->SetGameResult(GAME_RESULT_LOSER);
+    loser->SetGameResult(GamePlayerResult::kLoser);
   }
   for (auto& drawer : drawers) {
-    drawer->SetGameResult(GAME_RESULT_DRAWER);
+    drawer->SetGameResult(GamePlayerResult::kDrawer);
   }
 }
 

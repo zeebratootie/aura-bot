@@ -672,11 +672,6 @@ enum class GameResultComputerUndecidedHandler : uint8_t {
   LAST = 3,
 };
 
-constexpr uint8_t GAME_RESULT_LOSER = 0u;
-constexpr uint8_t GAME_RESULT_DRAWER = 1u;
-constexpr uint8_t GAME_RESULT_WINNER = 2u;
-constexpr uint8_t GAME_RESULT_UNDECIDED = 3u;
-
 enum class GamePlayerResult : uint8_t {
   kLoser = 0,
   kDrawer = 1,
@@ -749,6 +744,7 @@ enum class GameControllerType : uint8_t
 constexpr uint8_t JOIN_RESULT_FAIL = 0u;
 constexpr uint8_t JOIN_RESULT_PLAYER = 1u;
 constexpr uint8_t JOIN_RESULT_OBSERVER = 2u;
+constexpr uint8_t JOIN_RESULT_FAIL_DELAYED = 3u;
 
 enum class JoinResult : uint8_t {
   kFail = 0,
@@ -986,6 +982,13 @@ enum class ChatRecv : uint8_t {
   kAlly = 1,
   kObs = 2,
   LAST = 3,
+};
+
+enum class JoinRequestError : uint8_t {
+  kOk = 0,
+  kTooLong = 1,
+  kBadEncoding = 2,
+  kCannotParse = 3,
 };
 
 constexpr std::string::size_type MAX_LOBBY_CHAT_SIZE = 220;

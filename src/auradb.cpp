@@ -1062,7 +1062,7 @@ CDBGamePlayerSummary* CAuraDB::GamePlayerSummaryCheck(const string& rawName, con
   return GamePlayerSummary;
 }
 
-void CAuraDB::UpdateDotAPlayerOnEnd(const string& name, const string& server, uint8_t gameResult, const CDBDotAPlayer* dotaPlayer)
+void CAuraDB::UpdateDotAPlayerOnEnd(const string& name, const string& server, GamePlayerResult gameResult, const CDBDotAPlayer* dotaPlayer)
 {
   uint32_t kills = dotaPlayer->GetKills();
   uint32_t deaths = dotaPlayer->GetDeaths();
@@ -1085,9 +1085,9 @@ void CAuraDB::UpdateDotAPlayerOnEnd(const string& name, const string& server, ui
   uint32_t Wins   = 0;
   uint32_t Losses = 0;
 
-  if (gameResult == GAME_RESULT_WINNER)
+  if (gameResult == GamePlayerResult::kWinner)
     ++Wins;
-  else if (gameResult == GAME_RESULT_LOSER)
+  else if (gameResult == GamePlayerResult::kLoser)
     ++Losses;
 
   if (Statement == nullptr)
@@ -1451,12 +1451,12 @@ void CAuraDB::SaveDotAStats(Dota::CDotaStats* dotaStats)
         if (Name.empty())
           continue;
 
-        uint8_t result = GAME_RESULT_DRAWER;
+        GamePlayerResult result = GamePlayerResult::kUndecided;
 
         if ((dotaStats->m_Winner == Dota::WINNER_SENTINEL && Color >= 1 && Color <= 5) || (dotaStats->m_Winner == Dota::WINNER_SCOURGE && Color >= 7 && Color <= 11))
-          result = GAME_RESULT_WINNER;
+          result = GamePlayerResult::kWinner;
         else if ((dotaStats->m_Winner == Dota::WINNER_SCOURGE && Color >= 1 && Color <= 5) || (dotaStats->m_Winner == Dota::WINNER_SENTINEL && Color >= 7 && Color <= 11))
-          result = GAME_RESULT_LOSER;
+          result = GamePlayerResult::kLoser;
 
         UpdateDotAPlayerOnEnd(Name, Server, result, dotaPlayer);
         ++Players;

@@ -631,7 +631,7 @@ string CW3MMD::GetStoredPlayerName(uint8_t SID) const
 {
   auto nameIterator = m_SIDToName.find(SID);
   if (nameIterator == m_SIDToName.end()) {
-    return "SID " + to_string(SID);
+    return "SID " + ToDecString(SID);
   } else {
     return nameIterator->second;
   }

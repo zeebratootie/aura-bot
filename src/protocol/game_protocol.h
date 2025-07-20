@@ -158,6 +158,7 @@ namespace GameProtocol
     ~PacketWrapper();
 
     void Remove(size_t count);
+    void Merge(const PacketWrapper& packetWrapper);
     [[nodiscard]] inline bool GetIsEmpty() const { return count == 0; }
   };
 
@@ -221,6 +222,7 @@ namespace GameProtocol
   [[nodiscard]] std::vector<uint8_t> SEND_W3GS_STARTDOWNLOAD(uint8_t fromUID);
   [[nodiscard]] std::vector<uint8_t> SEND_W3GS_MAPPART(uint8_t fromUID, uint8_t toUID, size_t start, const FileChunkTransient& mapFileChunk);
   [[nodiscard]] std::vector<uint8_t> SEND_W3GS_MAPPART(uint8_t fromUID, uint8_t toUID, size_t start, const SharedByteArray& mapFileContents);
+  [[nodiscard]] PacketWrapper SENDWRAP_W3GS_GHOST_LOBBY_ERROR(std::string_view errorMessage);
 
   // other functions
 
@@ -249,6 +251,22 @@ namespace GameProtocol
     }
   }
 
+  [[nodiscard]] inline std::string_view JoinRequestErrorToString(JoinRequestError errorCode)
+  {
+    // TODO: For every fn(a, b, c) that accepts std::string_view, ensure that no argument is a function call returning a temporary std::string
+    switch (errorCode) {
+      case JoinRequestError::kOk:
+        return std::string_view();
+      case JoinRequestError::kTooLong:
+        return "Your username is too long. The limit is 31 English/Latin characters (15 or less in other languages.)";
+      case JoinRequestError::kBadEncoding:
+        return "Your username has technical issues. Please type it again, or copy it from an UTF8-aware app. This is NOT censorship.";
+      case JoinRequestError::kCannotParse:
+      default:
+        return "Critical error";
+    }
+  }
+
   [[nodiscard]] inline GamePlayerResult LeftCodeToResult(const uint32_t leftCode)
   {
     switch (leftCode) {
@@ -273,7 +291,7 @@ namespace GameProtocol
 class CIncomingJoinRequest
 {
 private:
-  bool                      m_Valid;
+  JoinRequestError          m_Error;
   bool                      m_Censored;
   std::string               m_Name;
   std::string               m_OriginalName;
@@ -283,10 +301,11 @@ private:
 
 public:
   CIncomingJoinRequest();
-  CIncomingJoinRequest(uint32_t nHostCounter, uint32_t nEntryKey, std::string_view nName, std::array<uint8_t, 4> nIPv4Internal);
+  CIncomingJoinRequest(uint32_t nHostCounter, uint32_t nEntryKey, std::string_view nName, std::array<uint8_t, 4> nIPv4Internal, JoinRequestError errorCode = JoinRequestError::kOk);
   ~CIncomingJoinRequest();
 
-  [[nodiscard]] inline bool                   GetIsValid() const { return m_Valid; }
+  [[nodiscard]] inline bool                   GetIsValid() const { return m_Error == JoinRequestError::kOk; }
+  [[nodiscard]] inline JoinRequestError       GetError() const { return m_Error; }
   [[nodiscard]] inline bool                   GetIsCensored() const { return m_Censored; }
   [[nodiscard]] inline uint32_t               GetHostCounter() const { return m_HostCounter; }
   [[nodiscard]] inline uint32_t               GetEntryKey() const { return m_EntryKey; }

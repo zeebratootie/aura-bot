@@ -778,7 +778,7 @@ void CAsyncObserver::EventLeft(const uint32_t clientReason)
   if (m_StartedLoading) {
     string reason;
     if (clientReason == PLAYERLEAVE_GPROXY) {
-      reason = " (", GameProtocol::LeftCodeToString(clientReason), ")";
+      reason = Concat(" (", GameProtocol::LeftCodeToString(clientReason), ")");
     }
     Print(Concat(GetLogPrefix(), "left the game at [", ToFormattedTimeStamp(m_GameTicks / 1000), "]", reason));
     /*
@@ -857,7 +857,7 @@ void CAsyncObserver::SendGameLoadedReport()
     int64_t delay = m_GameHistory->GetSpectatorDelay();
     string delayHint;
     if (delay > 0) {
-      delayHint = " (delay is ", ToDurationString(delay / 1000), ")";
+      delayHint = Concat(" (delay is ", ToDurationString(delay / 1000), ")");
     }
     SendChat(Concat("Watching game", otherSpectators + delayHint));
   }
@@ -950,6 +950,6 @@ void CAsyncObserver::SendProgressReport()
 
 string CAsyncObserver::GetLogPrefix() const
 {
-  if (!m_Game.expired()) return m_Game.lock()->GetLogPrefix(), "[SPECTATOR] [", m_Name, "] ";
+  if (!m_Game.expired()) return Concat(m_Game.lock()->GetLogPrefix(), "[SPECTATOR] [", m_Name, "] ");
   return Concat("[SPECTATOR] [", m_Name, "] ");
 }

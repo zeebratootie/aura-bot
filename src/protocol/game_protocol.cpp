@@ -239,6 +239,13 @@ namespace GameProtocol
     data.erase(data.begin(), data.begin() + cursor);
   }
 
+  void PacketWrapper::Merge(const PacketWrapper& other)
+  {
+    count += other.count;
+    data.reserve(data.size() + other.data.size());
+    data.insert(data.end(), other.data.begin(), other.data.end());
+  }
+
   //
   // MemoizedGameChatMessageBuilder
   //
@@ -296,11 +303,23 @@ namespace GameProtocol
     if (ValidateLength(data) && data.size() >= 20) {
       const uint32_t hostCounter = ByteArrayToUInt32(data, false, 4);
       const uint32_t entryKey = ByteArrayToUInt32(data, false, 8);
-      string_view rawName = ExtractUTF8View(data, 19, MAX_PLAYER_NAME_SIZE);
+      string_view rawName = ExtractUTF8View(data, 19, 4 * MAX_PLAYER_NAME_SIZE);
       if (!rawName.empty() && (data.size() >= rawName.size() + 30) && !HasUnsafeUTF8CodePoints(rawName)) {
         array<uint8_t, 4> internalIP = {0, 0, 0, 0};
         copy_n(data.begin() + rawName.size() + 26, 4, internalIP.begin());
-        return CIncomingJoinRequest(hostCounter, entryKey, rawName, internalIP);
+        if (MAX_PLAYER_NAME_SIZE < rawName.size()) {
+          // Name is larger than max
+          // However, someone could naively write a pretty long name with just a few code points.
+          // E.g. A username is limited to no more than 15 cyrillic letters. We will temporarily join a ghost lobby,
+          // and display an error message.
+          return CIncomingJoinRequest(hostCounter, entryKey, rawName, internalIP, JoinRequestError::kTooLong);
+        } else if (HasUnsafeUTF8CodePoints(rawName)) {
+          // Copying from Notepad, Word, or wherever could result in an invalid username.
+          // We shall similarly join them into a ghost lobby, and let them know.
+          return CIncomingJoinRequest(hostCounter, entryKey, rawName, internalIP, JoinRequestError::kBadEncoding);
+        } else {
+          return CIncomingJoinRequest(hostCounter, entryKey, rawName, internalIP);
+        }
       }
     }
 
@@ -506,6 +525,7 @@ namespace GameProtocol
 
   std::vector<uint8_t> SEND_W3GS_SLOTINFOJOIN(uint8_t UID, const std::array<uint8_t, 2>& port, const std::array<uint8_t, 4>& externalIP, const vector<CGameSlot>& slots, uint32_t randomSeed, uint8_t layoutStyle, uint8_t playerSlots)
   {
+    // NOTE: UID must not be 0
     std::vector<uint8_t> packet;
 
     const uint8_t              Zeros[]  = {0, 0, 0, 0};
@@ -1054,6 +1074,29 @@ namespace GameProtocol
     return packet;
   }
 
+  PacketWrapper SENDWRAP_W3GS_GHOST_LOBBY_ERROR(string_view errorMessage)
+  {
+    const array<uint8_t, 4> playerIP = {0, 0, 0, 0};
+    const array<uint8_t, 2> playerPort = {0, 0};
+    const uint8_t virtualHostUID = 1;
+    const uint8_t joinedPlayerUID = 2;
+    Version version = GAMEVER(1u, 0u);
+    vector<CGameSlot> slots;
+    slots.emplace_back(SLOTTYPE_USER, virtualHostUID, SLOTPROG_RST, SLOTSTATUS_OCCUPIED, SLOTCOMP_NO, 0, 0, SLOTRACE_RANDOM);
+    slots.emplace_back(SLOTTYPE_USER, joinedPlayerUID, SLOTPROG_RST, SLOTSTATUS_OCCUPIED, SLOTCOMP_NO, 1, 1, SLOTRACE_RANDOM);
+
+    PacketWrapper packetWrapper;
+    packetWrapper.count = 2;
+    AppendByteArrayFast(packetWrapper.data,
+      GameProtocol::SEND_W3GS_SLOTINFOJOIN(joinedPlayerUID, playerPort, playerIP, slots, 0, MAPLAYOUT_FIXED_PLAYERS, 2)
+    );
+    AppendByteArrayFast(
+      packetWrapper.data, GameProtocol::SEND_W3GS_PLAYERINFO_EXCLUDE_IP(version, virtualHostUID, " ")
+    );
+    packetWrapper.Merge(GameProtocol::SENDWRAP_W3GS_CHAT_FROM_HOST_LOBBY(virtualHostUID, {joinedPlayerUID}, GameProtocol::Magic::ChatType::CHAT_LOBBY, string_view(), errorMessage));
+    return packetWrapper;
+  }
+
   std::vector<uint8_t> SEND_W3GS_INCOMING_ACTION2(const ActionQueue& actions)
   {
     std::vector<uint8_t> packet = {GameProtocol::Magic::W3GS_HEADER, GameProtocol::Magic::INCOMING_ACTION2, 0, 0, 0, 0};
@@ -1197,7 +1240,7 @@ namespace GameProtocol
 //
 
 CIncomingJoinRequest::CIncomingJoinRequest()
-  : m_Valid(false),
+  : m_Error(JoinRequestError::kCannotParse),
     m_Censored(false),
     m_HostCounter(0),
     m_EntryKey(0)
@@ -1206,8 +1249,8 @@ CIncomingJoinRequest::CIncomingJoinRequest()
   m_Name = m_OriginalName;
 }
 
-CIncomingJoinRequest::CIncomingJoinRequest(uint32_t nHostCounter, uint32_t nEntryKey, string_view nName, std::array<uint8_t, 4> nIPv4Internal)
-  : m_Valid(true),
+CIncomingJoinRequest::CIncomingJoinRequest(uint32_t nHostCounter, uint32_t nEntryKey, string_view nName, std::array<uint8_t, 4> nIPv4Internal, JoinRequestError errorCode)
+  : m_Error(errorCode),
     m_Censored(false),
     m_OriginalName(std::string(nName)),
     m_IPv4Internal(std::move(nIPv4Internal)),

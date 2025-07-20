@@ -328,7 +328,7 @@ public:
   void                                        UpdateGamePlayerOnStart(const uint64_t gamePersistentId, const CGameController* controllerData);
   void                                        UpdateGamePlayerOnEnd(const uint64_t gamePersistentId, const CGameController* controllerData, const uint64_t durationSeconds);
   [[nodiscard]] CDBGamePlayerSummary*         GamePlayerSummaryCheck(const std::string& name, const std::string& server);
-  void                                        UpdateDotAPlayerOnEnd(const std::string& name, const std::string& server, uint8_t result, const CDBDotAPlayer* dotaPlayer);
+  void                                        UpdateDotAPlayerOnEnd(const std::string& name, const std::string& server, GamePlayerResult result, const CDBDotAPlayer* dotaPlayer);
   [[nodiscard]] CDBDotAPlayerSummary*         DotAPlayerSummaryCheck(const std::string& name, const std::string& server);
   [[nodiscard]] std::string                   GetInitialIP(const std::string& name, const std::string& server);
   [[nodiscard]] std::string                   GetLatestIP(const std::string& name, const std::string& server);

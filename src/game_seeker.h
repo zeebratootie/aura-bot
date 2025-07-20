@@ -56,6 +56,7 @@ public:
   // processing functions
 
   void SetTimeout(const int64_t nTicks);
+  void SetTimeoutAtLatest(const int64_t nTicks);
   bool CloseConnection();
   void Init();
   [[nodiscard]] GameSeekerStatus Update(fd_set* fd, fd_set* send_fd, int64_t timeout);
@@ -63,6 +64,7 @@ public:
   // other functions
 
   void Send(const std::vector<uint8_t>& data) final;
+  void Send(const GameProtocol::PacketWrapper& data) final;
 };
 
 #endif // AURA_GAMESEEKER_H_
