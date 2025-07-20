@@ -112,7 +112,7 @@ CGameUser::CGameUser(shared_ptr<CGame> nGame, CConnection* connection, uint8_t n
     m_IPv4Internal(std::move(nInternalIP)),
     m_RealmInternalId(nJoinedRealmInternalId),
     m_RealmHostName(std::move(nJoinedRealm)),
-    m_Name(std::string(nName)),
+    m_Name(nName),
     m_LeftCode(PLAYERLEAVE_LOBBY),
     m_Status(USERSTATUS_LOBBY),
     m_IsLeaver(false),

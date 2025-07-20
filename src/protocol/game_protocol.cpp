@@ -1252,7 +1252,7 @@ CIncomingJoinRequest::CIncomingJoinRequest()
 CIncomingJoinRequest::CIncomingJoinRequest(uint32_t nHostCounter, uint32_t nEntryKey, string_view nName, std::array<uint8_t, 4> nIPv4Internal, JoinRequestError errorCode)
   : m_Error(errorCode),
     m_Censored(false),
-    m_OriginalName(std::string(nName)),
+    m_OriginalName(nName),
     m_IPv4Internal(std::move(nIPv4Internal)),
     m_HostCounter(nHostCounter),
     m_EntryKey(nEntryKey)
@@ -1552,7 +1552,7 @@ CIncomingChatMessage::CIncomingChatMessage()
 
 CIncomingChatMessage::CIncomingChatMessage(uint8_t nFromUID, std::vector<uint8_t> nToUIDs, uint8_t nFlag, string_view nMessage)
   : m_Valid(true),
-    m_Message(std::string(nMessage)),
+    m_Message(nMessage),
     m_Type(GameProtocol::ChatToHostType::CTH_MESSAGE_LOBBY),
     m_Byte(255),
     m_FromUID(nFromUID),
@@ -1563,7 +1563,7 @@ CIncomingChatMessage::CIncomingChatMessage(uint8_t nFromUID, std::vector<uint8_t
 
 CIncomingChatMessage::CIncomingChatMessage(uint8_t nFromUID, std::vector<uint8_t> nToUIDs, uint8_t nFlag, string_view nMessage, uint32_t nExtraFlags)
   : m_Valid(true),
-    m_Message(std::string(nMessage)),
+    m_Message(nMessage),
     m_Type(GameProtocol::ChatToHostType::CTH_MESSAGE_INGAME),
     m_Byte(255),
     m_FromUID(nFromUID),
