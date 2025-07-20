@@ -78,7 +78,7 @@ uint32_t CConnection::SetFD(fd_set* fd, fd_set* send_fd, int32_t* nfds) const
 
 void CConnection::SetTimeout(const int64_t delta)
 {
-  int64_t timeoutTicks = m_Aura->GetLoopTicks() + delta;
+  m_TimeoutTicks = m_Aura->GetLoopTicks() + delta;
 }
 
 void CConnection::SetTimeoutAtLatest(const int64_t atLatestTicks)

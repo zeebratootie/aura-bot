@@ -1789,6 +1789,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
         case GameObserversMode::kReferees:
           output.push_back("Defeated players cannot observe the game. Observers can chat (referees.)");
           break;
+        IGNORE_ENUM_LAST(GameObserversMode)
       }
 
       // GOTCHA: /game - Leavers info is omitted. This affects games with name obfuscation.

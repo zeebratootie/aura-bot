@@ -1792,7 +1792,7 @@ bool IsASCII(string_view unsafeInput)
 bool IsUnsafeCodePoint(char32_t cp)
 {
   // C0, DEL, C1
-  if (cp < 0x20 || 0x7F <= cp && cp <= 0x9F) {
+  if (cp < 0x20 || (0x7F <= cp && cp <= 0x9F)) {
     return true;
   }
   switch (cp) {
