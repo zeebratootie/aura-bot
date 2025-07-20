@@ -6812,7 +6812,7 @@ void CGame::EventGameStartedLoading()
       user->SetCannotSave();
     }
     for (auto& fakeUser : m_FakeUsers) {
-      fakeUser->SetCannotSave();
+      fakeUser.SetCannotSave();
     }
   }
 
@@ -6821,7 +6821,7 @@ void CGame::EventGameStartedLoading()
       user->SetCannotPause();
     }
     for (auto& fakeUser : m_FakeUsers) {
-      fakeUser->SetCannotPause();
+      fakeUser.SetCannotPause();
     }
   }
 
