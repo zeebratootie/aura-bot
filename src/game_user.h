@@ -231,7 +231,7 @@ namespace GameUser
     [[nodiscard]] inline bool                  GetIsRealmVerified() const { return m_Verified; }
     [[nodiscard]] inline size_t                GetSyncCounter() const { return m_SyncCounter; }
     [[nodiscard]] inline size_t                GetNormalSyncCounter() const { return m_SyncCounter + m_SyncCounterOffset; }
-    [[nodiscard]] bool                         GetIsBehindFramesNormal(const uint32_t limit) const;
+    [[nodiscard]] bool                         GetIsBehindFramesNormal(const size_t limit) const;
     [[nodiscard]] inline int64_t               GetJoinTicks() const { return m_JoinTicks; }
     [[nodiscard]] inline int64_t               GetFinishedLoadingTicks() const { return m_FinishedLoadingTicks; }
     [[nodiscard]] inline int64_t               GetHandicapTicks() const { return m_HandicapTicks; }

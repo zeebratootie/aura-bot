@@ -286,7 +286,7 @@ void CNet::OnThrottledConnectionError(const NetworkHost& host)
   m_OutgoingPendingConnections.erase(host);
   auto it = m_OutgoingThrottles.find(host);
   if (it == m_OutgoingThrottles.end()) {
-    m_OutgoingThrottles[host] = TimedUint8(m_Aura->GetLoopTime(), 0);
+    m_OutgoingThrottles[host] = TimedUint8(m_Aura->GetLoopTime(), static_cast<uint8_t>(0u));
     return;
   }
   TimedUint8& throttled = it->second;
@@ -1048,7 +1048,7 @@ void CNet::HandleUDP(UDPPkt* pkt)
     return;
   }
 
-  const uint32_t productID = ByteArrayToUInt32<Endianness::kLittle>(data, 4);
+  const uint32_t productID = ByteArrayToUInt32LE(data, 4);
   const bool isExpansion = productID == ProductID_TFT_LE;
   if (!isExpansion && productID != ProductID_ROC_LE) {
     return;

@@ -322,27 +322,27 @@ void CPacked::Compress(const bool TFT)
 
 	vector<uint8_t> Header;
 	AppendByteArrayString(Header, "Warcraft III recorded game\x01A", true);
-	AppendNumber<Endianness::kLittle>(Header, HeaderSize);
-	AppendNumber<Endianness::kLittle>(Header, (uint32_t)HeaderCompressedSize);
-	AppendNumber<Endianness::kLittle>(Header, HeaderVersion);
-	AppendNumber<Endianness::kLittle>(Header, (uint32_t)m_Decompressed.size());
-	AppendNumber<Endianness::kLittle>(Header, (uint32_t)CompressedBlocks.size());
+	AppendNumberLE(Header, HeaderSize);
+	AppendNumberLE(Header, (uint32_t)HeaderCompressedSize);
+	AppendNumberLE(Header, HeaderVersion);
+	AppendNumberLE(Header, (uint32_t)m_Decompressed.size());
+	AppendNumberLE(Header, (uint32_t)CompressedBlocks.size());
 
   if (TFT) {
-    AppendNumber<Endianness::kLittle>(Header, ProductID_TFT_LE);
+    AppendNumberLE(Header, ProductID_TFT_LE);
   } else {
-    AppendNumber<Endianness::kLittle>(Header, ProductID_ROC_LE);
+    AppendNumberLE(Header, ProductID_ROC_LE);
   }
 
-	AppendNumber<Endianness::kLittle>(Header, static_cast<uint32_t>(m_War3Version.second));
-	AppendNumber<Endianness::kLittle>(Header, m_BuildNumber);
-	AppendNumber<Endianness::kLittle>(Header, m_Flags);
-	AppendNumber<Endianness::kLittle>(Header, m_ReplayLength);
+	AppendNumberLE(Header, static_cast<uint32_t>(m_War3Version.second));
+	AppendNumberLE(Header, m_BuildNumber);
+	AppendNumberLE(Header, m_Flags);
+	AppendNumberLE(Header, m_ReplayLength);
 
 	// append zero header CRC
 	// the header CRC is calculated over the entire header with itself set to zero
 	// we'll overwrite the zero header CRC after we calculate it
-	AppendNumber<Endianness::kLittle>(Header, (uint32_t)0);
+	AppendNumberLE(Header, (uint32_t)0);
 
 	// calculate header CRC
 	string HeaderString = string(Header.begin(), Header.end());
@@ -350,7 +350,7 @@ void CPacked::Compress(const bool TFT)
 
 	// overwrite the (currently zero) header CRC with the calculated CRC
 	Header.erase(Header.end() - 4, Header.end());
-	AppendNumber<Endianness::kLittle>(Header, CRC);
+	AppendNumberLE(Header, CRC);
 
 	// append header
 	m_Compressed += string(Header.begin(), Header.end());
@@ -358,11 +358,11 @@ void CPacked::Compress(const bool TFT)
 	// append blocks
   for (vector<string>::iterator i = CompressedBlocks.begin(); i != CompressedBlocks.end(); ++i) {
 		vector<uint8_t> BlockHeader;
-		AppendNumber<Endianness::kLittle>(BlockHeader, (uint16_t)(*i).size());
-		AppendNumber<Endianness::kLittle>(BlockHeader, (uint16_t)8192);
+		AppendNumberLE(BlockHeader, (uint16_t)(*i).size());
+		AppendNumberLE(BlockHeader, (uint16_t)8192);
 
 		// append zero block header CRC
-		AppendNumber<Endianness::kLittle>(BlockHeader, (uint32_t)0);
+		AppendNumberLE(BlockHeader, (uint32_t)0);
 
 		// calculate block header CRC
 		string BlockHeaderString = string(BlockHeader.begin(), BlockHeader.end());
@@ -374,7 +374,7 @@ void CPacked::Compress(const bool TFT)
 
 		// overwrite the block header CRC with the calculated CRC
 		BlockHeader.erase(BlockHeader.end( ) - 4, BlockHeader.end());
-		AppendNumber<Endianness::kLittle>(BlockHeader, BlockCRC);
+		AppendNumberLE(BlockHeader, BlockCRC);
 
 		// append block header and data
 		m_Compressed += string(BlockHeader.begin(), BlockHeader.end());

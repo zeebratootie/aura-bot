@@ -342,8 +342,8 @@ public:
   int64_t                                                GetActiveLatency() const;
   int64_t                                                GetNextLatency(int64_t frameDrift = 0) const;
   int64_t                                                GetLastActionLateBy(int64_t oldLatency) const;
-  uint32_t                                               GetSyncLimit(bool isObserver) const;
-  uint32_t                                               GetSyncLimitSafe(bool isObserver) const;
+  size_t                                                 GetSyncLimit(bool isObserver) const;
+  size_t                                                 GetSyncLimitSafe(bool isObserver) const;
   inline bool                                            GetIsLagging() const { return m_IsLagging; }
   inline bool                                            GetIsPaused() const { return m_IsPaused; }
   inline bool                                            GetIsGameOver() const { return m_GameOver != GAME_ONGOING; }
@@ -740,8 +740,8 @@ public:
   bool AddScopeBan(const std::string& name, const std::string& hostName, const std::string& addressLiteral);
   bool RemoveScopeBan(const std::string& name, const std::string& hostName);
 
-  std::vector<uint32_t> GetPlayersFramesBehind() const;
-  std::vector<uint32_t> GetUsersFramesBehind() const;
+  std::vector<size_t> GetPlayersFramesBehind() const;
+  std::vector<size_t> GetUsersFramesBehind() const;
   UserList GetLaggingUsers() const;
   uint8_t CountLaggingPlayers() const;
   UserList CalculateNewLaggingPlayers() const;

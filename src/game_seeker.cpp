@@ -125,7 +125,7 @@ GameSeekerStatus CGameSeeker::Update(fd_set* fd, fd_set* send_fd, int64_t timeou
 
     while (data.size() >= 4) {
       // bytes 2 and 3 contain the length of the packet
-      const uint16_t packetSize = ByteArrayToUInt16<Endianness::kLittle>(data, 2);
+      const uint16_t packetSize = ByteArrayToUInt16LE(data, 2);
       if (packetSize < 4) {
         Abort = true;
         break;

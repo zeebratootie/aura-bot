@@ -1658,7 +1658,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
       }
       string FromFragment;
       if (m_Aura->m_Net.m_Config.m_EnableGeoLocalization) {
-        FromFragment = ", From: " + m_Aura->m_DB->FromCheck(ByteArrayToUInt32<Endianness::kBig>(targetPlayer->GetIPv4()));
+        FromFragment = ", From: " + m_Aura->m_DB->FromCheck(ByteArrayToUInt32BE(targetPlayer->GetIPv4()));
       }
       string realmFragment = "Realm: " + (targetPlayer->GetRealmHostName().empty() ? "LAN" : string(targetPlayer->GetRealmHostName()));
       string versionFragment;
@@ -2511,7 +2511,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
 
         Froms += (*i)->GetDisplayName();
         Froms += ": (";
-        Froms += m_Aura->m_DB->FromCheck(ByteArrayToUInt32<Endianness::kBig>((*i)->GetIPv4()));
+        Froms += m_Aura->m_DB->FromCheck(ByteArrayToUInt32BE((*i)->GetIPv4()));
         Froms += ")";
 
         if (i != end(targetGame->m_Users) - 1)

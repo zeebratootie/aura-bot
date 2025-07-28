@@ -152,7 +152,7 @@ template <typename T>
 template <Endianness endianness>
 void WriteUint16(std::vector<uint8_t>& buffer, const uint16_t value, const size_t offset);
 template <Endianness endianness>
-void WriteUint32(std::vector<uint8_t>& buffer, const uint32_t value, const uint32_t offset);
+void WriteUint32(std::vector<uint8_t>& buffer, const uint32_t value, const size_t offset);
 [[nodiscard]] std::vector<uint8_t> CopyBytes(const uint8_t* a, const size_t size);
 [[nodiscard]] std::vector<uint8_t> CreateByteArray(const uint8_t c);
 template <Endianness endianness>
@@ -160,7 +160,7 @@ template <Endianness endianness>
 template <Endianness endianness>
 [[nodiscard]] std::vector<uint8_t> CreateByteArray(const uint32_t i);
 template <Endianness endianness>
-[[nodiscard]] std::vector<uint8_t> CreateByteArray(const int64_t i);
+[[nodiscard]] std::vector<uint8_t> CreateByteArrayLossy(const int64_t i);
 template <Endianness endianness>
 [[nodiscard]] std::vector<uint8_t> CreateByteArray(const float i);
 template <Endianness endianness>
@@ -171,7 +171,7 @@ template <Endianness endianness>
 template <Endianness endianness>
 [[nodiscard]] std::array<uint8_t, 4> CreateFixedByteArray(const uint32_t i);
 template <Endianness endianness>
-[[nodiscard]] std::array<uint8_t, 4> CreateFixedByteArray(const int64_t i);
+[[nodiscard]] std::array<uint8_t, 4> CreateFixedByteArrayLossy(const int64_t i);
 template <Endianness endianness>
 [[nodiscard]] std::array<uint8_t, 8> CreateFixedByteArray64(const uint64_t i);
 template <Endianness endianness>
@@ -182,7 +182,7 @@ void EnsureFixedByteArray(std::optional<std::array<uint8_t, 2>>& optArray, const
 template <Endianness endianness>
 void EnsureFixedByteArray(std::optional<std::array<uint8_t, 4>>& optArray, const uint32_t i);
 template <Endianness endianness>
-void EnsureFixedByteArray(std::optional<std::array<uint8_t, 4>>& optArray, const int64_t i);
+void EnsureFixedByteArrayLossy(std::optional<std::array<uint8_t, 4>>& optArray, const int64_t i);
 template <Endianness endianness>
 void EnsureFixedByteArray(std::optional<std::array<uint8_t, 8>>& optArray, const double i);
 template <Endianness endianness>
@@ -227,7 +227,7 @@ void AppendNumber(std::vector<uint8_t>& b, const uint16_t i);
 template <Endianness endianness>
 void AppendNumber(std::vector<uint8_t>& b, const uint32_t i);
 template <Endianness endianness>
-void AppendNumber(std::vector<uint8_t>& b, const int64_t i);
+void AppendNumberLossy(std::vector<uint8_t>& b, const int64_t i);
 template <Endianness endianness>
 void AppendNumber(std::vector<uint8_t>& b, const float i);
 template <Endianness endianness>

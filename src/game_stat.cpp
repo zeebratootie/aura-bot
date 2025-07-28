@@ -70,17 +70,17 @@ GameStat::GameStat(const uint8_t* ptr, size_t size)
 
   cursorEnd = cursorStart + 4;
   if (cursorEnd > dataEnd) return;
-  m_GameFlags = ByteArrayToUInt32<Endianness::kLittle>(cursorStart);
+  m_GameFlags = ByteArrayToUInt32LE(cursorStart);
   cursorStart = cursorEnd + 1;
 
   cursorEnd = cursorStart + 2;
   if (cursorEnd > dataEnd) return;
-  m_MapWidth = ByteArrayToUInt16<Endianness::kLittle>(cursorStart);
+  m_MapWidth = ByteArrayToUInt16LE(cursorStart);
   cursorStart = cursorEnd;
 
   cursorEnd = cursorStart + 2;
   if (cursorEnd > dataEnd) return;
-  m_MapHeight = ByteArrayToUInt16<Endianness::kLittle>(cursorStart);
+  m_MapHeight = ByteArrayToUInt16LE(cursorStart);
   cursorStart = cursorEnd;
 
   cursorEnd = cursorStart + 4;
@@ -119,10 +119,10 @@ vector<uint8_t> GameStat::Encode() const
 {
   vector<uint8_t> encoded;
   encoded.reserve(13 + m_MapPath.size() + 1 + m_HostName.size() + 2 + (m_MapScriptsSHA1.has_value() ? 20 : 0));
-  AppendNumber<Endianness::kLittle>(encoded, m_GameFlags);
+  AppendNumberLE(encoded, m_GameFlags);
   encoded.push_back(0);
-  AppendNumber<Endianness::kLittle>(encoded, m_MapWidth);
-  AppendNumber<Endianness::kLittle>(encoded, m_MapHeight);
+  AppendNumberLE(encoded, m_MapWidth);
+  AppendNumberLE(encoded, m_MapHeight);
   AppendContainer(encoded, m_MapScriptsBlizzHash);
   AppendByteArrayString(encoded, m_MapPath, true);
   AppendByteArrayString(encoded, m_HostName, true);

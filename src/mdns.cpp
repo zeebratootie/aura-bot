@@ -88,7 +88,7 @@ vector<uint8_t> CMDNS::GetGameBroadcastData(shared_ptr<const CGame> game, const 
   string secret = to_string(game->GetEntryKey());
 
   vector<uint8_t> statInfo;
-  AppendNumber<Endianness::kLittle>(statInfo, game->GetGameFlags());
+  AppendNumberLE(statInfo, game->GetGameFlags());
   statInfo.push_back(0);
   AppendContainer(statInfo, game->GetAnnounceWidth());
   AppendContainer(statInfo, game->GetAnnounceHeight());
@@ -112,19 +112,19 @@ vector<uint8_t> CMDNS::GetGameBroadcastData(shared_ptr<const CGame> game, const 
     game_data_d.push_back(0);
     AppendContainer(game_data_d, encodedStatString);
     game_data_d.push_back(0);
-    AppendNumber<Endianness::kLittle>(game_data_d, (uint32_t)slotsTotal);
+    AppendNumberLE(game_data_d, (uint32_t)slotsTotal);
     AppendContainer(game_data_d, magicNumber);
-    AppendNumber<Endianness::kLittle>(game_data_d, hostPort);
+    AppendNumberLE(game_data_d, hostPort);
   } else {
     const uint32_t One = 1;
-    AppendNumber<Endianness::kLittle>(game_data_d, One);
+    AppendNumberLE(game_data_d, One);
     AppendByteArrayString(game_data_d, gameName, true);
     AppendContainer(game_data_d, encodedStatString);
     game_data_d.push_back(0);
-    AppendNumber<Endianness::kLittle>(game_data_d, (uint32_t)slotsTotal);
+    AppendNumberLE(game_data_d, (uint32_t)slotsTotal);
     AppendByteArrayString(game_data_d, gameName, true);
     game_data_d.push_back(0);
-    AppendNumber<Endianness::kLittle>(game_data_d, hostPort);
+    AppendNumberLE(game_data_d, hostPort);
   }
 
   string game_data = Base64::Encode(reinterpret_cast<unsigned char*>(game_data_d.data()), game_data_d.size(), false);

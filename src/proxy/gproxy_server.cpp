@@ -69,7 +69,7 @@ void CGProxyServer::CheckSendAck()
 {
   if (!GetIsEnabled()) return;
   if (!m_Aura->GetTicksIsFirstOrAfterDelay(m_LastAckTicks, GPS_ACK_PERIOD)) return;
-  GetSocket().PutBytes(GPSProtocol::SEND_GPSS_ACK(m_TotalRecvPackets));
+  GetSocket().PutBytes(GPSProtocol::SEND_GPSS_ACK((uint32_t)m_TotalRecvPackets));
   m_LastAckTicks = m_Aura->GetLoopTicks();
 }
 

@@ -264,7 +264,7 @@ void GameHistory::UpdateSpectatorActions(int64_t spectatorDelay /* seconds */)
       case GAME_FRAME_TYPE_GPROXY:
       case GAME_FRAME_TYPE_LATENCY:
         // it stored, GAME_FRAME_TYPE_LATENCY always goes after GAME_FRAME_TYPE_ACTIONS
-        m_SpectatorActiveLatency = ByteArrayToUInt16<Endianness::kLittle>(it->GetBytes(), 0);
+        m_SpectatorActiveLatency = ByteArrayToUInt16LE(it->GetBytes(), 0);
         break;
       case GAME_FRAME_TYPE_ACTIONS:  
         gameDurationWanted -= m_SpectatorActiveLatency;

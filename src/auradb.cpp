@@ -1717,12 +1717,12 @@ CDBGameSummary::CDBGameSummary(uint64_t nID, string playerNames, string playerID
   : m_ID(nID),
     m_PlayerNames(SplitArgs(playerNames, 1, 24))
 {
-  uint8_t playerCount = static_cast<uint8_t>(m_PlayerNames.size());
+  size_t playerCount = m_PlayerNames.size();
   if (playerCount == 0) {
     return;
   }
   vector<uint8_t> rawIDs = ExtractNumbers(playerIDs, 3 * playerCount);
-  if (rawIDs.size() % 3 != 0 || rawIDs.size() != playerCount * 3) {
+  if (rawIDs.size() != playerCount * 3) {
     return;
   }
   m_UIDs = vector<uint8_t>(rawIDs.begin(), rawIDs.begin() + playerCount);

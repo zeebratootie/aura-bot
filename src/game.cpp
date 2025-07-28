@@ -753,7 +753,7 @@ bool CGame::EventGameCacheInteger(const uint8_t UID, const uint8_t* actionStart,
   key = string(reinterpret_cast<const char*>(stringStart), reinterpret_cast<const char*>(stringEnd));
 
   if (actionEnd != stringEnd + 5u) return false;
-  value = ByteArrayToUInt32<Endianness::kLittle>(stringEnd + 1);
+  value = ByteArrayToUInt32LE(stringEnd + 1);
 
   if (m_CustomStats) {
     if (!m_CustomStats->EventGameCacheInteger(UID, cacheFileName, missionKey, key, value)) {
@@ -1616,7 +1616,7 @@ void CGame::UpdateLoaded()
     if (m_Config.m_EnableLagScreen && m_Aura->GetTicksIsAfterDelay(m_LastLagStartCheckTime, 1000)) {
       string LaggingString;
       bool startedLagging = false;
-      vector<uint32_t> framesBehind = GetUsersFramesBehind();
+      vector<size_t> framesBehind = GetUsersFramesBehind();
       uint8_t i = static_cast<uint8_t>(m_Users.size());
       while (i--) {
         if (framesBehind[i] > GetSyncLimit(m_Users[i]->GetIsObserver()) && !m_Users[i]->GetDisconnectedUnrecoverably()) {
@@ -1627,8 +1627,8 @@ void CGame::UpdateLoaded()
       if (startedLagging) {
         uint8_t worstLaggerIndex = 0;
         uint8_t bestLaggerIndex = 0;
-        uint32_t worstLaggerFrames = 0;
-        uint32_t bestLaggerFrames = 0xFFFFFFFF;
+        size_t worstLaggerFrames = 0;
+        size_t bestLaggerFrames = numeric_limits<size_t>::max();
         UserList laggingPlayers;
         i = static_cast<uint8_t>(m_Users.size());
         while (i--) {
@@ -2056,7 +2056,7 @@ void CGame::RunActionsScheduler()
   if (newLatency != oldLatency) {
     m_LatencyTicks = newLatency;
     if (m_BufferingEnabled & BUFFERING_ENABLED_PLAYING) {
-      vector<uint8_t> storedLatency = CreateByteArray<Endianness::kLittle>(static_cast<uint16_t>(newLatency));
+      vector<uint8_t> storedLatency = CreateByteArrayLE(static_cast<uint16_t>(newLatency));
       m_GameHistory->m_PlayingBuffer.emplace_back(GAME_FRAME_TYPE_LATENCY, storedLatency);
       m_GameHistory->SetActiveLatency(newLatency);
       m_GameHistory->UpdateSpectatorActions((int64_t)m_Config.m_SpectatorDelay);
@@ -3543,7 +3543,7 @@ uint8_t CGame::NextSendMap(CConnection* user, const uint8_t UID, MapTransfer& ma
 
     if (fullySent) {
       mapTransfer.SetFinished();
-      if (mapTransfer.GetLastCRC32() == ByteArrayToUInt32<Endianness::kLittle>(m_Map->GetMapCRC32())) {
+      if (mapTransfer.GetLastCRC32() == ByteArrayToUInt32LE(m_Map->GetMapCRC32())) {
         return MAP_TRANSFER_DONE;
       } else {
         return MAP_TRANSFER_INVALID;
@@ -3774,7 +3774,7 @@ void CGame::EventOutgoingAtomicAction(const uint8_t UID, const uint8_t* actionSt
         GameUser::CGameUser* user = GetUserFromUID(UID);
         if (user) {
           string_view chatMessage = string_view(reinterpret_cast<const char*>(chatMessageStart), chatMessageEnd - chatMessageStart);
-          EventChatTrigger(user, chatMessage, ByteArrayToUInt32<Endianness::kLittle>(actionStart + 1u), ByteArrayToUInt32<Endianness::kLittle>(actionStart + 5u));
+          EventChatTrigger(user, chatMessage, ByteArrayToUInt32LE(actionStart + 1u), ByteArrayToUInt32LE(actionStart + 5u));
         }
       }
     }
@@ -3783,7 +3783,7 @@ void CGame::EventOutgoingAtomicAction(const uint8_t UID, const uint8_t* actionSt
   if (actionType == ACTION_ALLIANCE_SETTINGS && (actionEnd >= actionStart + 6u) && actionStart[1] < MAX_SLOTS_MODERN) {
     GameUser::CGameUser* user = GetUserFromUID(UID);
     if (user) {
-      const bool wantsShare = (ByteArrayToUInt32<Endianness::kLittle>(actionStart + 2u) & ALLIANCE_SETTINGS_SHARED_CONTROL_FAMILY) == ALLIANCE_SETTINGS_SHARED_CONTROL_FAMILY;
+      const bool wantsShare = (ByteArrayToUInt32LE(actionStart + 2u) & ALLIANCE_SETTINGS_SHARED_CONTROL_FAMILY) == ALLIANCE_SETTINGS_SHARED_CONTROL_FAMILY;
       const uint8_t targetSID = actionStart[1];
       if (user->GetIsSharingUnitsWithSlot(targetSID) != wantsShare) {
         if (wantsShare) {
@@ -4303,10 +4303,10 @@ vector<uint8_t> CGame::GetGameDiscoveryInfo(const Version& gameVersion, const ui
   uint32_t uptime = GetUptime();
   if (m_Config.m_CrossPlayMode != CrossPlayMode::kForce || (GAMEVER(1u, 24u) <= m_SupportedGameVersionsMin && m_SupportedGameVersionsMax <= GAMEVER(1u, 28u))) {
     vector<uint8_t> info = *(GetGameDiscoveryInfoTemplate());
-    WriteUint32<Endianness::kLittle>(info, gameVersion.second, m_GameDiscoveryInfoVersionOffset);
-    WriteUint32<Endianness::kLittle>(info, slotsOff, m_GameDiscoveryInfoDynamicOffset);
-    WriteUint32<Endianness::kLittle>(info, uptime, m_GameDiscoveryInfoDynamicOffset + 4);
-    WriteUint16<Endianness::kLittle>(info, hostPort, m_GameDiscoveryInfoDynamicOffset + 8);
+    WriteUint32LE(info, gameVersion.second, m_GameDiscoveryInfoVersionOffset);
+    WriteUint32LE(info, slotsOff, m_GameDiscoveryInfoDynamicOffset);
+    WriteUint32LE(info, uptime, m_GameDiscoveryInfoDynamicOffset + 4);
+    WriteUint16LE(info, hostPort, m_GameDiscoveryInfoDynamicOffset + 8);
     return info;    
   } else {
     vector<uint8_t> info = GameProtocol::SEND_W3GS_GAMEINFO(
@@ -5973,7 +5973,7 @@ bool CGame::EventUserIncomingAction(GameUser::CGameUser* user, CIncomingAction& 
       } else if (delimiters[i][1] == MH_DOTA_SETTINGS_SYNC_DATA) {
         LOG_APP_IF(LogLevel::kDebug, Concat("Player [", user->GetName(), "] synchronizing DotA data"));
       } else if (delimiters[i][1] < MAX_SLOTS_MODERN) {
-        const bool wantsShare = (ByteArrayToUInt32<Endianness::kLittle>(delimiters[i] + 2) & ALLIANCE_SETTINGS_SHARED_CONTROL_FAMILY) == ALLIANCE_SETTINGS_SHARED_CONTROL_FAMILY;
+        const bool wantsShare = (ByteArrayToUInt32LE(delimiters[i] + 2) & ALLIANCE_SETTINGS_SHARED_CONTROL_FAMILY) == ALLIANCE_SETTINGS_SHARED_CONTROL_FAMILY;
         const uint8_t targetSID = delimiters[i][1];
 
         if (user->GetIsSharingUnitsWithSlot(targetSID) != wantsShare) {
@@ -9443,10 +9443,10 @@ bool CGame::RemoveScopeBan(const string& rawName, const string& hostName)
   return false;
 }
 
-vector<uint32_t> CGame::GetPlayersFramesBehind() const
+vector<size_t> CGame::GetPlayersFramesBehind() const
 {
   uint8_t i = static_cast<uint8_t>(m_Users.size());
-  vector<uint32_t> framesBehind(i, 0);
+  vector<size_t> framesBehind(i, 0);
   while (i--) {
     if (m_Users[i]->GetIsObserver()) {
       continue;
@@ -9454,20 +9454,20 @@ vector<uint32_t> CGame::GetPlayersFramesBehind() const
     if (m_SyncCounter <= m_Users[i]->GetNormalSyncCounter()) {
       continue;
     }
-    framesBehind[i] = static_cast<uint32_t>(m_SyncCounter - m_Users[i]->GetNormalSyncCounter());
+    framesBehind[i] = static_cast<size_t>(m_SyncCounter - m_Users[i]->GetNormalSyncCounter());
   }
   return framesBehind;
 }
 
-vector<uint32_t> CGame::GetUsersFramesBehind() const
+vector<size_t> CGame::GetUsersFramesBehind() const
 {
   uint8_t i = static_cast<uint8_t>(m_Users.size());
-  vector<uint32_t> framesBehind(i, 0);
+  vector<size_t> framesBehind(i, 0);
   while (i--) {
     if (m_SyncCounter <= m_Users[i]->GetNormalSyncCounter()) {
       continue;
     }
-    framesBehind[i] = static_cast<uint32_t>(m_SyncCounter - m_Users[i]->GetNormalSyncCounter());
+    framesBehind[i] = static_cast<size_t>(m_SyncCounter - m_Users[i]->GetNormalSyncCounter());
   }
   return framesBehind;
 }
@@ -10178,7 +10178,7 @@ bool CGame::Save(GameUser::CGameUser* user, CQueuedActionsFrame& actionFrame, co
     ActionStart.push_back(ACTION_SAVE);
     AppendByteArrayString(ActionStart, fileName, true);
     ActionEnd.push_back(ACTION_SAVE_ENDED);
-    AppendNumber<Endianness::kLittle>(ActionEnd, success);
+    AppendNumberLE(ActionEnd, success);
     actionFrame.AddAction(std::move(CIncomingAction(UID, ActionStart)));
     actionFrame.AddAction(std::move(CIncomingAction(UID, ActionEnd)));
   }
@@ -10197,7 +10197,7 @@ void CGame::SaveEnded(const uint8_t exceptUID, CQueuedActionsFrame& actionFrame)
     }
     vector<uint8_t> Action;
     Action.push_back(ACTION_SAVE_ENDED);
-    AppendNumber<Endianness::kLittle>(Action, success);
+    AppendNumberLE(Action, success);
     actionFrame.AddAction(std::move(CIncomingAction(fakeUser.GetUID(), Action)));
   }
 }
@@ -10233,9 +10233,9 @@ bool CGame::SendMiniMapSignal(GameUser::CGameUser* user, CQueuedActionsFrame& ac
   {
     vector<uint8_t> Action;
     Action.push_back(ACTION_MINIMAPSIGNAL);
-    AppendNumber<Endianness::kLittle>(Action, x);
-    AppendNumber<Endianness::kLittle>(Action, y);
-    AppendNumber<Endianness::kLittle>(Action, duration);
+    AppendNumberLE(Action, x);
+    AppendNumberLE(Action, y);
+    AppendNumberLE(Action, duration);
     actionFrame.AddAction(std::move(CIncomingAction(UID, Action)));
   }
 
@@ -10272,8 +10272,8 @@ bool CGame::Trade(const uint8_t fromUID, const uint8_t SID, CQueuedActionsFrame&
   vector<uint8_t> Action;
   Action.push_back(ACTION_TRANSFER_RESOURCES);
   Action.push_back(SID);
-  AppendNumber<Endianness::kLittle>(Action, gold);
-  AppendNumber<Endianness::kLittle>(Action, lumber);
+  AppendNumberLE(Action, gold);
+  AppendNumberLE(Action, lumber);
   actionFrame.AddAction(std::move(CIncomingAction(fromUID, Action)));
   return true;
 }
@@ -10294,7 +10294,7 @@ bool CGame::ShareUnits(const uint8_t fromUID, const uint8_t SID, CQueuedActionsF
   vector<uint8_t> Action;
   Action.push_back(ACTION_ALLIANCE_SETTINGS);
   Action.push_back(SID);
-  AppendNumber<Endianness::kLittle>(Action, ALLIANCE_SETTINGS_ALLY | ALLIANCE_SETTINGS_SHARED_VISION | ALLIANCE_SETTINGS_SHARED_CONTROL | ALLIANCE_SETTINGS_SHARED_VICTORY);
+  AppendNumberLE(Action, ALLIANCE_SETTINGS_ALLY | ALLIANCE_SETTINGS_SHARED_VISION | ALLIANCE_SETTINGS_SHARED_CONTROL | ALLIANCE_SETTINGS_SHARED_VICTORY);
   actionFrame.AddAction(std::move(CIncomingAction(fromUID, Action)));
   return true;
 }
@@ -10313,8 +10313,8 @@ bool CGame::ShareUnits(GameUser::CGameUser* fromUser, const uint8_t SID, const b
 bool CGame::SendChatTrigger(const uint8_t UID, const string& message, const uint32_t firstValue, const uint32_t secondValue)
 {
   vector<uint8_t> action = {ACTION_CHAT_TRIGGER};
-  AppendNumber<Endianness::kLittle>(action, firstValue);
-  AppendNumber<Endianness::kLittle>(action, secondValue);
+  AppendNumberLE(action, firstValue);
+  AppendNumberLE(action, secondValue);
   AppendByteArrayString(action, message, true);
   GetLastActionFrame().AddAction(std::move(CIncomingAction(UID, action)));
   return true;
@@ -10933,12 +10933,12 @@ int64_t CGame::GetLastActionLateBy(int64_t oldLatency) const
   return actualSendInterval - expectedSendInterval;
 }
 
-uint32_t CGame::GetSyncLimit(bool isObserver) const
+size_t CGame::GetSyncLimit(bool isObserver) const
 {
   return isObserver ? m_LagStartMinObserversFrames : m_LagStartMinPlayersFrames;
 }
 
-uint32_t CGame::GetSyncLimitSafe(bool isObserver) const
+size_t CGame::GetSyncLimitSafe(bool isObserver) const
 {
   return isObserver ? m_LagStopMaxObserversFrames : m_LagStopMaxPlayersFrames;
 }

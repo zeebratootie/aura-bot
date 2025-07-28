@@ -410,8 +410,8 @@ public:
   [[nodiscard]] std::string                     GetErrorString() const;
   [[nodiscard]] std::string                     GetName() const;
   [[nodiscard]] inline uint16_t                 GetPort() const { return m_Port; }
-  [[nodiscard]] inline std::array<uint8_t, 2>   GetPortLE() const { return CreateFixedByteArray<Endianness::kLittle>(m_Port); }
-  [[nodiscard]] inline std::array<uint8_t, 2>   GetPortBE() const { return CreateFixedByteArray<Endianness::kBig>(m_Port); } // Network-byte-order
+  [[nodiscard]] inline std::array<uint8_t, 2>   GetPortLE() const { return CreateFixedByteArrayLE(m_Port); }
+  [[nodiscard]] inline std::array<uint8_t, 2>   GetPortBE() const { return CreateFixedByteArrayBE(m_Port); } // Network-byte-order
   [[nodiscard]] inline int32_t                  GetError() const { return m_Error; }
   [[nodiscard]] inline bool                     HasError() const { return m_HasError; }
   [[nodiscard]] inline bool                     HasFin() const { return m_HasFin; }

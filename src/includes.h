@@ -178,6 +178,12 @@ std::string::size_type constexpr GetStringLength(const char* str)
 #define ByteArrayToUInt16BE ByteArrayToUInt16<Endianness::kBig>
 #define ByteArrayToUInt32LE ByteArrayToUInt32<Endianness::kLittle>
 #define ByteArrayToUInt32BE ByteArrayToUInt32<Endianness::kBig>
+#define ByteArrayToUInt64LE ByteArrayToUInt64<Endianness::kLittle>
+#define ByteArrayToUInt64BE ByteArrayToUInt64<Endianness::kBig>
+#define WriteUint16LE WriteUint16<Endianness::kLittle>
+#define WriteUint16BE WriteUint16<Endianness::kBig>
+#define WriteUint32LE WriteUint32<Endianness::kLittle>
+#define WriteUint32BE WriteUint32<Endianness::kBig>
 
 // time
 

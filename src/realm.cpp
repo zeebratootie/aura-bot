@@ -71,7 +71,7 @@ using namespace std;
 
 // {220, 1, 203, 7}
 constexpr array<uint8_t, 4> BNET_INFO_CLIENT_TOKEN_BYTES = {220, 1, 203, 7};
-constexpr uint32_t BNET_INFO_CLIENT_TOKEN = ByteArrayToUInt32<Endianness::kLittle>(BNET_INFO_CLIENT_TOKEN_BYTES);
+constexpr uint32_t BNET_INFO_CLIENT_TOKEN = ByteArrayToUInt32LE(BNET_INFO_CLIENT_TOKEN_BYTES);
 
 //
 // CRealm
@@ -193,7 +193,7 @@ void CRealm::UpdateConnected(fd_set* fd, fd_set* send_fd)
 
     while (data.size() >= 4) {
       // bytes 2 and 3 contain the length of the packet
-      const uint16_t packetSize = ByteArrayToUInt16<Endianness::kLittle>(data, 2);
+      const uint16_t packetSize = ByteArrayToUInt16LE(data, 2);
       if (packetSize < 4) {
         Abort = true;
         break;
@@ -228,8 +228,8 @@ void CRealm::UpdateConnected(fd_set* fd, fd_set* send_fd)
               std::vector<uint8_t> relayPacket = {GameProtocol::Magic::W3FW_HEADER, 0, 0, 0};
               std::string ipString = m_Socket->GetIPString();
               AppendByteArrayString(relayPacket, ipString, true);
-              AppendNumber<Endianness::kBig>(relayPacket, static_cast<uint16_t>(6112u));
-              AppendNumber<Endianness::kLittle>(relayPacket, (uint32_t)m_AuthGameVersion.second);
+              AppendNumberBE(relayPacket, static_cast<uint16_t>(6112u));
+              AppendNumberLE(relayPacket, (uint32_t)m_AuthGameVersion.second);
               AppendByteArrayString(relayPacket, packet, false);
               AssignLength(relayPacket);
               DPRINT_IF(LogLevel::kTrace2, GetLogPrefix() + "sending game list to " + AddressToString(m_Aura->m_Net.m_Config.m_UDPForwardAddress) + " (" + to_string(relayPacket.size()) + " bytes)");

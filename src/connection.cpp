@@ -117,7 +117,7 @@ IncomingConnectionStatus CConnection::Update(fd_set* fd, fd_set* send_fd, int64_
 
     while (data.size() >= 4) {
       // bytes 2 and 3 contain the length of the packet
-      const uint16_t packetSize = ByteArrayToUInt16<Endianness::kLittle>(data, 2);
+      const uint16_t packetSize = ByteArrayToUInt16LE(data, 2);
       if (packetSize < 4) {
         Abort = true;
         break;
@@ -216,11 +216,11 @@ IncomingConnectionStatus CConnection::Update(fd_set* fd, fd_set* send_fd, int64_
 
         case GPSProtocol::Magic::GPS_HEADER: {
           if (packetSize >= 13 && packetType == GPSProtocol::Magic::RECONNECT && m_Type == IncomingConnectionType::kNone && m_Aura->m_Net.m_Config.m_ProxyReconnect > 0) {
-            const uint32_t reconnectKey = ByteArrayToUInt32<Endianness::kLittle>(packet, 5);
-            const uint32_t lastPacket = ByteArrayToUInt32<Endianness::kLittle>(packet,  9);
+            const uint32_t reconnectKey = ByteArrayToUInt32LE(packet, 5);
+            const uint32_t lastPacket = ByteArrayToUInt32LE(packet,  9);
             GameUser::CGameUser* targetUser = nullptr;
             if (packetSize >= 17) {
-              targetUser = m_Aura->m_Net.GetReconnectTargetUser(ByteArrayToUInt32<Endianness::kLittle>(packet, 13), GetByteAt(packet, 4));
+              targetUser = m_Aura->m_Net.GetReconnectTargetUser(ByteArrayToUInt32LE(packet, 13), GetByteAt(packet, 4));
             } else {
               targetUser = m_Aura->m_Net.GetReconnectTargetUserLegacy(GetByteAt(packet, 4), reconnectKey);
             }

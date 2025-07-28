@@ -164,7 +164,7 @@ AsyncObserverStatus CAsyncObserver::Update(fd_set* fd, fd_set* send_fd, int64_t 
 
     while (data.size() >= 4) {
       // bytes 2 and 3 contain the length of the packet
-      const uint16_t packetSize = ByteArrayToUInt16<Endianness::kLittle>(data, 2);
+      const uint16_t packetSize = ByteArrayToUInt16LE(data, 2);
       if (packetSize < 4) {
         EventProtocolError();
         Abort = true;
@@ -183,7 +183,7 @@ AsyncObserverStatus CAsyncObserver::Update(fd_set* fd, fd_set* send_fd, int64_t 
           switch (packetType) {
             case GameProtocol::Magic::LEAVEGAME: {
               if (ValidateLength(packet) && packet.size() >= 8) {
-                const uint32_t reason = ByteArrayToUInt32<Endianness::kLittle>(packet, 4);
+                const uint32_t reason = ByteArrayToUInt32LE(packet, 4);
                 EventLeft(reason);
                 //m_Socket->SetLogErrors(false);
               } else {
@@ -460,7 +460,7 @@ bool CAsyncObserver::PushGameFrames(bool isFlush)
         break;
       case GAME_FRAME_TYPE_LATENCY:
         // it stored, GAME_FRAME_TYPE_LATENCY always goes after GAME_FRAME_TYPE_ACTIONS
-        m_Latency = ByteArrayToUInt16<Endianness::kLittle>(it->GetBytes(), 0);
+        m_Latency = ByteArrayToUInt16LE(it->GetBytes(), 0);
         ResetClientFrameRate();
         break;
       case GAME_FRAME_TYPE_ACTIONS:

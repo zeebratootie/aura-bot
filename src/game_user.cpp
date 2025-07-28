@@ -454,7 +454,7 @@ string CGameUser::GetRealmDataBaseID(bool mustVerify) const
   return string();
 }
 
-bool CGameUser::GetIsBehindFramesNormal(const uint32_t frameLimit) const
+bool CGameUser::GetIsBehindFramesNormal(const size_t frameLimit) const
 {
   return m_Game.get().GetSyncCounter() > GetNormalSyncCounter() && m_Game.get().GetSyncCounter() - GetNormalSyncCounter() >= frameLimit;
 }
@@ -536,7 +536,7 @@ bool CGameUser::Update(fd_set* fd, int64_t timeout)
     while (data.size() >= 4)
     {
       // bytes 2 and 3 contain the length of the packet
-      const uint16_t packetSize = ByteArrayToUInt16<Endianness::kLittle>(data, 2);
+      const uint16_t packetSize = ByteArrayToUInt16LE(data, 2);
       if (packetSize < 4) {
         m_Game.get().EventUserDisconnectGameProtocolError(this, true);
         Abort = true;
@@ -561,7 +561,7 @@ bool CGameUser::Update(fd_set* fd, int64_t timeout)
         {
           case GameProtocol::Magic::LEAVEGAME: {
             if (ValidateLength(packet) && packet.size() >= 8) {
-              const uint32_t reason = ByteArrayToUInt32<Endianness::kLittle>(packet, 4);
+              const uint32_t reason = ByteArrayToUInt32LE(packet, 4);
               m_Game.get().EventUserLeft(this, reason);
               m_Socket->SetLogErrors(false);
             } else {
@@ -735,13 +735,13 @@ bool CGameUser::Update(fd_set* fd, int64_t timeout)
       }
       else if (packetFamily == GPSProtocol::Magic::GPS_HEADER && m_Game.get().GetIsProxyReconnectable()) {
         if (packetType == GPSProtocol::Magic::ACK && packetSize == 8) {
-          EventGProxyAck(ByteArrayToUInt32<Endianness::kLittle>(packet, 4));
+          EventGProxyAck(ByteArrayToUInt32LE(packet, 4));
         } else if (packetType == GPSProtocol::Magic::INIT) {
-          EventGProxyClientInit(/* version */ packetSize >= 8 ? ByteArrayToUInt32<Endianness::kLittle>(packet, 4) : 0);
+          EventGProxyClientInit(/* version */ packetSize >= 8 ? ByteArrayToUInt32LE(packet, 4) : 0);
         } else if (packetType == GPSProtocol::Magic::SUPPORT_EXTENDED && packetSize >= 8) {
           EventGProxyExtendedClientInit(packet);
         } else if (packetType == GPSProtocol::Magic::CHANGEKEY && packetSize >= 8) {
-          EventGProxyChangeKey(ByteArrayToUInt32<Endianness::kLittle>(packet, 4));
+          EventGProxyChangeKey(ByteArrayToUInt32LE(packet, 4));
         }
       }
 
@@ -960,7 +960,7 @@ void CGameUser::EventGProxyReconnect(CConnection* connection, const uint32_t las
   connection->SetSocket(nullptr);
 
   m_Socket->SetLogErrors(true);
-  m_Socket->PutBytes(GPSProtocol::SEND_GPSS_RECONNECT(m_GProxy->GetRecvPacketsCount()));
+  m_Socket->PutBytes(GPSProtocol::SEND_GPSS_RECONNECT((uint32_t)m_GProxy->GetRecvPacketsCount()));
   DCHECK((m_GProxy->UnqueuePackets(lastPacket)), ("EventGProxyReconnect() triggered with an old lastPacket"));
   m_GProxy->SynchronizeFromBuffer();
   m_Disconnected = false;

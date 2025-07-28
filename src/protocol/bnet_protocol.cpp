@@ -79,7 +79,7 @@ namespace BNETProtocol
       return games;
     }
 
-    const uint32_t totalGames = ByteArrayToUInt32<Endianness::kLittle>(data, 4);
+    const uint32_t totalGames = ByteArrayToUInt32LE(data, 4);
     if (totalGames == 0 || totalGames > 100) {
       //Print("[BNETPROTO] Got list of " + to_string(totalGames) + " games");
       return games;
@@ -97,11 +97,11 @@ namespace BNETProtocol
       cursor += 4;
 
       NetworkGameInfo& gameInfo = games[gameIndex];
-      gameInfo.SetGameType(ByteArrayToUInt16<Endianness::kLittle>(data, cursor));
+      gameInfo.SetGameType(ByteArrayToUInt16LE(data, cursor));
       cursor += 2;
       cursor += 4; // <0x01 0x00 0x02 0x00>
 
-      uint16_t port = ByteArrayToUInt16<Endianness::kBig>(data, cursor);
+      uint16_t port = ByteArrayToUInt16BE(data, cursor);
       cursor += 2;
       sockaddr_storage address = IPv4BytesToAddress(data.data() + cursor);
       cursor += 4;
@@ -111,7 +111,7 @@ namespace BNETProtocol
       cursor += 4; // zeroes
       cursor += 4; // zeroes
 
-      gameInfo.SetStatus(ByteArrayToUInt32<Endianness::kLittle>(data, cursor));
+      gameInfo.SetStatus(ByteArrayToUInt32LE(data, cursor));
       cursor += 4;
 
       cursor += 4; // <0x2b 0x00 0x00 0x00>
@@ -182,7 +182,7 @@ namespace BNETProtocol
     if (!ValidateLength(packet) || packet.size() < 29) {
       return IncomingChatResult();
     }
-    const uint32_t eventID = ByteArrayToUInt32<Endianness::kLittle>(packet, 4);
+    const uint32_t eventID = ByteArrayToUInt32LE(packet, 4);
     string_view userName = ExtractUTF8View(packet, 28, MAX_PLAYER_NAME_SIZE);
     if (userName.empty() || HasUnsafeUTF8CodePoints(userName)) {
       return IncomingChatResult();
@@ -219,7 +219,7 @@ namespace BNETProtocol
 
     if (ValidateLength(packet) && packet.size() >= 8)
     {
-      if (ByteArrayToUInt32<Endianness::kLittle>(packet, 4) == 0)
+      if (ByteArrayToUInt32LE(packet, 4) == 0)
         return true;
     }
 
@@ -236,7 +236,7 @@ namespace BNETProtocol
     // 4 bytes					-> Ping
 
     if (ValidateLength(packet) && packet.size() >= 8) {
-      return ByteArrayToUInt32<Endianness::kLittle>(packet, 4);
+      return ByteArrayToUInt32LE(packet, 4);
     }
     return 0;
   }
@@ -272,9 +272,9 @@ namespace BNETProtocol
     }
     return AuthInfoResult(
       true,
-      ByteArrayToUInt32<Endianness::kLittle>(packet, 4),
-      ByteArrayToUInt32<Endianness::kLittle>(packet, 8),
-      ByteArrayToUInt64<Endianness::kLittle>(packet, 16),
+      ByteArrayToUInt32LE(packet, 4),
+      ByteArrayToUInt32LE(packet, 8),
+      ByteArrayToUInt64LE(packet, 16),
       packet.substr(24, fileNameEndPos - 24),
       packet.substr(valueStringFormulaStartPos, valueStringFormulaEndPos - valueStringFormulaStartPos)
     );
@@ -297,7 +297,7 @@ namespace BNETProtocol
     if (HasUnsafeUTF8CodePoints(description)) {
       description.remove_prefix(description.size());
     }
-    return AuthCheckResult(ByteArrayToUInt32<Endianness::kLittle>(packet, 4), description);
+    return AuthCheckResult(ByteArrayToUInt32LE(packet, 4), description);
   }
 
   AuthLoginResult RECEIVE_SID_AUTH_ACCOUNTLOGON(const string_view packet)
@@ -313,7 +313,7 @@ namespace BNETProtocol
     //		32 bytes			-> ServerPublicKey
 
     if (ValidateLength(packet) && packet.size() >= 8) {
-      if (ByteArrayToUInt32<Endianness::kLittle>(packet, 4) == 0 && packet.size() >= 72) {
+      if (ByteArrayToUInt32LE(packet, 4) == 0 && packet.size() >= 72) {
         return AuthLoginResult(true, packet.substr(8, 32), packet.substr(40, 32));
       }
     }
@@ -332,7 +332,7 @@ namespace BNETProtocol
 
     if (ValidateLength(packet) && packet.size() >= 8)
     {
-      uint32_t status = ByteArrayToUInt32<Endianness::kLittle>(packet, 4);
+      uint32_t status = ByteArrayToUInt32LE(packet, 4);
 
       if (status == 0 || status == 0xE) {
         // OK: 0x0, EMAIL: 0xE
@@ -354,7 +354,7 @@ namespace BNETProtocol
 
     if (ValidateLength(packet) && packet.size() >= 8)
     {
-      uint32_t status = ByteArrayToUInt32<Endianness::kLittle>(packet, 4);
+      uint32_t status = ByteArrayToUInt32LE(packet, 4);
 
       if (status == 0x1) {
         return true;
@@ -479,7 +479,7 @@ namespace BNETProtocol
       Print("[BNETPROTO] RECEIVE_HOSTED_GAME_CONFIG bad packet size");
       return gameConfig;
     }
-    const uint16_t slotInfoSize = ByteArrayToUInt16<Endianness::kLittle>(packet, 44);
+    const uint16_t slotInfoSize = ByteArrayToUInt16LE(packet, 44);
     if (static_cast<uint16_t>(packet.size()) < 44u + slotInfoSize) {
       Print("[BNETPROTO] RECEIVE_HOSTED_GAME_CONFIG bad slot packet size");
       return gameConfig;
@@ -490,8 +490,8 @@ namespace BNETProtocol
       return gameConfig;
     }
     gameConfig.emplace();
-    gameConfig->SetUint32("rehost.unknown_1", ByteArrayToUInt32<Endianness::kLittle>(packet, 4));
-    gameConfig->SetUint32("rehost.unknown_2", ByteArrayToUInt32<Endianness::kLittle>(packet, 8));
+    gameConfig->SetUint32("rehost.unknown_1", ByteArrayToUInt32LE(packet, 4));
+    gameConfig->SetUint32("rehost.unknown_2", ByteArrayToUInt32LE(packet, 8));
 
     vector<uint8_t> mapSize = vector<uint8_t>(4, 0);
     vector<uint8_t> mapCRC32 = vector<uint8_t>(4, 0);
@@ -1110,7 +1110,7 @@ namespace BNETProtocol
     packet.push_back(0);                                    //
     packet.push_back(2);                                    // AF_INET
     packet.push_back(0);                                    // AF_INET continued
-    AppendNumber<Endianness::kBig>(packet, port);           // Custom port
+    AppendNumberBE(packet, port);                           // Custom port
     AppendContainer(packet, address);                       // Custom IP
     AppendBytes(packet, Zeros, 4);                          //
     AppendBytes(packet, Zeros, 4);                          //
@@ -1129,7 +1129,7 @@ namespace BNETProtocol
     hostCounterString = string(hostCounterString.rbegin(), hostCounterString.rend());
     assert(hostCounterString.size() == 8 && "hostCounterString should be 8 ASCII characters long");
 
-    GameStat gameStat(gameFlags, ByteArrayToUInt16<Endianness::kLittle>(mapWidth), ByteArrayToUInt16<Endianness::kLittle>(mapHeight), mapPath, hostName, mapBlizzHash, maybeSHA1);
+    GameStat gameStat(gameFlags, ByteArrayToUInt16LE(mapWidth), ByteArrayToUInt16LE(mapHeight), mapPath, hostName, mapBlizzHash, maybeSHA1);
     vector<uint8_t> statString = gameStat.Encode();
     vector<uint8_t> packet;
 
@@ -1148,8 +1148,8 @@ namespace BNETProtocol
       packet.push_back(0);                                   // State continued...
       packet.push_back(0);                                   // State continued...
       packet.push_back(0);                                   // State continued...
-      AppendNumber<Endianness::kLittle>(packet, upTime);                // time since creation
-      AppendNumber<Endianness::kLittle>(packet, mapGameType);           // Game Type (public? saved?)
+      AppendNumberLE(packet, upTime);                // time since creation
+      AppendNumberLE(packet, mapGameType);           // Game Type (public? saved?)
       AppendBytes(packet, Unknown, 4);                   // ???
       AppendBytes(packet, CustomGame, 4);                // Custom Game
       AppendByteArrayString(packet, gameName, true);         // Game Name
@@ -1179,7 +1179,7 @@ namespace BNETProtocol
   vector<uint8_t> SEND_SID_PING(const uint32_t pingValue)
   {
     vector<uint8_t> packet = {BNETProtocol::Magic::BNET_HEADER, BNETProtocol::Magic::PING, 0, 0};
-    AppendNumber<Endianness::kLittle>(packet, pingValue); // Ping Value
+    AppendNumberLE(packet, pingValue); // Ping Value
     AssignLength(packet);
     return packet;
   }
@@ -1207,7 +1207,7 @@ namespace BNETProtocol
     packet.push_back(BNETProtocol::Magic::NETGAMEPORT);      // SID_NETGAMEPORT
     packet.push_back(0);                                          // packet length will be assigned later
     packet.push_back(0);                                          // packet length will be assigned later
-    AppendNumber<Endianness::kLittle>(packet, serverPort);                   // local game server port
+    AppendNumberLE(packet, serverPort);                   // local game server port
     AssignLength(packet);
 
     return packet;
@@ -1229,16 +1229,16 @@ namespace BNETProtocol
     AppendBytes(packet, ProtocolID, 4);                        // Protocol ID
     AppendBytes(packet, PlatformID, 4);                        // Platform ID
     if (isExpansion) {
-      AppendNumber<Endianness::kLittle>(packet, ProductID_TFT_LE);                     // Product ID (TFT)
+      AppendNumberLE(packet, ProductID_TFT_LE);                     // Product ID (TFT)
     } else {
-      AppendNumber<Endianness::kLittle>(packet, ProductID_ROC_LE);                     // Product ID (ROC)
+      AppendNumberLE(packet, ProductID_ROC_LE);                     // Product ID (ROC)
     }
     AppendBytes(packet, version4, 4);                           // Version
     AppendContainer(packet, localeShort);                      // Reverse language (ISO 639-1 concatenated with ISO 3166 alpha-2, and reversed)
     AppendBytes(packet, LocalIP, 4);                           // Local IP for NAT compatibility
     AppendBytes(packet, TimeZoneBias, 4);                      // Time Zone Bias
-    AppendNumber<Endianness::kLittle>(packet, localeID);                      // Locale ID
-    AppendNumber<Endianness::kLittle>(packet, languageID);                    // Language ID
+    AppendNumberLE(packet, localeID);                      // Locale ID
+    AppendNumberLE(packet, languageID);                    // Language ID
     AppendByteArrayString(packet, countryShort, true);             // Country Abbreviation - PvPGN accepts up to 64 characters, including null terminator
     AppendByteArrayString(packet, country, true);                  // Country - PvPGN accepts up to 128 characters, including null terminator
     AssignLength(packet);
@@ -1255,11 +1255,11 @@ namespace BNETProtocol
     packet.push_back(BNETProtocol::Magic::AUTH_CHECK);              // SID_AUTH_CHECK
     packet.push_back(0);                                            // packet length will be assigned later
     packet.push_back(0);                                            // packet length will be assigned later
-    AppendNumber<Endianness::kLittle>(packet, clientToken);                    // Client Token
+    AppendNumberLE(packet, clientToken);                    // Client Token
     AppendContainer(packet, exeVersion);                        // EXE Version
     AppendContainer(packet, exeVersionHash);                    // EXE Version Hash
-    AppendNumber<Endianness::kLittle>(packet, numKeys);                        // number of keys in this packet
-    AppendNumber<Endianness::kLittle>(packet, static_cast<uint32_t>(0));       // boolean Using Spawn (32 bit)
+    AppendNumberLE(packet, numKeys);                        // number of keys in this packet
+    AppendNumberLE(packet, static_cast<uint32_t>(0));       // boolean Using Spawn (32 bit)
     AppendContainer(packet, keyInfoROC);                        // ROC Key Info
     if (isExpansion) AppendContainer(packet, keyInfoTFT);       // TFT Key Info
     AppendByteArrayString(packet, exeInfo, true);                   // EXE Info

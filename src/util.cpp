@@ -305,7 +305,7 @@ void WriteUint16(vector<uint8_t>& buffer, const uint16_t value, const size_t off
 template void WriteUint16<Endianness::kLittle>(vector<uint8_t>& buffer, const uint16_t value, const size_t offset);
 
 template <Endianness endianness>
-void WriteUint32(vector<uint8_t>& buffer, const uint32_t value, const uint32_t offset)
+void WriteUint32(vector<uint8_t>& buffer, const uint32_t value, const size_t offset)
 {
   if constexpr (endianness == Endianness::kLittle) {
     buffer[offset] = static_cast<uint8_t>(value);
@@ -357,8 +357,9 @@ vector<uint8_t> CreateByteArray(const uint32_t i)
 template vector<uint8_t> CreateByteArray<Endianness::kLittle>(const uint32_t i);
 
 template <Endianness endianness>
-vector<uint8_t> CreateByteArray(const int64_t i)
+vector<uint8_t> CreateByteArrayLossy(const int64_t i)
 {
+  // FIXME: CreateByteArray int64_t overload loses 4 bytes
   if constexpr (endianness == Endianness::kLittle) {
     return vector<uint8_t>{
       static_cast<uint8_t>(i), static_cast<uint8_t>(i >> 8), static_cast<uint8_t>(i >> 16), static_cast<uint8_t>(i >> 24)/*,
@@ -372,7 +373,7 @@ vector<uint8_t> CreateByteArray(const int64_t i)
   }
 }
 
-template vector<uint8_t> CreateByteArray<Endianness::kLittle>(const int64_t i);
+template vector<uint8_t> CreateByteArrayLossy<Endianness::kLittle>(const int64_t i);
 
 template <Endianness endianness>
 vector<uint8_t> CreateByteArray(const float i)
@@ -448,8 +449,9 @@ template array<uint8_t, 4> CreateFixedByteArray<Endianness::kBig>(const uint32_t
 template array<uint8_t, 4> CreateFixedByteArray<Endianness::kLittle>(const uint32_t i);
 
 template <Endianness endianness>
-array<uint8_t, 4> CreateFixedByteArray(const int64_t i)
+array<uint8_t, 4> CreateFixedByteArrayLossy(const int64_t i)
 {
+  // FIXME: CreateFixedByteArray int64_t overload loses 4 bytes
   if constexpr (endianness == Endianness::kLittle) {
     return array<uint8_t, 4>{
       static_cast<uint8_t>(i), static_cast<uint8_t>(i >> 8), static_cast<uint8_t>(i >> 16), static_cast<uint8_t>(i >> 24)/*,
@@ -463,7 +465,7 @@ array<uint8_t, 4> CreateFixedByteArray(const int64_t i)
   }
 }
 
-template array<uint8_t, 4> CreateFixedByteArray<Endianness::kLittle>(const int64_t i);
+template array<uint8_t, 4> CreateFixedByteArrayLossy<Endianness::kLittle>(const int64_t i);
 
 template <Endianness endianness>
 array<uint8_t, 8> CreateFixedByteArray64(const uint64_t i)
@@ -534,14 +536,16 @@ template void EnsureFixedByteArray<Endianness::kLittle>(optional<array<uint8_t, 
 template void EnsureFixedByteArray<Endianness::kBig>(optional<array<uint8_t, 4>>& optArray, const uint32_t i);
 
 template <Endianness endianness>
-void EnsureFixedByteArray(optional<array<uint8_t, 4>>& optArray, const int64_t i)
+void EnsureFixedByteArrayLossy(optional<array<uint8_t, 4>>& optArray, const int64_t i)
 {
-  array<uint8_t, 4> val = CreateFixedByteArray<endianness>(i);
+  // FIXME: EnsureFixedByteArray int64_t overload loses 4 bytes
+  // NOTE: This one is apparently unused.
+  array<uint8_t, 4> val = CreateFixedByteArrayLossy<endianness>(i);
   optArray.emplace();
   optArray->swap(val);
 }
 
-template void EnsureFixedByteArray<Endianness::kLittle>(optional<array<uint8_t, 4>>& optArray, const int64_t i);
+template void EnsureFixedByteArrayLossy<Endianness::kLittle>(optional<array<uint8_t, 4>>& optArray, const int64_t i);
 
 template <Endianness endianness>
 void EnsureFixedByteArray(optional<array<uint8_t, 8>>& optArray, const double i)
@@ -583,6 +587,7 @@ uint32_t ByteArrayToUInt32(const vector<uint8_t>& b, const size_t start)
 }
 
 template uint32_t ByteArrayToUInt32<Endianness::kLittle>(const vector<uint8_t>& b, const size_t start);
+template uint32_t ByteArrayToUInt32<Endianness::kBig>(const vector<uint8_t>& b, const size_t start);
 
 template <Endianness endianness>
 uint16_t ByteArrayToUInt16(const uint8_t* b)
@@ -985,12 +990,13 @@ void AppendNumber(vector<uint8_t>& b, const uint32_t i)
 template void AppendNumber<Endianness::kLittle>(vector<uint8_t>& b, const uint32_t i);
 
 template <Endianness endianness>
-void AppendNumber(vector<uint8_t>& b, const int64_t i)
+void AppendNumberLossy(vector<uint8_t>& b, const int64_t i)
 {
-  AppendContainer(b, CreateByteArray<endianness>(i));
+  // FIXME: AppendNumber int64_t overload loses 4 bytes
+  AppendContainer(b, CreateByteArrayLossy<endianness>(i));
 }
 
-template void AppendNumber<Endianness::kLittle>(vector<uint8_t>& b, const int64_t i);
+template void AppendNumberLossy<Endianness::kLittle>(vector<uint8_t>& b, const int64_t i);
 
 template <Endianness endianness>
 void AppendNumber(vector<uint8_t>& b, const float i)
@@ -1781,7 +1787,7 @@ RangeSizeType ResolveSyncLimits(size_t latency, const pair<double, double>& delt
   size_t minSync = GetNearestMultiple(DoubleToSize(deltaTicksMs.first), latency);
   size_t maxSync = GetNearestMultiple(DoubleToSize(deltaTicksMs.second), latency);
   if (minSync == maxSync) {
-    return ResolveSyncLimits(latency, minSync);
+    return ResolveSyncLimits(latency, (double)minSync);
   }
   RangeEnsureMinMaxSorted(&minSync, &maxSync);
 

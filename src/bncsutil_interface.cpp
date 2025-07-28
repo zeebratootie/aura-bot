@@ -259,8 +259,8 @@ bool CBNCSUtilInterface::ExtractEXEFeatures(const Version& war3DataVersion, cons
 
     buffer.resize(requiredSize);
     m_EXEInfo        = buffer.data();
-    m_EXEVersion     = CreateFixedByteArray<Endianness::kLittle>(EXEVersion);
-    m_EXEVersionHash = CreateFixedByteArray<Endianness::kLittle>(int64_t(EXEVersionHash));
+    m_EXEVersion     = CreateFixedByteArrayLE(EXEVersion);
+    m_EXEVersionHash = CreateFixedByteArrayLossy<Endianness::kLittle>(static_cast<const int64_t>(EXEVersionHash)); // Only uses 4 bytes
 
     return true;
   }
@@ -356,14 +356,14 @@ bool CBNCSUtilInterface::HELP_PvPGNPasswordHash(const string& userPassword)
 std::vector<uint8_t> CBNCSUtilInterface::CreateKeyInfo(const string& key, uint32_t clientToken, uint32_t serverToken)
 {
   std::vector<uint8_t> KeyInfo;
-  CDKeyDecoder         Decoder(key.c_str(), key.size());
+  CDKeyDecoder Decoder(key.c_str(), key.size());
 
   if (Decoder.isKeyValid())
   {
     const uint8_t Zeros[] = {0, 0, 0, 0};
-    AppendNumber<Endianness::kLittle>(KeyInfo, (uint32_t)key.size());
-    AppendContainer(KeyInfo, CreateByteArray<Endianness::kLittle>(Decoder.getProduct()));
-    AppendContainer(KeyInfo, CreateByteArray<Endianness::kLittle>(Decoder.getVal1()));
+    AppendNumberLE(KeyInfo, (uint32_t)key.size()); // 4 bytes
+    AppendContainer(KeyInfo, CreateByteArrayLE(Decoder.getProduct())); // 4 bytes
+    AppendContainer(KeyInfo, CreateByteArrayLE(Decoder.getVal1())); // 4 bytes
     AppendBytes(KeyInfo, Zeros, 4);
     size_t Length = Decoder.calculateHash(clientToken, serverToken);
     auto   buf    = new char[Length];
