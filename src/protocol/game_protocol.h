@@ -178,14 +178,14 @@ namespace GameProtocol
 
   // receive functions
 
-  [[nodiscard]] CIncomingJoinRequest RECEIVE_W3GS_REQJOIN(const std::vector<uint8_t>& data);
-  [[nodiscard]] uint32_t RECEIVE_W3GS_LEAVEGAME(const std::vector<uint8_t>& data);
-  [[nodiscard]] bool RECEIVE_W3GS_GAMELOADED_SELF(const std::vector<uint8_t>& data);
-  [[nodiscard]] CIncomingAction RECEIVE_W3GS_OUTGOING_ACTION(const std::vector<uint8_t>& data, uint8_t UID);
-  [[nodiscard]] uint32_t RECEIVE_W3GS_OUTGOING_KEEPALIVE(const std::vector<uint8_t>& data);
-  [[nodiscard]] CIncomingChatMessage RECEIVE_W3GS_CHAT_TO_HOST(const std::vector<uint8_t>& data);
-  [[nodiscard]] CIncomingMapFileSize RECEIVE_W3GS_MAPSIZE(const std::vector<uint8_t>& data);
-  [[nodiscard]] uint32_t RECEIVE_W3GS_PONG_TO_HOST(const std::vector<uint8_t>& data);
+  [[nodiscard]] CIncomingJoinRequest RECEIVE_W3GS_REQJOIN(std::string_view data);
+  [[nodiscard]] uint32_t RECEIVE_W3GS_LEAVEGAME(std::string_view data);
+  [[nodiscard]] bool RECEIVE_W3GS_GAMELOADED_SELF(std::string_view data);
+  [[nodiscard]] CIncomingAction RECEIVE_W3GS_OUTGOING_ACTION(std::string_view, uint8_t UID);
+  [[nodiscard]] uint32_t RECEIVE_W3GS_OUTGOING_KEEPALIVE(std::string_view data);
+  [[nodiscard]] CIncomingChatMessage RECEIVE_W3GS_CHAT_TO_HOST(std::string_view data);
+  [[nodiscard]] CIncomingMapFileSize RECEIVE_W3GS_MAPSIZE(std::string_view data);
+  [[nodiscard]] uint32_t RECEIVE_W3GS_PONG_TO_HOST(std::string_view data);
 
   // send functions
 
@@ -203,13 +203,13 @@ namespace GameProtocol
   [[nodiscard]] std::vector<uint8_t> SEND_W3GS_EMPTY_ACTIONS(uint32_t count);
   [[nodiscard]] std::vector<uint8_t> SEND_W3GS_INCOMING_ACTION(const ActionQueue& actions, uint16_t sendInterval);
   [[nodiscard]] std::vector<uint8_t> SEND_W3GS_INCOMING_ACTION2(const ActionQueue& actions);
-  [[nodiscard]] std::vector<uint8_t> SEND_W3GS_CHAT_FROM_HOST_IN_GAME_ATOMIC(uint8_t fromUID, const std::vector<uint8_t>& toUIDs, uint8_t flag, const uint32_t flagExtra, std::string_view prefix, std::string_view message);
+  [[nodiscard]] std::vector<uint8_t> SEND_W3GS_CHAT_FROM_HOST_IN_GAME_ATOMIC(uint8_t fromUID, const std::vector<uint8_t>& toUIDs, uint8_t flag, const uint32_t inGameChannel, std::string_view prefix, std::string_view message);
   [[nodiscard]] std::vector<uint8_t> SEND_W3GS_CHAT_FROM_HOST_LOBBY_ATOMIC(uint8_t fromUID, const std::vector<uint8_t>& toUIDs, uint8_t flag, std::string_view prefix, std::string_view message);
-  [[nodiscard]] std::vector<uint8_t> SEND_W3GS_CHAT_FROM_HOST_IN_GAME(uint8_t fromUID, const std::vector<uint8_t>& toUIDs, uint8_t flag, const uint32_t flagExtra, std::string_view message);
+  [[nodiscard]] std::vector<uint8_t> SEND_W3GS_CHAT_FROM_HOST_IN_GAME(uint8_t fromUID, const std::vector<uint8_t>& toUIDs, uint8_t flag, const uint32_t inGameChannel, std::string_view message);
   [[nodiscard]] std::vector<uint8_t> SEND_W3GS_CHAT_FROM_HOST_LOBBY(uint8_t fromUID, const std::vector<uint8_t>& toUIDs, uint8_t flag, std::string_view message);
-  [[nodiscard]] PacketWrapper SENDWRAP_W3GS_CHAT_FROM_HOST_IN_GAME(uint8_t fromUID, const std::vector<uint8_t>& toUIDs, uint8_t flag, const uint32_t flagExtra, std::string_view prefix, std::string_view message);
+  [[nodiscard]] PacketWrapper SENDWRAP_W3GS_CHAT_FROM_HOST_IN_GAME(uint8_t fromUID, const std::vector<uint8_t>& toUIDs, uint8_t flag, const uint32_t inGameChannel, std::string_view prefix, std::string_view message);
   [[nodiscard]] PacketWrapper SENDWRAP_W3GS_CHAT_FROM_HOST_LOBBY(uint8_t fromUID, const std::vector<uint8_t>& toUIDs, uint8_t flag, std::string_view prefix, std::string_view message);
-  [[nodiscard]] PacketWrapper SENDWRAP_W3GS_CHAT_SELF_IN_GAME(uint8_t fromUID, uint32_t flagExtra, std::string_view prefix, std::string_view message);
+  [[nodiscard]] PacketWrapper SENDWRAP_W3GS_CHAT_SELF_IN_GAME(uint8_t fromUID, uint32_t inGameChannel, std::string_view prefix, std::string_view message);
   [[nodiscard]] PacketWrapper SENDWRAP_W3GS_CHAT_SELF_LOBBY(uint8_t fromUID, std::string_view prefix, std::string_view message);
   [[nodiscard]] std::vector<uint8_t> SEND_W3GS_START_LAG(const std::vector<GameUser::CGameUser*>& users, const int64_t ticks);
   [[nodiscard]] std::vector<uint8_t> SEND_W3GS_STOP_LAG(const GameUser::CGameUser* user, const int64_t ticks);
@@ -261,6 +261,8 @@ namespace GameProtocol
         return "Your username is too long. The limit is 31 English/Latin characters (15 or less in other languages.)";
       case JoinRequestError::kBadEncoding:
         return "Your username has technical issues. Please type it again, or copy it from an UTF8-aware app. This is NOT censorship.";
+      case JoinRequestError::kUnsafeCodePoints:
+        return "Your username has technical issues. Please type it again, avoiding strange characters.";
       case JoinRequestError::kCannotParse:
       default:
         return "Critical error";
@@ -385,14 +387,14 @@ private:
   GameProtocol::ChatToHostType        m_Type;
   uint8_t                             m_Byte;
   uint8_t                             m_FromUID;
-  uint8_t                             m_Flag;
-  uint32_t                            m_ExtraFlags;
+  uint8_t                             m_Discriminator;
+  uint32_t                            m_InGameChannel;
   std::vector<uint8_t>                m_ToUIDs;
 
 public:
   CIncomingChatMessage();
   CIncomingChatMessage(uint8_t nFromUID, std::vector<uint8_t> nToUIDs, uint8_t nFlag, std::string_view nMessage);
-  CIncomingChatMessage(uint8_t nFromUID, std::vector<uint8_t> nToUIDs, uint8_t nFlag, std::string_view nMessage, uint32_t nExtraFlags);
+  CIncomingChatMessage(uint8_t nFromUID, std::vector<uint8_t> nToUIDs, uint8_t nFlag, std::string_view nMessage, uint32_t nInGameChannel);
   CIncomingChatMessage(uint8_t nFromUID, std::vector<uint8_t> nToUIDs, uint8_t nFlag, uint8_t nByte);
   ~CIncomingChatMessage();
 
@@ -400,10 +402,10 @@ public:
   [[nodiscard]] inline GameProtocol::ChatToHostType       GetType() const { return m_Type; }
   [[nodiscard]] inline uint8_t                            GetFromUID() const { return m_FromUID; }
   [[nodiscard]] inline const std::vector<uint8_t>&        GetToUIDs() const { return m_ToUIDs; }
-  [[nodiscard]] inline uint8_t                            GetFlag() const { return m_Flag; }
-  [[nodiscard]] inline std::string_view                 GetMessage() const { return m_Message; }
+  [[nodiscard]] inline uint8_t                            GetDiscriminator() const { return m_Discriminator; }
+  [[nodiscard]] inline std::string_view                   GetMessage() const { return m_Message; }
   [[nodiscard]] inline uint8_t                            GetByte() const { return m_Byte; }
-  [[nodiscard]] inline uint32_t                           GetExtraFlags() const { return m_ExtraFlags; }
+  [[nodiscard]] inline uint32_t                           GetInGameChannel() const { return m_InGameChannel; }
 };
 
 class CIncomingMapFileSize

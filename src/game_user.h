@@ -429,7 +429,7 @@ namespace GameUser
 
 
     void EventGProxyClientInit(const uint32_t version);
-    void EventGProxyExtendedClientInit(const std::vector<uint8_t>& data);
+    void EventGProxyExtendedClientInit(const std::string_view data);
     void EventGProxyChangeKey(const uint32_t key);
     void EventGProxyAck(const size_t lastPacket);
     void EventGProxyReconnect(CConnection* connection, const uint32_t LastPacket);

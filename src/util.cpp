@@ -290,9 +290,10 @@ string ToOrdinalName(const size_t number)
   }
 }
 
-void WriteUint16(vector<uint8_t>& buffer, const uint16_t value, const size_t offset, bool bigEndian)
+template <Endianness endianness>
+void WriteUint16(vector<uint8_t>& buffer, const uint16_t value, const size_t offset)
 {
-  if (!bigEndian) {
+  if constexpr (endianness == Endianness::kLittle) {
     buffer[offset] = static_cast<uint8_t>(value);
     buffer[offset + 1] = static_cast<uint8_t>(value >> 8);
   } else {
@@ -301,9 +302,12 @@ void WriteUint16(vector<uint8_t>& buffer, const uint16_t value, const size_t off
   }
 }
 
-void WriteUint32(vector<uint8_t>& buffer, const uint32_t value, const uint32_t offset, bool bigEndian)
+template void WriteUint16<Endianness::kLittle>(vector<uint8_t>& buffer, const uint16_t value, const size_t offset);
+
+template <Endianness endianness>
+void WriteUint32(vector<uint8_t>& buffer, const uint32_t value, const uint32_t offset)
 {
-  if (!bigEndian) {
+  if constexpr (endianness == Endianness::kLittle) {
     buffer[offset] = static_cast<uint8_t>(value);
     buffer[offset + 1] = static_cast<uint8_t>(value >> 8);
     buffer[offset + 2] = static_cast<uint8_t>(value >> 16);
@@ -316,7 +320,9 @@ void WriteUint32(vector<uint8_t>& buffer, const uint32_t value, const uint32_t o
   }
 }
 
-vector<uint8_t> CreateByteArray(const uint8_t* a, const size_t size)
+template void WriteUint32<Endianness::kLittle>(vector<uint8_t>& buffer, const uint32_t value, const size_t offset);
+
+vector<uint8_t> CopyBytes(const uint8_t* a, const size_t size)
 {
   return vector<uint8_t>(a, a + size);
 }
@@ -326,121 +332,178 @@ vector<uint8_t> CreateByteArray(const uint8_t c)
   return vector<uint8_t>{c};
 }
 
-vector<uint8_t> CreateByteArray(const uint16_t i, bool bigEndian)
+template <Endianness endianness>
+vector<uint8_t> CreateByteArray(const uint16_t i)
 {
-  if (!bigEndian)
+  if constexpr (endianness == Endianness::kLittle) {
     return vector<uint8_t>{static_cast<uint8_t>(i), static_cast<uint8_t>(i >> 8)};
-  else
+  } else {
     return vector<uint8_t>{static_cast<uint8_t>(i >> 8), static_cast<uint8_t>(i)};
+  }
 }
 
-vector<uint8_t> CreateByteArray(const uint32_t i, bool bigEndian)
+template vector<uint8_t> CreateByteArray<Endianness::kLittle>(const uint16_t i);
+
+template <Endianness endianness>
+vector<uint8_t> CreateByteArray(const uint32_t i)
 {
-  if (!bigEndian)
+  if constexpr (endianness == Endianness::kLittle) {
     return vector<uint8_t>{static_cast<uint8_t>(i), static_cast<uint8_t>(i >> 8), static_cast<uint8_t>(i >> 16), static_cast<uint8_t>(i >> 24)};
-  else
+  } else {
     return vector<uint8_t>{static_cast<uint8_t>(i >> 24), static_cast<uint8_t>(i >> 16), static_cast<uint8_t>(i >> 8), static_cast<uint8_t>(i)};
+  }
 }
 
-vector<uint8_t> CreateByteArray(const int64_t i, bool bigEndian)
+template vector<uint8_t> CreateByteArray<Endianness::kLittle>(const uint32_t i);
+
+template <Endianness endianness>
+vector<uint8_t> CreateByteArray(const int64_t i)
 {
-  if (!bigEndian)
+  if constexpr (endianness == Endianness::kLittle) {
     return vector<uint8_t>{
       static_cast<uint8_t>(i), static_cast<uint8_t>(i >> 8), static_cast<uint8_t>(i >> 16), static_cast<uint8_t>(i >> 24)/*,
       static_cast<uint8_t>(i >> 32), static_cast<uint8_t>(i >> 40), static_cast<uint8_t>(i >> 48), static_cast<uint8_t>(i >> 56)*/
     };
-  else
+  } else {
     return vector<uint8_t>{
       /*static_cast<uint8_t>(i >> 56), static_cast<uint8_t>(i >> 48), static_cast<uint8_t>(i >> 40), static_cast<uint8_t>(32),*/
       static_cast<uint8_t>(i >> 24), static_cast<uint8_t>(i >> 16), static_cast<uint8_t>(i >> 8), static_cast<uint8_t>(i)
     };
+  }
 }
 
-vector<uint8_t> CreateByteArray(const float i, bool bigEndian)
+template vector<uint8_t> CreateByteArray<Endianness::kLittle>(const int64_t i);
+
+template <Endianness endianness>
+vector<uint8_t> CreateByteArray(const float i)
 {
   vector<uint8_t> bytes(4, 0);
   if (numeric_limits<float>::is_iec559) {
     memcpy(bytes.data(), &i, sizeof(float));
-    if (bigEndian != GetIsHostBigEndian()) {
-      reverse(bytes.begin(), bytes.end());
+    if constexpr (endianness == Endianness::kLittle) {
+      if (GetIsHostBigEndian()) {
+        reverse(bytes.begin(), bytes.end());
+      }
+    } else {
+      if (!GetIsHostBigEndian()) {
+        reverse(bytes.begin(), bytes.end());
+      }
     }
   }
   return bytes;
 }
 
-vector<uint8_t> CreateByteArray(const double i, bool bigEndian)
+template vector<uint8_t> CreateByteArray<Endianness::kLittle>(const float i);
+
+template <Endianness endianness>
+vector<uint8_t> CreateByteArray(const double i)
 {
   vector<uint8_t> bytes(8, 0);
   if (numeric_limits<double>::is_iec559) {
     memcpy(bytes.data(), &i, sizeof(double));
-    if (bigEndian != GetIsHostBigEndian()) {
-      reverse(bytes.begin(), bytes.end());
+    if constexpr (endianness == Endianness::kLittle) {
+      if (GetIsHostBigEndian()) {
+        reverse(bytes.begin(), bytes.end());
+      }
+    } else {
+      if (!GetIsHostBigEndian()) {
+        reverse(bytes.begin(), bytes.end());
+      }
     }
   }
   return bytes;
 }
+
+template vector<uint8_t> CreateByteArray<Endianness::kLittle>(const double i);
 
 array<uint8_t, 1> CreateFixedByteArray(const uint8_t c)
 {
   return array<uint8_t, 1>{c};
 }
 
-array<uint8_t, 2> CreateFixedByteArray(const uint16_t i, bool bigEndian)
+template <Endianness endianness>
+array<uint8_t, 2> CreateFixedByteArray(const uint16_t i)
 {
-  if (!bigEndian)
+  if constexpr (endianness == Endianness::kLittle) {
     return array<uint8_t, 2>{static_cast<uint8_t>(i), static_cast<uint8_t>(i >> 8)};
-  else
+  } else {
     return array<uint8_t, 2>{static_cast<uint8_t>(i >> 8), static_cast<uint8_t>(i)};
+  }
 }
 
-array<uint8_t, 4> CreateFixedByteArray(const uint32_t i, bool bigEndian)
+template array<uint8_t, 2> CreateFixedByteArray<Endianness::kBig>(const uint16_t i);
+template array<uint8_t, 2> CreateFixedByteArray<Endianness::kLittle>(const uint16_t i);
+
+template <Endianness endianness>
+array<uint8_t, 4> CreateFixedByteArray(const uint32_t i)
 {
-  if (!bigEndian)
+  if constexpr (endianness == Endianness::kLittle) {
     return array<uint8_t, 4>{static_cast<uint8_t>(i), static_cast<uint8_t>(i >> 8), static_cast<uint8_t>(i >> 16), static_cast<uint8_t>(i >> 24)};
-  else
+  } else {
     return array<uint8_t, 4>{static_cast<uint8_t>(i >> 24), static_cast<uint8_t>(i >> 16), static_cast<uint8_t>(i >> 8), static_cast<uint8_t>(i)};
+  }
 }
 
-array<uint8_t, 4> CreateFixedByteArray(const int64_t i, bool bigEndian)
+template array<uint8_t, 4> CreateFixedByteArray<Endianness::kBig>(const uint32_t i);
+template array<uint8_t, 4> CreateFixedByteArray<Endianness::kLittle>(const uint32_t i);
+
+template <Endianness endianness>
+array<uint8_t, 4> CreateFixedByteArray(const int64_t i)
 {
-  if (!bigEndian)
+  if constexpr (endianness == Endianness::kLittle) {
     return array<uint8_t, 4>{
       static_cast<uint8_t>(i), static_cast<uint8_t>(i >> 8), static_cast<uint8_t>(i >> 16), static_cast<uint8_t>(i >> 24)/*,
       static_cast<uint8_t>(i >> 32), static_cast<uint8_t>(i >> 40), static_cast<uint8_t>(i >> 48), static_cast<uint8_t>(i >> 56)*/
     };
-  else
+  } else {
     return array<uint8_t, 4>{
       /*static_cast<uint8_t>(i >> 56), static_cast<uint8_t>(i >> 48), static_cast<uint8_t>(i >> 40), static_cast<uint8_t>(32),*/
       static_cast<uint8_t>(i >> 24), static_cast<uint8_t>(i >> 16), static_cast<uint8_t>(i >> 8), static_cast<uint8_t>(i)
     };
+  }
 }
 
-array<uint8_t, 8> CreateFixedByteArray64(const uint64_t i, bool bigEndian)
+template array<uint8_t, 4> CreateFixedByteArray<Endianness::kLittle>(const int64_t i);
+
+template <Endianness endianness>
+array<uint8_t, 8> CreateFixedByteArray64(const uint64_t i)
 {
-  if (!bigEndian)
+  if constexpr (endianness == Endianness::kLittle) {
     return array<uint8_t, 8>{
       static_cast<uint8_t>(i), static_cast<uint8_t>(i >> 8), static_cast<uint8_t>(i >> 16), static_cast<uint8_t>(i >> 24),
       static_cast<uint8_t>(i >> 32), static_cast<uint8_t>(i >> 40), static_cast<uint8_t>(i >> 48), static_cast<uint8_t>(i >> 56)
     };
-  else
+  } else {
     return array<uint8_t, 8>{
       static_cast<uint8_t>(i >> 56), static_cast<uint8_t>(i >> 48), static_cast<uint8_t>(i >> 40), static_cast<uint8_t>(32),
       static_cast<uint8_t>(i >> 24), static_cast<uint8_t>(i >> 16), static_cast<uint8_t>(i >> 8), static_cast<uint8_t>(i)
     };
+  }
 }
 
-array<uint8_t, 8> CreateFixedByteArray(const double i, bool bigEndian)
+template array<uint8_t, 8> CreateFixedByteArray64<Endianness::kLittle>(const uint64_t i);
+
+template <Endianness endianness>
+array<uint8_t, 8> CreateFixedByteArray(const double i)
 {
   array<uint8_t, 8> bytes;
   bytes.fill(0);
   if (numeric_limits<double>::is_iec559) {
     memcpy(bytes.data(), &i, sizeof(double));
-    if (bigEndian != GetIsHostBigEndian()) {
-      reverse(bytes.begin(), bytes.end());
+    if constexpr (endianness == Endianness::kLittle) {
+      if (GetIsHostBigEndian()) {
+        reverse(bytes.begin(), bytes.end());
+      }
+    } else {
+      if (!GetIsHostBigEndian()) {
+        reverse(bytes.begin(), bytes.end());
+      }
     }
   }
   return bytes;
 }
+
+template array<uint8_t, 8> CreateFixedByteArray<Endianness::kLittle>(const double i);
 
 void EnsureFixedByteArray(optional<array<uint8_t, 1>>& optArray, const uint8_t c)
 {
@@ -449,87 +512,209 @@ void EnsureFixedByteArray(optional<array<uint8_t, 1>>& optArray, const uint8_t c
   optArray->swap(val);
 }
 
-void EnsureFixedByteArray(optional<array<uint8_t, 2>>& optArray, const uint16_t i, bool bigEndian)
+template <Endianness endianness>
+void EnsureFixedByteArray(optional<array<uint8_t, 2>>& optArray, const uint16_t i)
 {
-  array<uint8_t, 2> val = CreateFixedByteArray(i, bigEndian);
+  array<uint8_t, 2> val = CreateFixedByteArray<endianness>(i);
   optArray.emplace();
   optArray->swap(val);
 }
 
-void EnsureFixedByteArray(optional<array<uint8_t, 4>>& optArray, const uint32_t i, bool bigEndian)
+template void EnsureFixedByteArray<Endianness::kLittle>(optional<array<uint8_t, 2>>& optArray, const uint16_t i);
+
+template <Endianness endianness>
+void EnsureFixedByteArray(optional<array<uint8_t, 4>>& optArray, const uint32_t i)
 {
-  array<uint8_t, 4> val = CreateFixedByteArray(i, bigEndian);
+  array<uint8_t, 4> val = CreateFixedByteArray<endianness>(i);
   optArray.emplace();
   optArray->swap(val);
 }
 
-void EnsureFixedByteArray(optional<array<uint8_t, 4>>& optArray, const int64_t i, bool bigEndian)
+template void EnsureFixedByteArray<Endianness::kLittle>(optional<array<uint8_t, 4>>& optArray, const uint32_t i);
+template void EnsureFixedByteArray<Endianness::kBig>(optional<array<uint8_t, 4>>& optArray, const uint32_t i);
+
+template <Endianness endianness>
+void EnsureFixedByteArray(optional<array<uint8_t, 4>>& optArray, const int64_t i)
 {
-  array<uint8_t, 4> val = CreateFixedByteArray(i, bigEndian);
+  array<uint8_t, 4> val = CreateFixedByteArray<endianness>(i);
   optArray.emplace();
   optArray->swap(val);
 }
 
-void EnsureFixedByteArray(optional<array<uint8_t, 8>>& optArray, const double i, bool bigEndian)
+template void EnsureFixedByteArray<Endianness::kLittle>(optional<array<uint8_t, 4>>& optArray, const int64_t i);
+
+template <Endianness endianness>
+void EnsureFixedByteArray(optional<array<uint8_t, 8>>& optArray, const double i)
 {
-  array<uint8_t, 8> val = CreateFixedByteArray(i, bigEndian);
+  array<uint8_t, 8> val = CreateFixedByteArray<endianness>(i);
   optArray.emplace();
   optArray->swap(val);
 }
 
-uint16_t ByteArrayToUInt16(const vector<uint8_t>& b, bool bigEndian, const size_t start)
+template void EnsureFixedByteArray<Endianness::kLittle>(optional<array<uint8_t, 8>>& optArray, const double i);
+
+template <Endianness endianness>
+uint16_t ByteArrayToUInt16(const vector<uint8_t>& b, const size_t start)
 {
   if (b.size() < start + 2)
     return 0;
 
-  if (!bigEndian)
+  if constexpr (endianness == Endianness::kLittle) {
     return static_cast<uint16_t>(b[start + 1] << 8 | b[start]);
-  else
+  } else {
     return static_cast<uint16_t>(b[start] << 8 | b[start + 1]);
+  }
 }
 
-uint32_t ByteArrayToUInt32(const vector<uint8_t>& b, bool bigEndian, const size_t start)
+template uint16_t ByteArrayToUInt16<Endianness::kLittle>(const vector<uint8_t>& b, const size_t start);
+template uint16_t ByteArrayToUInt16<Endianness::kBig>(const vector<uint8_t>& b, const size_t start);
+
+template <Endianness endianness>
+uint32_t ByteArrayToUInt32(const vector<uint8_t>& b, const size_t start)
 {
   if (b.size() < start + 4)
     return 0;
 
-  if (!bigEndian)
+  if constexpr (endianness == Endianness::kLittle) {
     return static_cast<uint32_t>(b[start + 3] << 24 | b[start + 2] << 16 | b[start + 1] << 8 | b[start]);
-  else
+  } else {
     return static_cast<uint32_t>(b[start] << 24 | b[start + 1] << 16 | b[start + 2] << 8 | b[start + 3]);
+  }
 }
 
-uint16_t ByteArrayToUInt16(const array<uint8_t, 2>& b, bool bigEndian)
+template uint32_t ByteArrayToUInt32<Endianness::kLittle>(const vector<uint8_t>& b, const size_t start);
+
+template <Endianness endianness>
+uint16_t ByteArrayToUInt16(const uint8_t* b)
 {
-  if (!bigEndian)
-    return static_cast<uint16_t>(b[1] << 8 | b[0]);
-  else
-    return static_cast<uint16_t>(b[2] << 8 | b[3]);
+  if constexpr (endianness == Endianness::kLittle) {
+    return (
+      ((const uint16_t)(b[1]) << 8) |
+      ((const uint16_t)(b[0]))
+    );
+  } else {
+    return (
+      ((const uint16_t)(b[2]) << 8) |
+      ((const uint16_t)(b[3]))
+    );
+  }
 }
 
-uint32_t ByteArrayToUInt32(const array<uint8_t, 4>& b, bool bigEndian)
+template uint16_t ByteArrayToUInt16<Endianness::kLittle>(const uint8_t* b);
+
+template <Endianness endianness>
+uint32_t ByteArrayToUInt32(const uint8_t* b)
 {
-  if (!bigEndian)
-    return static_cast<uint32_t>(b[3] << 24 | b[2] << 16 | b[1] << 8 | b[0]);
-  else
-    return static_cast<uint32_t>(b[0] << 24 | b[1] << 16 | b[2] << 8 | b[3]);
+  if constexpr (endianness == Endianness::kLittle) {
+    return (
+      ((const uint32_t)(b[3]) << 24) |
+      ((const uint32_t)(b[2]) << 16) |
+      ((const uint32_t)(b[1]) << 8) |
+      ((const uint32_t)(b[0]))
+    );
+  } else {
+    return (
+      ((const uint32_t)(b[0]) << 24) |
+      ((const uint32_t)(b[1]) << 16) |
+      ((const uint32_t)(b[2]) << 8) |
+      ((const uint32_t)(b[3]))
+    );
+  }
 }
 
-uint16_t ByteArrayToUInt16(const uint8_t* b, bool bigEndian)
+template uint32_t ByteArrayToUInt32<Endianness::kLittle>(const uint8_t* b);
+
+uint8_t GetByteAt(const char* b, const size_t pos)
 {
-  if (!bigEndian)
-    return static_cast<uint16_t>(b[1] << 8 | b[0]);
-  else
-    return static_cast<uint16_t>(b[2] << 8 | b[3]);
+  return (uint8_t)(static_cast<unsigned char>(b[pos]));
 }
 
-uint32_t ByteArrayToUInt32(const uint8_t* b, bool bigEndian)
+uint8_t GetByteAt(const string_view b, const size_t pos)
 {
-  if (!bigEndian)
-    return static_cast<uint32_t>(b[3] << 24 | b[2] << 16 | b[1] << 8 | b[0]);
-  else
-    return static_cast<uint32_t>(b[0] << 24 | b[1] << 16 | b[2] << 8 | b[3]);
+  return (uint8_t)(static_cast<unsigned char>(b[pos]));
 }
+
+template <Endianness endianness>
+uint16_t ByteArrayToUInt16(const string_view b, const size_t start)
+{
+  if (b.size() < start + 2)
+    return 0;
+
+  if constexpr (endianness == Endianness::kLittle) {
+    return (
+      ((uint16_t)(static_cast<unsigned char>(b[start + 1])) << 8) |
+      ((uint16_t)(static_cast<unsigned char>(b[start])))
+    );
+  } else {
+    return (
+      ((uint16_t)(static_cast<unsigned char>(b[start])) << 8) |
+      ((uint16_t)(static_cast<unsigned char>(b[start + 1])))
+    );
+  }
+}
+
+template uint16_t ByteArrayToUInt16<Endianness::kLittle>(const string_view b, const size_t start);
+template uint16_t ByteArrayToUInt16<Endianness::kBig>(const string_view b, const size_t start);
+
+template <Endianness endianness>
+uint32_t ByteArrayToUInt32(const string_view b, const size_t start)
+{
+  if (b.size() < start + 4)
+    return 0;
+
+  if constexpr (endianness == Endianness::kLittle) {
+    return (
+      ((uint32_t)(static_cast<unsigned char>(b[start + 3])) << 24) |
+      ((uint32_t)(static_cast<unsigned char>(b[start + 2])) << 16) |
+      ((uint32_t)(static_cast<unsigned char>(b[start + 1])) << 8) |
+      ((uint32_t)(static_cast<unsigned char>(b[start])))
+    );
+  } else {
+    return (
+      ((uint32_t)(static_cast<unsigned char>(b[start])) << 24) |
+      ((uint32_t)(static_cast<unsigned char>(b[start + 1])) << 16) |
+      ((uint32_t)(static_cast<unsigned char>(b[start + 2])) << 8) |
+      ((uint32_t)(static_cast<unsigned char>(b[start + 3])))
+    );
+  }
+}
+
+template uint32_t ByteArrayToUInt32<Endianness::kLittle>(const string_view b, const size_t start);
+template uint32_t ByteArrayToUInt32<Endianness::kBig>(const string_view b, const size_t start);
+
+template <Endianness endianness>
+uint64_t ByteArrayToUInt64(const string_view b, const size_t start)
+{
+  if (b.size() < start + 4)
+    return 0;
+
+  if constexpr (endianness == Endianness::kLittle) {
+    return (
+      ((uint64_t)(static_cast<unsigned char>(b[start + 7])) << 56) |
+      ((uint64_t)(static_cast<unsigned char>(b[start + 6])) << 48) |
+      ((uint64_t)(static_cast<unsigned char>(b[start + 5])) << 40) |
+      ((uint64_t)(static_cast<unsigned char>(b[start + 4])) << 32) |
+      ((uint64_t)(static_cast<unsigned char>(b[start + 3])) << 24) |
+      ((uint64_t)(static_cast<unsigned char>(b[start + 2])) << 16) |
+      ((uint64_t)(static_cast<unsigned char>(b[start + 1])) << 8) |
+      ((uint64_t)(static_cast<unsigned char>(b[start])))
+    );
+  } else {
+    return (
+      ((uint64_t)(static_cast<unsigned char>(b[start])) << 56) |
+      ((uint64_t)(static_cast<unsigned char>(b[start + 1])) << 48) |
+      ((uint64_t)(static_cast<unsigned char>(b[start + 2])) << 40) |
+      ((uint64_t)(static_cast<unsigned char>(b[start + 3])) << 32) |
+      ((uint64_t)(static_cast<unsigned char>(b[start + 4])) << 24) |
+      ((uint64_t)(static_cast<unsigned char>(b[start + 5])) << 16) |
+      ((uint64_t)(static_cast<unsigned char>(b[start + 6])) << 8) |
+      ((uint64_t)(static_cast<unsigned char>(b[start + 7])))
+    );
+  }
+}
+
+template uint64_t ByteArrayToUInt64<Endianness::kLittle>(const string_view b, const size_t start);
+template uint64_t ByteArrayToUInt64<Endianness::kBig>(const string_view b, const size_t start);
 
 string ByteArrayToDecString(const vector<uint8_t>& b)
 {
@@ -625,6 +810,29 @@ string ByteArrayToHexString(const array<uint8_t, SIZE>& b)
 template string ByteArrayToHexString(const array<uint8_t, 4>& b);
 template string ByteArrayToHexString(const array<uint8_t, 20>& b);
 
+string GetStringBytesHex(string_view sv)
+{
+  if (sv.empty()) return string();
+  string result;
+  {
+    unsigned char b = static_cast<unsigned char>(sv[0]);
+    if (b < 0x10)
+      result += "0" + ToHexString((uint16_t)b);
+    else
+      result += ToHexString((uint16_t)b);
+  }
+
+  for (auto i = cbegin(sv) + 1; i != cend(sv); ++i) {
+    unsigned char b = static_cast<unsigned char>(*i);
+    if (b < 0x10)
+      result += " 0" + ToHexString((uint16_t)b);
+    else
+      result += " " + ToHexString((uint16_t)b);
+  }
+
+  return result;
+}
+
 string ReverseByteArrayToDecString(const vector<uint8_t>& b)
 {
   if (b.empty())
@@ -703,24 +911,24 @@ string ReverseByteArrayToHexString(const array<uint8_t, SIZE>& b)
 template string ReverseByteArrayToHexString(const array<uint8_t, 4>& b);
 template string ReverseByteArrayToHexString(const array<uint8_t, 20>& b);
 
-void AppendByteArrayFast(vector<uint8_t>& b, const vector<uint8_t>& append)
+void AppendContainer(vector<uint8_t>& b, const vector<uint8_t>& append)
 {
   b.insert(end(b), begin(append), end(append));
 }
 
 template <size_t SIZE>
-void AppendByteArrayFast(vector<uint8_t>& b, const array<uint8_t, SIZE>& append)
+void AppendContainer(vector<uint8_t>& b, const array<uint8_t, SIZE>& append)
 {
   b.insert(end(b), begin(append), end(append));
 }
 
-template void AppendByteArrayFast(vector<uint8_t>& b, const array<uint8_t, 2>& append);
-template void AppendByteArrayFast(vector<uint8_t>& b, const array<uint8_t, 4>& append);
-template void AppendByteArrayFast(vector<uint8_t>& b, const array<uint8_t, 8>& append);
-template void AppendByteArrayFast(vector<uint8_t>& b, const array<uint8_t, 20>& append);
-template void AppendByteArrayFast(vector<uint8_t>& b, const array<uint8_t, 32>& append);
+template void AppendContainer(vector<uint8_t>& b, const array<uint8_t, 2>& append);
+template void AppendContainer(vector<uint8_t>& b, const array<uint8_t, 4>& append);
+template void AppendContainer(vector<uint8_t>& b, const array<uint8_t, 8>& append);
+template void AppendContainer(vector<uint8_t>& b, const array<uint8_t, 20>& append);
+template void AppendContainer(vector<uint8_t>& b, const array<uint8_t, 32>& append);
 
-void AppendByteArray(vector<uint8_t>& b, const uint8_t* a, const size_t size)
+void AppendBytes(vector<uint8_t>& b, const uint8_t* a, const size_t size)
 {
   size_t cursor = b.size();
   b.resize(cursor + size);
@@ -737,12 +945,13 @@ void AppendByteArrayString(vector<uint8_t>& b, string_view append, bool terminat
     b.push_back(0);
 }
 
-void AppendByteArray(vector<uint8_t>& b, const uint16_t i, bool bigEndian)
+template <Endianness endianness>
+void AppendNumber(vector<uint8_t>& b, const uint16_t i)
 {
   size_t offset = b.size();
   b.resize(offset + 2);
   uint8_t* cursor = b.data() + offset;
-  if (bigEndian) {
+  if constexpr (endianness == Endianness::kBig) {
     cursor[0] = static_cast<uint8_t>(i >> 8);
     cursor[1] = static_cast<uint8_t>(i);
   } else {
@@ -751,12 +960,16 @@ void AppendByteArray(vector<uint8_t>& b, const uint16_t i, bool bigEndian)
   }
 }
 
-void AppendByteArray(vector<uint8_t>& b, const uint32_t i, bool bigEndian)
+template void AppendNumber<Endianness::kLittle>(vector<uint8_t>& b, const uint16_t i);
+template void AppendNumber<Endianness::kBig>(vector<uint8_t>& b, const uint16_t i);
+
+template <Endianness endianness>
+void AppendNumber(vector<uint8_t>& b, const uint32_t i)
 {
   size_t offset = b.size();
   b.resize(offset + 4);
   uint8_t* cursor = b.data() + offset;
-  if (bigEndian) {
+  if constexpr (endianness == Endianness::kBig) {
     cursor[0] = static_cast<uint8_t>(i >> 24);
     cursor[1] = static_cast<uint8_t>(i >> 16);
     cursor[2] = static_cast<uint8_t>(i >> 8);
@@ -769,37 +982,60 @@ void AppendByteArray(vector<uint8_t>& b, const uint32_t i, bool bigEndian)
   }
 }
 
-void AppendByteArray(vector<uint8_t>& b, const int64_t i, bool bigEndian)
+template void AppendNumber<Endianness::kLittle>(vector<uint8_t>& b, const uint32_t i);
+
+template <Endianness endianness>
+void AppendNumber(vector<uint8_t>& b, const int64_t i)
 {
-  AppendByteArrayFast(b, CreateByteArray(i, bigEndian));
+  AppendContainer(b, CreateByteArray<endianness>(i));
 }
 
-void AppendByteArray(vector<uint8_t>& b, const float i, bool bigEndian)
+template void AppendNumber<Endianness::kLittle>(vector<uint8_t>& b, const int64_t i);
+
+template <Endianness endianness>
+void AppendNumber(vector<uint8_t>& b, const float i)
 {
   size_t offset = b.size();
   b.resize(offset + 4);
   if constexpr (numeric_limits<float>::is_iec559 && sizeof(float) == 4) {
     uint8_t* cursor = b.data() + offset;
     memcpy(cursor, &i, 4);
-    if (bigEndian != GetIsHostBigEndian()) {
-      reverse(cursor, cursor + 4);
+    if constexpr (endianness == Endianness::kLittle) {
+      if (GetIsHostBigEndian()) {
+        reverse(cursor, cursor + 4);
+      }
+    } else {
+      if (!GetIsHostBigEndian()) {
+        reverse(cursor, cursor + 4);
+      }
     }
   } else {
   }
 }
 
-void AppendByteArray(vector<uint8_t>& b, const double i, bool bigEndian)
+template void AppendNumber<Endianness::kLittle>(vector<uint8_t>& b, const float i);
+
+template <Endianness endianness>
+void AppendNumber(vector<uint8_t>& b, const double i)
 {
   size_t offset = b.size();
   b.resize(offset + 8);
   if constexpr (numeric_limits<double>::is_iec559 && sizeof(double) == 8) {
     uint8_t* cursor = b.data() + offset;
     memcpy(cursor, &i, 8);
-    if (bigEndian != GetIsHostBigEndian()) {
-      reverse(cursor, cursor + 8);
+    if constexpr (endianness == Endianness::kLittle) {
+      if (GetIsHostBigEndian()) {
+        reverse(cursor, cursor + 8);
+      }
+    } else {
+      if (!GetIsHostBigEndian()) {
+        reverse(cursor, cursor + 8);
+      }
     }
   }
 }
+
+template void AppendNumber<Endianness::kLittle>(vector<uint8_t>& b, const double i);
 
 void AppendSwapString(string& fromString, string& toString)
 {
@@ -901,6 +1137,27 @@ size_t FindNullDelimiterOrEnd(const vector<uint8_t>& b, const size_t start)
 template size_t FindNullDelimiterOrEnd<OOBPolicy::kCheck>(const vector<uint8_t>& b, const size_t start);
 template size_t FindNullDelimiterOrEnd<OOBPolicy::kUnsafe>(const vector<uint8_t>& b, const size_t start);
 
+template <OOBPolicy oobPolicy>
+size_t FindNullDelimiterOrEnd(const string_view b, const size_t start)
+{
+  // start searching the byte array at position 'start' for the first null value
+  // if found, return the subarray from 'start' to the null value but not including the null value
+
+  size_t end = b.size();
+  if constexpr (oobPolicy == OOBPolicy::kCheck) {
+    if (start >= end) return end;
+  }
+  for (size_t i = start; i < end; ++i) {
+    if (b[i] == '\x00') {
+      return i;
+    }
+  }
+  return end;
+}
+
+template size_t FindNullDelimiterOrEnd<OOBPolicy::kCheck>(const string_view b, const size_t start);
+template size_t FindNullDelimiterOrEnd<OOBPolicy::kUnsafe>(const string_view b, const size_t start);
+
 const uint8_t* FindNullDelimiterInRangeOrEnd(const uint8_t* start, const uint8_t* end)
 {
   const uint8_t* needle = start;
@@ -976,44 +1233,49 @@ string_view ExtractStringView(const vector<uint8_t>& b, const size_t start, cons
   return sv;
 }
 
-/*
-template string_view ExtractStringView<OOBPolicy::kCheck, NullTerminatorPolicy::kRequired, StringEncoding::kUTF8>(const vector<uint8_t>& b, const size_t start, const size_t maxSize);
-template string_view ExtractStringView<OOBPolicy::kCheck, NullTerminatorPolicy::kRequired, StringEncoding::kNone>(const vector<uint8_t>& b, const size_t start, const size_t maxSize);
-template string_view ExtractStringView<OOBPolicy::kCheck, NullTerminatorPolicy::kOptional, StringEncoding::kUTF8>(const vector<uint8_t>& b, const size_t start, const size_t maxSize);
-template string_view ExtractStringView<OOBPolicy::kCheck, NullTerminatorPolicy::kOptional, StringEncoding::kNone>(const vector<uint8_t>& b, const size_t start, const size_t maxSize);
-*/
+template <OOBPolicy oobPolicy, NullTerminatorPolicy nullPolicy, StringEncoding encoding>
+string_view ExtractStringView(const string_view b, const size_t start, const size_t maxSize)
+{
+  if constexpr (oobPolicy == OOBPolicy::kCheck) {
+    if (start >= b.size()) return string_view();
+  }
+
+  size_t nullPos = FindNullDelimiterOrEnd<OOBPolicy::kUnsafe>(b, start);
+  string_view sv;
+  if (nullPos == b.size()) {
+    if constexpr (nullPolicy == NullTerminatorPolicy::kRequired) {
+      return string_view();
+    } else {
+      sv = b.substr(start, b.size() - start);
+    }
+  } else {
+    sv = b.substr(start, nullPos - start);
+  }
+  if (0 < maxSize && maxSize < sv.size()) {
+    return string_view();
+  }
+  if constexpr (encoding == StringEncoding::kUTF8) {
+    if (!utf8::is_valid(sv)) {
+      return string_view();
+    }
+  }
+  return sv;
+}
+
 template string_view ExtractStringView<OOBPolicy::kUnsafe, NullTerminatorPolicy::kRequired, StringEncoding::kUTF8>(const vector<uint8_t>& b, const size_t start, const size_t maxSize);
 template string_view ExtractStringView<OOBPolicy::kUnsafe, NullTerminatorPolicy::kRequired, StringEncoding::kNone>(const vector<uint8_t>& b, const size_t start, const size_t maxSize);
-/*
-template string_view ExtractStringView<OOBPolicy::kUnsafe, NullTerminatorPolicy::kOptional, StringEncoding::kUTF8>(const vector<uint8_t>& b, const size_t start, const size_t maxSize);
-template string_view ExtractStringView<OOBPolicy::kUnsafe, NullTerminatorPolicy::kOptional, StringEncoding::kNone>(const vector<uint8_t>& b, const size_t start, const size_t maxSize);
-*/
+template string_view ExtractStringView<OOBPolicy::kUnsafe, NullTerminatorPolicy::kRequired, StringEncoding::kUTF8>(const string_view b, const size_t start, const size_t maxSize);
+template string_view ExtractStringView<OOBPolicy::kUnsafe, NullTerminatorPolicy::kRequired, StringEncoding::kNone>(const string_view b, const size_t start, const size_t maxSize);
+template string_view ExtractStringView<OOBPolicy::kCheck, NullTerminatorPolicy::kRequired, StringEncoding::kNone>(const string_view b, const size_t start, const size_t maxSize);
 
 string_view ExtractUTF8View(const vector<uint8_t>& b, const size_t start, const size_t maxSize)
 {
   return ExtractStringView<OOBPolicy::kUnsafe, NullTerminatorPolicy::kRequired, StringEncoding::kUTF8>(b, start, maxSize);
 }
 
-uint8_t ExtractHex(const vector<uint8_t>& b, const size_t start, bool bigEndian)
+string_view ExtractUTF8View(const string_view b, const size_t start, const size_t maxSize)
 {
-  // consider the byte array to contain a 2 character ASCII encoded hex value at b[start] and b[start + 1] e.g. "FF"
-  // extract it as a single decoded byte
-
-  if (start + 1 < b.size())
-  {
-    uint8_t c = 0;
-    string temp = string(begin(b) + start, begin(b) + start + 2);
-
-    if (bigEndian)
-      temp = string(temp.rend(), temp.rbegin());
-
-    stringstream SS;
-    SS << temp;
-    SS >> hex >> c;
-    return c;
-  }
-
-  return 0;
+  return ExtractStringView<OOBPolicy::kUnsafe, NullTerminatorPolicy::kRequired, StringEncoding::kUTF8>(b, start, maxSize);
 }
 
 vector<uint8_t> ExtractNumbers(const string& s, const uint32_t maxCount)
@@ -1232,7 +1494,18 @@ bool ValidateLength(const vector<uint8_t>& content)
 
   size_t size = content.size();
   if (size >= 4 && size <= 0xFFFF) {
-    return ByteArrayToUInt16(content, false, 2) == static_cast<uint16_t>(size);
+    return ByteArrayToUInt16<Endianness::kLittle>(content, 2) == static_cast<uint16_t>(size);
+  }
+  return false;
+}
+
+bool ValidateLength(const string_view content)
+{
+  // verify that bytes 3 and 4 (indices 2 and 3) of the content array describe the length
+
+  size_t size = content.size();
+  if (size >= 4 && size <= 0xFFFF) {
+    return ByteArrayToUInt16<Endianness::kLittle>(content, 2) == static_cast<uint16_t>(size);
   }
   return false;
 }
@@ -1346,9 +1619,9 @@ vector<uint8_t> DecodeStatString(const T& data)
 template vector<uint8_t> DecodeStatString(const vector<uint8_t>& data);
 template vector<uint8_t> DecodeStatString(const string& data);
 
-vector<string> SplitTokens(string_view s, const char delim)
+vector<string_view> SplitTokens(string_view s, const char delim)
 {
-  vector<string> tokens;
+  vector<string_view> tokens;
   size_t start = 0;
 
   while (start < s.size()) {
@@ -1359,7 +1632,7 @@ vector<string> SplitTokens(string_view s, const char delim)
     }
 
     if (end > start) {
-      tokens.emplace_back(s.substr(start, end - start));
+      tokens.push_back(s.substr(start, end - start));
     }
 
     start = end + 1;
@@ -1503,7 +1776,7 @@ RangeSizeType ResolveSyncLimits(size_t latency, double deltaTicksMs)
   return make_pair<size_t, size_t>(move(minSync), move(maxSync));
 }
 
-RangeSizeType ResolveSyncLimits(size_t latency, const std::pair<double, double>& deltaTicksMs)
+RangeSizeType ResolveSyncLimits(size_t latency, const pair<double, double>& deltaTicksMs)
 {
   size_t minSync = GetNearestMultiple(DoubleToSize(deltaTicksMs.first), latency);
   size_t maxSync = GetNearestMultiple(DoubleToSize(deltaTicksMs.second), latency);
@@ -1574,12 +1847,12 @@ template<typename Container>
 string JoinStrings(const Container& list, const string connector)
 {
   using T = typename Container::value_type;
-  static_assert(is_same_v<T, string> || is_same_v<T, uint16_t> || is_same_v<T, uint32_t>, "Container must contain string or uint16_t or uint32_t");
+  static_assert(is_same_v<T, string> || is_same_v<T, string_view> || is_same_v<T, uint16_t> || is_same_v<T, uint32_t>, "Container must contain string or uint16_t or uint32_t");
 
   size_t size = 0;
   string results;
   for (const auto& element : list) {
-    if constexpr (is_same_v<T, string>) {
+    if constexpr (is_same_v<T, string> || is_same_v<T, string_view>) {
       size += element.size();
     } else {
       size += 4;
@@ -1595,19 +1868,19 @@ string JoinStrings(const Container& list, const string connector)
 
   auto it = list.cbegin();
   auto itEnd = list.cend();
-  if constexpr (is_same_v<T, string>) {
-    results += (*it);
+  if constexpr (is_same_v<T, string> || is_same_v<T, string_view>) {
+    results.append(*it);
   } else {
-    results += to_string(*it);
+    results.append(to_string(*it));
   }  
   ++it;
 
   while (it != itEnd) {
-    results += connector;
-    if constexpr (is_same_v<T, string>) {
-      results += (*it);
+    results.append(connector);
+    if constexpr (is_same_v<T, string> || is_same_v<T, string_view>) {
+      results.append(*it);
     } else {
-      results += to_string(*it);
+      results.append(to_string(*it));
     }
     ++it;
   }
@@ -1632,6 +1905,7 @@ template string JoinStrings(const array<string, SIZE>& list, const string connec
 template string JoinStrings(const array<string, SIZE>& list);
 
 INSTANTIATE_JOIN_STRINGLIKE(string)
+INSTANTIATE_JOIN_STRINGLIKE(string_view)
 INSTANTIATE_JOIN_STRINGLIKE(uint16_t)
 INSTANTIATE_JOIN_STRINGLIKE(uint32_t)
 INSTANTIATE_JOIN_STRINGS_ARRAY(2)

@@ -77,6 +77,7 @@ public:
   void Disable() { m_Config.m_Enabled = false; }
   void Update(fd_set* fd, fd_set* send_fd);
   void ExtractPackets();
+  void ProcessPacket(std::string_view packet);
   void Send(std::string_view message);
   void SendUser(std::string_view message, std::string_view target);
   void SendChannel(std::string_view message, std::string_view target);

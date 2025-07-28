@@ -83,7 +83,7 @@ public:
   void SynchronizeFromBuffer();
 
   void StartExtendedHandShake(int64_t waitTicks, uint32_t gameID) const;
-  GProxyExtendedClientResult ConfirmExtended(const std::vector<uint8_t>& data);
+  GProxyExtendedClientResult ConfirmExtended(const std::string_view data);
   void UpdateEmptyActions(uint8_t emptyActions) const;
   void CheckExtendedStartHandShake() const;
 };

@@ -106,7 +106,7 @@ public:
   void                                    Reset(const std::string& userName, const std::string& userPassword);
   bool                                    ExtractEXEFeatures(const Version& war3DataVersion, const std::filesystem::path& war3Path, const std::string& valueStringFormula, const std::string& mpqFileName);
 
-  bool                                    HELP_SID_AUTH_CHECK(const std::filesystem::path& war3Path, const std::optional<Version>& war3DataVersion, const bool realmIsExpansion, const Version& m_GameIsExpansion, const CRealmConfig* realmConfig, const std::string& valueStringFormula, const std::string& mpqFileName, const std::array<uint8_t, 4>& clientToken, const std::array<uint8_t, 4>& serverToken);
+  bool                                    HELP_SID_AUTH_CHECK(const std::filesystem::path& war3Path, const std::optional<Version>& war3DataVersion, const bool realmIsExpansion, const Version& m_GameIsExpansion, const CRealmConfig* realmConfig, const std::string& valueStringFormula, const std::string& mpqFileName, const uint32_t clientToken, const uint32_t serverToken);
   bool                                    HELP_SID_AUTH_ACCOUNTLOGON();
   bool                                    HELP_SID_AUTH_ACCOUNTLOGONPROOF(const std::array<uint8_t, 32>& salt, const std::array<uint8_t, 32>& serverKey);
   bool                                    HELP_PvPGNPasswordHash(const std::string& userPassword);

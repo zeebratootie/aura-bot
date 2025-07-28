@@ -110,32 +110,37 @@ IncomingConnectionStatus CConnection::Update(fd_set* fd, fd_set* send_fd, int64_
   if (m_Type == IncomingConnectionType::kKickedPlayer) {
     m_Socket->Discard(fd);
   } else if (m_Socket->DoRecv(fd)) {
-    // extract as many packets as possible from the socket's receive buffer and process them
-    string*              RecvBuffer         = m_Socket->GetBytes();
-    std::vector<uint8_t> Bytes              = CreateByteArray((uint8_t*)RecvBuffer->c_str(), RecvBuffer->size());
-    uint32_t             LengthProcessed    = 0;
+    CStreamIOSocket* socket = m_Socket;
+    string_view data = socket->GetRecvBufferView();
 
     // a packet is at least 4 bytes so loop as long as the buffer contains 4 bytes
 
-    while (Bytes.size() >= 4) {
+    while (data.size() >= 4) {
       // bytes 2 and 3 contain the length of the packet
-      const uint16_t Length = ByteArrayToUInt16(Bytes, false, 2);
-      if (Length < 4) {
+      const uint16_t packetSize = ByteArrayToUInt16<Endianness::kLittle>(data, 2);
+      if (packetSize < 4) {
         Abort = true;
         break;
       }
-      if (Bytes.size() < Length) break;
-      const std::vector<uint8_t> Data = std::vector<uint8_t>(begin(Bytes), begin(Bytes) + Length);
+      if (data.size() < packetSize) {
+        // we don't have the complete packet yet
+        break;
+      }
 
-      switch (Bytes[0]) {
+      string_view packet = data.substr(0, packetSize);
+      const uint8_t packetFamily = GetByteAt(packet, 0);
+      const uint8_t packetType = GetByteAt(packet, 1);
+      switch (packetFamily) {
         case GameProtocol::Magic::W3GS_HEADER:
-          if (Bytes[1] == GameProtocol::Magic::REQJOIN) {
-            CIncomingJoinRequest joinRequest = GameProtocol::RECEIVE_W3GS_REQJOIN(Data);
+          if (packetType == GameProtocol::Magic::REQJOIN) {
+            CIncomingJoinRequest joinRequest = GameProtocol::RECEIVE_W3GS_REQJOIN(packet);
             if (!joinRequest.GetIsValid()) {
-              DPRINT_IF(LogLevel::kTrace2, "[AURA] Got invalid REQJOIN <" + ByteArrayToDecString(Bytes) + ">");
+              DPRINT_IF(LogLevel::kTrace2, "[AURA] Got invalid REQJOIN <" + GetStringBytesHex(packet) + ">");
               if (joinRequest.GetError() != JoinRequestError::kCannotParse) {
                 Send(GameProtocol::SENDWRAP_W3GS_GHOST_LOBBY_ERROR(GameProtocol::JoinRequestErrorToString(joinRequest.GetError())));
                 SetTimeoutAtLatest(m_Aura->GetLoopTicks() + 8000);
+                result = IncomingConnectionStatus::kDestroyDelayed;
+                m_Type = IncomingConnectionType::kKickedPlayer;
               }
               Abort = true;
               break;
@@ -165,28 +170,43 @@ IncomingConnectionStatus CConnection::Update(fd_set* fd, fd_set* send_fd, int64_
             if (joinRequest.GetIsCensored()) {
               DPRINT_IF(LogLevel::kTrace, Concat("[AURA] User name censored: [", joinRequest.GetOriginalName(), "] -> [", joinRequest.GetName(), "]"));
             }
-            const uint8_t joinResult = targetLobby->EventRequestJoin(this, joinRequest);
-            if (joinResult == JOIN_RESULT_PLAYER) {
-              result = IncomingConnectionStatus::kPromoted;
-              m_Type = IncomingConnectionType::kPlayer;
-              m_Socket = nullptr;
-            } else if (joinResult == JOIN_RESULT_OBSERVER) {
-              result = IncomingConnectionStatus::kPromoted;
-              m_Type = IncomingConnectionType::kObserver;
-            } else if (joinResult == JOIN_RESULT_FAIL_DELAYED) {
-              result = IncomingConnectionStatus::kPromoted; // hack
+            JoinRequestResult joinResult = targetLobby->EventRequestJoin(this, joinRequest);
+            switch (joinResult) {
+              case JoinRequestResult::kPlayer: {
+                result = IncomingConnectionStatus::kPromoted; // must be destroyed
+                m_Type = IncomingConnectionType::kPlayer;
+                m_Socket = nullptr;
+                break;
+              }
+              case JoinRequestResult::kObserver: {
+                result = IncomingConnectionStatus::kPromoted; // must be destroyed
+                m_Type = IncomingConnectionType::kObserver;
+                m_Socket = nullptr; // TODO: Investigate why this wasn't nulled before
+                break;
+              }
+              case JoinRequestResult::kFailDelayed: {
+                result = IncomingConnectionStatus::kDestroyDelayed;
+                m_Type = IncomingConnectionType::kKickedPlayer;
+                SetTimeoutAtLatest(m_Aura->GetLoopTicks() + 8000);
+                break;
+              }
+              case JoinRequestResult::kFail: {
+                result = IncomingConnectionStatus::kDestroy; // must be destroyed
+                m_Type = IncomingConnectionType::kKickedPlayer;
+                break;
+              }
             }
             Abort = true;
-          } else if (GameProtocol::Magic::SEARCHGAME <= Bytes[1] && Bytes[1] <= GameProtocol::Magic::DECREATEGAME) {
-            if (Length > 1024) {
+          } else if (GameProtocol::Magic::SEARCHGAME <= packetType && packetType <= GameProtocol::Magic::DECREATEGAME) {
+            if (packetSize > 1024) {
               Abort = true;
               break;
             }
             struct UDPPkt pkt;
             pkt.socket = m_Socket;
             pkt.sender = &(m_Socket->m_RemoteHost);
-            memcpy(pkt.buf, Bytes.data(), Length);
-            pkt.length = Length;
+            memcpy(pkt.buf, packet.data(), packetSize);
+            pkt.length = packetSize;
             m_Aura->m_Net.HandleUDP(&pkt);
           } else {
             Abort = true;
@@ -195,14 +215,14 @@ IncomingConnectionStatus CConnection::Update(fd_set* fd, fd_set* send_fd, int64_
           break;
 
         case GPSProtocol::Magic::GPS_HEADER: {
-          if (Length >= 13 && Bytes[1] == GPSProtocol::Magic::RECONNECT && m_Type == IncomingConnectionType::kNone && m_Aura->m_Net.m_Config.m_ProxyReconnect > 0) {
-            const uint32_t reconnectKey = ByteArrayToUInt32(Bytes, false, 5);
-            const uint32_t lastPacket = ByteArrayToUInt32(Bytes, false, 9);
+          if (packetSize >= 13 && packetType == GPSProtocol::Magic::RECONNECT && m_Type == IncomingConnectionType::kNone && m_Aura->m_Net.m_Config.m_ProxyReconnect > 0) {
+            const uint32_t reconnectKey = ByteArrayToUInt32<Endianness::kLittle>(packet, 5);
+            const uint32_t lastPacket = ByteArrayToUInt32<Endianness::kLittle>(packet,  9);
             GameUser::CGameUser* targetUser = nullptr;
-            if (Length >= 17) {
-              targetUser = m_Aura->m_Net.GetReconnectTargetUser(ByteArrayToUInt32(Bytes, false, 13), Bytes[4]);
+            if (packetSize >= 17) {
+              targetUser = m_Aura->m_Net.GetReconnectTargetUser(ByteArrayToUInt32<Endianness::kLittle>(packet, 13), GetByteAt(packet, 4));
             } else {
-              targetUser = m_Aura->m_Net.GetReconnectTargetUserLegacy(Bytes[4], reconnectKey);
+              targetUser = m_Aura->m_Net.GetReconnectTargetUserLegacy(GetByteAt(packet, 4), reconnectKey);
             }
             if (!targetUser || !targetUser->GetGProxy()->ValidateReconnect(reconnectKey, lastPacket)) {
               m_Socket->PutBytes(GPSProtocol::SEND_GPSS_REJECT(targetUser == nullptr ? REJECTGPS_NOTFOUND : REJECTGPS_INVALID));
@@ -214,7 +234,7 @@ IncomingConnectionStatus CConnection::Update(fd_set* fd, fd_set* send_fd, int64_
               result = IncomingConnectionStatus::kReconnected;
               Abort = true;
             }          
-          } else if (Length >= 4 && Bytes[1] == GPSProtocol::Magic::UDPSYN && m_Aura->m_Net.m_Config.m_EnableTCPWrapUDP) {
+          } else if (packetSize >= 4 && packetType == GPSProtocol::Magic::UDPSYN && m_Aura->m_Net.m_Config.m_EnableTCPWrapUDP) {
             // in-house extension
             m_Aura->m_Net.RegisterGameSeeker(this, IncomingConnectionType::kUDPTunnel);
             result = IncomingConnectionStatus::kPromoted;
@@ -234,33 +254,29 @@ IncomingConnectionStatus CConnection::Update(fd_set* fd, fd_set* send_fd, int64_
           break;
         }
 
-         default:
+        default:
           Abort = true;
       }
 
       if (result != IncomingConnectionStatus::kPromotedPassThrough) {
-        LengthProcessed += Length;
+        data.remove_prefix(packetSize);
       }
 
       if (Abort) {
         // Process no more packets
+        data.remove_prefix(data.size());
         break;
       }
-
-      Bytes = std::vector<uint8_t>(begin(Bytes) + Length, end(Bytes));
     }
 
-    if (Abort && result != IncomingConnectionStatus::kPromoted && result != IncomingConnectionStatus::kPromotedPassThrough && result != IncomingConnectionStatus::kReconnected) {
-      result = IncomingConnectionStatus::kDestroy;
-      RecvBuffer->clear();
-    } else if (LengthProcessed > 0) {
-      *RecvBuffer = RecvBuffer->substr(LengthProcessed);
+    if (data.size() != socket->GetRecvBufferSize()) {
+      socket->UpdateRecvBuffer(data);
     }
   } else if (m_Aura->GetTicksIsAfterDelay(m_Socket->GetLastRecv(), timeout)) {
     return IncomingConnectionStatus::kDestroy;
   }
 
-  if (Abort) {
+  if (Abort && result != IncomingConnectionStatus::kDestroyDelayed) {
     m_DeleteMe = true;
   }
 

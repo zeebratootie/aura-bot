@@ -26,6 +26,7 @@
 #ifndef AURA_CONSTANTS_H_
 #define AURA_CONSTANTS_H_
 
+#include <array>
 #include <string>
 #include <type_traits>
 
@@ -59,6 +60,42 @@ enum class NullTerminatorPolicy : bool
   kRequired = true,
   kOptional = false,
 };
+
+template <Endianness endianness>
+[[nodiscard]] constexpr uint16_t ByteArrayToUInt16(const std::array<uint8_t, 2>& b)
+{
+  if constexpr (endianness == Endianness::kLittle) {
+    return (
+      (static_cast<uint16_t>(b[1]) << 8) |
+      (static_cast<uint16_t>(b[0]))
+    );
+  } else {
+    return (
+      (static_cast<uint16_t>(b[0]) << 8) |
+      (static_cast<uint16_t>(b[1]))
+    );
+  }
+}
+
+template <Endianness endianness>
+[[nodiscard]] constexpr uint32_t ByteArrayToUInt32(const std::array<uint8_t, 4>& b)
+{
+  if constexpr (endianness == Endianness::kLittle) {
+    return (
+      (static_cast<uint32_t>(b[3]) << 24) |
+      (static_cast<uint32_t>(b[2]) << 16) |
+      (static_cast<uint32_t>(b[1]) << 8) |
+      (static_cast<uint32_t>(b[0]))
+    );
+  } else {
+    return (
+      (static_cast<uint32_t>(b[0]) << 24) |
+      (static_cast<uint32_t>(b[1]) << 16) |
+      (static_cast<uint32_t>(b[2]) << 8) |
+      (static_cast<uint32_t>(b[3]))
+    );
+  }
+}
 
 constexpr uint8_t LOG_LEVEL_EMERGENCY = 0;
 constexpr uint8_t LOG_LEVEL_ALERT = 1;
@@ -127,8 +164,11 @@ constexpr size_t MAX_READ_FILE_SIZE = 0x18000000;
 
 constexpr double PERCENT_FACTOR = 100.;
 
-constexpr unsigned char ProductID_ROC[4] = {51, 82, 65, 87};
-constexpr unsigned char ProductID_TFT[4] = {80, 88, 51, 87};
+constexpr std::array<uint8_t, 4> ProductID_ROC_BYTES = {51, 82, 65, 87};
+constexpr std::array<uint8_t, 4> ProductID_TFT_BYTES = {80, 88, 51, 87};
+
+constexpr uint32_t ProductID_ROC_LE = ByteArrayToUInt32<Endianness::kLittle>(ProductID_ROC_BYTES);
+constexpr uint32_t ProductID_TFT_LE = ByteArrayToUInt32<Endianness::kLittle>(ProductID_TFT_BYTES);
 
 // aura.h
 
@@ -741,16 +781,11 @@ enum class GameControllerType : uint8_t
 
 // connection.h
 
-constexpr uint8_t JOIN_RESULT_FAIL = 0u;
-constexpr uint8_t JOIN_RESULT_PLAYER = 1u;
-constexpr uint8_t JOIN_RESULT_OBSERVER = 2u;
-constexpr uint8_t JOIN_RESULT_FAIL_DELAYED = 3u;
-
-enum class JoinResult : uint8_t {
+enum class JoinRequestResult : uint8_t {
   kFail = 0,
-  kPlayer = 1,
-  kObserver = 2,
-  LAST = 3,
+  kFailDelayed = 1,
+  kPlayer = 2,
+  kObserver = 3,
 };
 
 // game_user.h
@@ -988,7 +1023,8 @@ enum class JoinRequestError : uint8_t {
   kOk = 0,
   kTooLong = 1,
   kBadEncoding = 2,
-  kCannotParse = 3,
+  kUnsafeCodePoints = 3,
+  kCannotParse = 4,
 };
 
 constexpr std::string::size_type MAX_LOBBY_CHAT_SIZE = 220;

@@ -238,172 +238,174 @@ void CIRC::Update(fd_set* fd, fd_set* send_fd)
 
 void CIRC::ExtractPackets()
 {
-  const int64_t loopTime = m_Aura->GetLoopTime();
-  string*       Recv = m_Socket->GetBytes();
-
-  // separate packets using the CRLF delimiter
-
-  vector<string> Packets = SplitTokens(*Recv, '\n');
-
-  for (auto& Packets_Packet : Packets)
-  {
-    // delete the superflous '\r'
-
-    const string::size_type pos = Packets_Packet.find('\r');
-
-    if (pos != string::npos)
-      Packets_Packet.erase(pos, 1);
-
-    // track timeouts
-
-    m_LastPacketTime = loopTime;
-
-    // ping packet
-    // in:  PING :2748459196
-    // out: PONG :2748459196
-    // respond to the packet sent by the server
-
-    if (Packets_Packet.compare(0, 4, "PING") == 0)
-    {
-      Send("PONG :" + Packets_Packet.substr(6));
-      continue;
-    }
-
-    // notice packet
-    // in: NOTICE AUTH :*** Checking Ident
-    // not actually important
-
-    if (Packets_Packet.compare(0, 6, "NOTICE") == 0)
-    {
-      //Print("[IRC: " + m_Config.m_HostName + "] " + Packets_Packet);
-      continue;
-    }
-
-    // now we need to further tokenize each packet
-    // the delimiter is space
-    // we use a std::vector so we can check its number of tokens
-
-    const vector<string> Tokens = SplitTokens(Packets_Packet, ' ');
-
-    // privmsg packet
-    // in:  :nickname!~username@hostname PRIVMSG #channel :message
-    // print the message, check if it's a command then execute if it is
-
-    if (Tokens.size() > 3 && Tokens[1] == "PRIVMSG" && m_Config.m_CommandCFG->m_Enabled)
-    {
-      // don't bother parsing if the message is very short (1 character)
-      // since it's surely not a command
-
-      if (Tokens[3].size() < 3)
-        continue;
-
-      string nickName, hostName;
-
-      // get the nickname
-
-      uint32_t i = 1;
-
-      for (; Tokens[0][i] != '!'; ++i)
-        nickName += Tokens[0][i];
-
-      // skip the username
-
-      for (; Tokens[0][i] != '@'; ++i)
-        ;
-
-      // get the hostname
-
-      for (++i; i < Tokens[0].size(); ++i)
-        hostName += Tokens[0][i];
-
-      // get the channel
-
-      string channel = Tokens[2];
-
-      // get the message
-
-      string message = Packets_Packet.substr(Tokens[0].size() + Tokens[1].size() + Tokens[2].size() + 4);
-
-      if (message.empty() || channel.empty())
-        continue;
-
-      if (
-        !IsArbitraryStringUTF8Safe(nickName) || !IsArbitraryStringUTF8Safe(message) ||
-        !IsArbitraryStringUTF8Safe(channel) || !IsArbitraryStringUTF8Safe(hostName)
-      ) {
-        continue;
-      }
-
-      string cmdToken, command, target;
-      uint8_t tokenMatch = ExtractMessageTokensAny(message, m_Config.m_PrivateCmdToken, m_Config.m_BroadcastCmdToken, cmdToken, command, target);
-      if (tokenMatch != COMMAND_TOKEN_MATCH_NONE) {
-        const bool isWhisper = channel[0] != '#';
-        shared_ptr<CCommandContext> ctx = nullptr;
-        try {
-          ctx = make_shared<CCommandContext>(ServiceType::kIRC, m_Aura, m_Config.m_CommandCFG, channel, nickName, isWhisper, hostName, !isWhisper && tokenMatch == COMMAND_TOKEN_MATCH_BROADCAST, &std::cout);
-        } catch (...) {
-        }
-        if (ctx) {
-          ctx->UpdatePermissions();
-          ctx->Run(cmdToken, command, target);
-        }
-      }
-
-      continue;
-    }
-
-    // kick packet
-    // in:  :nickname!~username@hostname KICK #channel nickname :reason
-    // out: JOIN #channel
-    // rejoin the channel if we're the victim
-
-    if (Tokens.size() == 5 && Tokens[1] == "KICK")
-    {
-      if (Tokens[3] == m_NickName) {
-        Send("JOIN " + Tokens[2]);
-      }
-
-      continue;
-    }
-
-    // message of the day end packet
-    // in: :server 376 nickname :End of /MOTD command.
-    // out: JOIN #channel
-    // join channels and auth and set +x on QuakeNet
-
-    if (Tokens.size() >= 2 && Tokens[1] == "376") {
-      // auth if the server is QuakeNet
-
-      if (m_Config.m_HostName.find("quakenet.org") != string::npos && !m_Config.m_Password.empty()) {
-        SendUser("AUTH " + m_Config.m_UserName + " " + m_Config.m_Password, "Q@CServe.quakenet.org");
-        Send("MODE " + m_Config.m_NickName + " +x");
-      }
-
-      // join channels
-
-      for (const auto& channel : m_Config.m_Channels)
-        Send("JOIN " + channel);
-
-      continue;
-    }
-
-    // nick taken packet
-    // in:  :server 433 CurrentNickname WantedNickname :Nickname is already in use.
-    // out: NICK NewNickname
-    // append an underscore and send the new nickname
-
-    if (Tokens.size() >= 2 && Tokens[1] == "433")
-    {
-      // nick taken, append _
-
-      m_NickName += '_';
-      Send("NICK " + m_NickName);
-      continue;
-    }
+  string_view data = m_Socket->GetRecvBufferView();
+  while (!data.empty()) {
+    // separate packets using the CRLF delimiter
+    string_view::size_type crlfIndex = data.find("\r\n");
+    if (crlfIndex == string_view::npos) break;
+    ProcessPacket(data.substr(0, crlfIndex));
+    data.remove_prefix(crlfIndex + 2);
   }
 
-  // clear the whole buffer
-  m_Socket->ClearRecvBuffer();
+  if (data.size() != m_Socket->GetRecvBufferSize()) {
+    m_Socket->UpdateRecvBuffer(data);
+  }
+}
+
+void CIRC::ProcessPacket(string_view packet)
+{
+  // track timeouts
+
+  m_LastPacketTime = m_Aura->GetLoopTime();
+
+  // ping packet
+  // in:  PING :2748459196
+  // out: PONG :2748459196
+  // respond to the packet sent by the server
+
+  if (packet.substr(0, 4) == "PING") {
+    Send(Concat("PONG :", packet.substr(6)));
+    return;
+  }
+
+  // notice packet
+  // in: NOTICE AUTH :*** Checking Ident
+  // not actually important
+
+  if (packet.substr(0, 6) == "NOTICE") {
+    //Print(Concat("[IRC: ", m_Config.m_HostName, "] ", packet));
+    return;
+  }
+
+  // now we need to further tokenize each packet
+  // the delimiter is space
+  // we use a std::vector so we can check its number of tokens
+
+  const vector<string_view> tokens = SplitTokens(packet, ' ');
+
+  // privmsg packet
+  // in:  :nickname!~username@hostname PRIVMSG #channel :message
+  // print the message, check if it's a command then execute if it is
+
+  if (tokens.size() > 3 && tokens[1] == "PRIVMSG" && m_Config.m_CommandCFG->m_Enabled)
+  {
+    // don't bother parsing if the message is very short (1 character)
+    // since it's surely not a command
+
+    if (tokens[3].size() < 3)
+      return;
+
+    string_view::size_type fragmentStartPos = 1;
+    if (tokens[0].size() <= fragmentStartPos) {
+      return;
+    }
+    // nickname
+    string_view::size_type fragmentEndPos = tokens[0].find('!', fragmentStartPos);
+    if (fragmentEndPos == string_view::npos) {
+      return;
+    }
+    string nickName(tokens[0].substr(fragmentStartPos, fragmentEndPos - fragmentStartPos));
+
+    fragmentStartPos = fragmentEndPos + 1;
+    if (tokens[0].size() <= fragmentStartPos) {
+      return;
+    }
+
+    // username
+    fragmentEndPos = tokens[0].find('@', fragmentStartPos);
+    if (fragmentEndPos == string_view::npos) {
+      return;
+    }
+
+    fragmentStartPos = fragmentEndPos + 1;
+    if (tokens[0].size() <= fragmentStartPos) {
+      return;
+    }
+
+    string hostName(tokens[0].substr(fragmentStartPos, tokens[0].size() - fragmentStartPos));
+
+    // get the channel
+
+    string channel(tokens[2]);
+
+    // get the message
+
+    string message(packet.substr(tokens[0].size() + tokens[1].size() + tokens[2].size() + 4));
+
+    if (message.empty() || channel.empty())
+      return;
+
+    if (
+      !IsArbitraryStringUTF8Safe(nickName) || !IsArbitraryStringUTF8Safe(message) ||
+      !IsArbitraryStringUTF8Safe(channel) || !IsArbitraryStringUTF8Safe(hostName)
+    ) {
+      return;
+    }
+
+    string cmdToken, command, target;
+    uint8_t tokenMatch = ExtractMessageTokensAny(message, m_Config.m_PrivateCmdToken, m_Config.m_BroadcastCmdToken, cmdToken, command, target);
+    if (tokenMatch != COMMAND_TOKEN_MATCH_NONE) {
+      const bool isWhisper = channel[0] != '#';
+      shared_ptr<CCommandContext> ctx = nullptr;
+      try {
+        ctx = make_shared<CCommandContext>(ServiceType::kIRC, m_Aura, m_Config.m_CommandCFG, channel, nickName, isWhisper, hostName, !isWhisper && tokenMatch == COMMAND_TOKEN_MATCH_BROADCAST, &std::cout);
+      } catch (...) {
+      }
+      if (ctx) {
+        ctx->UpdatePermissions();
+        ctx->Run(cmdToken, command, target);
+      }
+    }
+
+    return;
+  }
+
+  // kick packet
+  // in:  :nickname!~username@hostname KICK #channel nickname :reason
+  // out: JOIN #channel
+  // rejoin the channel if we're the victim
+
+  if (tokens.size() == 5 && tokens[1] == "KICK") {
+    if (tokens[3] == m_NickName) {
+      Send(Concat("JOIN ", tokens[2]));
+    }
+
+    return;
+  }
+
+  // message of the day end packet
+  // in: :server 376 nickname :End of /MOTD command.
+  // out: JOIN #channel
+  // join channels and auth and set +x on QuakeNet
+
+  if (tokens.size() >= 2 && tokens[1] == "376") {
+    // auth if the server is QuakeNet
+
+    if (m_Config.m_HostName.find("quakenet.org") != string::npos && !m_Config.m_Password.empty()) {
+      SendUser(Concat("AUTH ", m_Config.m_UserName, " ", m_Config.m_Password), "Q@CServe.quakenet.org");
+      Send(Concat("MODE ", m_Config.m_NickName, " +x"));
+    }
+
+    // join channels
+
+    for (const auto& channel : m_Config.m_Channels)
+      Send(Concat("JOIN ", channel));
+
+    return;
+  }
+
+  // nick taken packet
+  // in:  :server 433 CurrentNickname WantedNickname :Nickname is already in use.
+  // out: NICK NewNickname
+  // append an underscore and send the new nickname
+
+  if (tokens.size() >= 2 && tokens[1] == "433") {
+    // nick taken, append _
+
+    m_NickName += '_';
+    Send(Concat("NICK ", m_NickName));
+    return;
+  }
 }
 
 void CIRC::Send(string_view message)

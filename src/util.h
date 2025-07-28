@@ -149,32 +149,58 @@ template <typename T>
 [[nodiscard]] uint8_t ToVersionOrdinal(const Version& version); // Aura internal
 [[nodiscard]] bool GetIsValidVersion(const Version& version);
 [[nodiscard]] std::string ToOrdinalName(const size_t number);
-void WriteUint16(std::vector<uint8_t>& buffer, const uint16_t value, const size_t offset, bool bigEndian = false);
-void WriteUint32(std::vector<uint8_t>& buffer, const uint32_t value, const uint32_t offset, bool bigEndian = false);
-[[nodiscard]] std::vector<uint8_t> CreateByteArray(const uint8_t* a, const size_t size);
+template <Endianness endianness>
+void WriteUint16(std::vector<uint8_t>& buffer, const uint16_t value, const size_t offset);
+template <Endianness endianness>
+void WriteUint32(std::vector<uint8_t>& buffer, const uint32_t value, const uint32_t offset);
+[[nodiscard]] std::vector<uint8_t> CopyBytes(const uint8_t* a, const size_t size);
 [[nodiscard]] std::vector<uint8_t> CreateByteArray(const uint8_t c);
-[[nodiscard]] std::vector<uint8_t> CreateByteArray(const uint16_t i, bool bigEndian);
-[[nodiscard]] std::vector<uint8_t> CreateByteArray(const uint32_t i, bool bigEndian);
-[[nodiscard]] std::vector<uint8_t> CreateByteArray(const int64_t i, bool bigEndian);
-[[nodiscard]] std::vector<uint8_t> CreateByteArray(const float i, bool bigEndian);
-[[nodiscard]] std::vector<uint8_t> CreateByteArray(const double i, bool bigEndian);
+template <Endianness endianness>
+[[nodiscard]] std::vector<uint8_t> CreateByteArray(const uint16_t i);
+template <Endianness endianness>
+[[nodiscard]] std::vector<uint8_t> CreateByteArray(const uint32_t i);
+template <Endianness endianness>
+[[nodiscard]] std::vector<uint8_t> CreateByteArray(const int64_t i);
+template <Endianness endianness>
+[[nodiscard]] std::vector<uint8_t> CreateByteArray(const float i);
+template <Endianness endianness>
+[[nodiscard]] std::vector<uint8_t> CreateByteArray(const double i);
 [[nodiscard]] std::array<uint8_t, 1> CreateFixedByteArray(const uint8_t c);
-[[nodiscard]] std::array<uint8_t, 2> CreateFixedByteArray(const uint16_t i, bool bigEndian);
-[[nodiscard]] std::array<uint8_t, 4> CreateFixedByteArray(const uint32_t i, bool bigEndian);
-[[nodiscard]] std::array<uint8_t, 4> CreateFixedByteArray(const int64_t i, bool bigEndian);
-[[nodiscard]] std::array<uint8_t, 8> CreateFixedByteArray64(const uint64_t i, bool bigEndian);
-[[nodiscard]] std::array<uint8_t, 8> CreateFixedByteArray(const double i, bool bigEndian);
+template <Endianness endianness>
+[[nodiscard]] std::array<uint8_t, 2> CreateFixedByteArray(const uint16_t i);
+template <Endianness endianness>
+[[nodiscard]] std::array<uint8_t, 4> CreateFixedByteArray(const uint32_t i);
+template <Endianness endianness>
+[[nodiscard]] std::array<uint8_t, 4> CreateFixedByteArray(const int64_t i);
+template <Endianness endianness>
+[[nodiscard]] std::array<uint8_t, 8> CreateFixedByteArray64(const uint64_t i);
+template <Endianness endianness>
+[[nodiscard]] std::array<uint8_t, 8> CreateFixedByteArray(const double i);
 void EnsureFixedByteArray(std::optional<std::array<uint8_t, 1>>& optArray, const uint8_t c);
-void EnsureFixedByteArray(std::optional<std::array<uint8_t, 2>>& optArray, const uint16_t i, bool bigEndian);
-void EnsureFixedByteArray(std::optional<std::array<uint8_t, 4>>& optArray, const uint32_t i, bool bigEndian);
-void EnsureFixedByteArray(std::optional<std::array<uint8_t, 4>>& optArray, const int64_t i, bool bigEndian);
-void EnsureFixedByteArray(std::optional<std::array<uint8_t, 8>>& optArray, const double i, bool bigEndian);
-[[nodiscard]] uint16_t ByteArrayToUInt16(const std::vector<uint8_t>& b, bool bigEndian, const size_t start = 0);
-[[nodiscard]] uint32_t ByteArrayToUInt32(const std::vector<uint8_t>& b, bool bigEndian, const size_t start = 0);
-[[nodiscard]] uint16_t ByteArrayToUInt16(const std::array<uint8_t, 2>& b, bool bigEndian);
-[[nodiscard]] uint32_t ByteArrayToUInt32(const std::array<uint8_t, 4>& b, bool bigEndian);
-[[nodiscard]] uint16_t ByteArrayToUInt16(const uint8_t* b, bool bigEndian);
-[[nodiscard]] uint32_t ByteArrayToUInt32(const uint8_t* b, bool bigEndian);
+template <Endianness endianness>
+void EnsureFixedByteArray(std::optional<std::array<uint8_t, 2>>& optArray, const uint16_t i);
+template <Endianness endianness>
+void EnsureFixedByteArray(std::optional<std::array<uint8_t, 4>>& optArray, const uint32_t i);
+template <Endianness endianness>
+void EnsureFixedByteArray(std::optional<std::array<uint8_t, 4>>& optArray, const int64_t i);
+template <Endianness endianness>
+void EnsureFixedByteArray(std::optional<std::array<uint8_t, 8>>& optArray, const double i);
+template <Endianness endianness>
+[[nodiscard]] uint16_t ByteArrayToUInt16(const std::vector<uint8_t>& b, const size_t start);
+template <Endianness endianness>
+[[nodiscard]] uint32_t ByteArrayToUInt32(const std::vector<uint8_t>& b, const size_t start);
+template <Endianness endianness>
+[[nodiscard]] uint16_t ByteArrayToUInt16(const uint8_t* b);
+template <Endianness endianness>
+[[nodiscard]] uint32_t ByteArrayToUInt32(const uint8_t* b);
+[[nodiscard]] uint8_t GetByteAt(const char* b, const size_t pos);
+[[nodiscard]] uint8_t GetByteAt(const std::string_view b, const size_t pos);
+template <Endianness endianness>
+[[nodiscard]] uint16_t ByteArrayToUInt16(const std::string_view b, const size_t start);
+template <Endianness endianness>
+[[nodiscard]] uint32_t ByteArrayToUInt32(const std::string_view b, const size_t start);
+template <Endianness endianness>
+[[nodiscard]] uint64_t ByteArrayToUInt64(const std::string_view b, const size_t start);
 [[nodiscard]] std::string ByteArrayToDecString(const std::vector<uint8_t>& b);
 [[nodiscard]] std::string ByteArrayToDecString(const uint8_t* start, const size_t size);
 template <size_t SIZE>
@@ -183,6 +209,7 @@ template <size_t SIZE>
 [[nodiscard]] std::string ByteArrayToHexString(const uint8_t* start, const size_t size);
 template <size_t SIZE>
 [[nodiscard]] std::string ByteArrayToHexString(const std::array<uint8_t, SIZE>& b);
+[[nodiscard]] std::string GetStringBytesHex(const std::string_view b);
 [[nodiscard]] std::string ReverseByteArrayToDecString(const std::vector<uint8_t>& b);
 [[nodiscard]] std::string ReverseByteArrayToDecString(const uint8_t* start, const size_t size);
 template <size_t SIZE>
@@ -190,16 +217,21 @@ template <size_t SIZE>
 [[nodiscard]] std::string ReverseByteArrayToHexString(const std::vector<uint8_t>& b);
 template <size_t SIZE>
 [[nodiscard]] std::string ReverseByteArrayToHexString(const std::array<uint8_t, SIZE>& b);
-void AppendByteArrayFast(std::vector<uint8_t>& b, const std::vector<uint8_t>& append);
+void AppendContainer(std::vector<uint8_t>& b, const std::vector<uint8_t>& append);
 template <size_t SIZE>
-void AppendByteArrayFast(std::vector<uint8_t>& b, const std::array<uint8_t, SIZE>& append);
-void AppendByteArray(std::vector<uint8_t>& b, const uint8_t* a, const size_t size);
+void AppendContainer(std::vector<uint8_t>& b, const std::array<uint8_t, SIZE>& append);
+void AppendBytes(std::vector<uint8_t>& b, const uint8_t* a, const size_t size);
 void AppendByteArrayString(std::vector<uint8_t>& b, std::string_view append, bool terminator = true);
-void AppendByteArray(std::vector<uint8_t>& b, const uint16_t i, bool bigEndian);
-void AppendByteArray(std::vector<uint8_t>& b, const uint32_t i, bool bigEndian);
-void AppendByteArray(std::vector<uint8_t>& b, const int64_t i, bool bigEndian);
-void AppendByteArray(std::vector<uint8_t>& b, const float i, bool bigEndian);
-void AppendByteArray(std::vector<uint8_t>& b, const double i, bool bigEndian);
+template <Endianness endianness>
+void AppendNumber(std::vector<uint8_t>& b, const uint16_t i);
+template <Endianness endianness>
+void AppendNumber(std::vector<uint8_t>& b, const uint32_t i);
+template <Endianness endianness>
+void AppendNumber(std::vector<uint8_t>& b, const int64_t i);
+template <Endianness endianness>
+void AppendNumber(std::vector<uint8_t>& b, const float i);
+template <Endianness endianness>
+void AppendNumber(std::vector<uint8_t>& b, const double i);
 void AppendSwapString(std::string& fromString, std::string& toString);
 void AppendProtoBufferFromLengthDelimitedS2S(std::vector<uint8_t>& b, const std::string& key, const std::string& value);
 void AppendProtoBufferFromLengthDelimitedS2C(std::vector<uint8_t>& b, const std::string& key, const uint8_t value);
@@ -209,14 +241,18 @@ template <OOBPolicy oobPolicy>
 [[nodiscard]] const uint8_t* FindNullDelimiterInRangeOrStart(const uint8_t* start, const uint8_t* end);
 template <OOBPolicy oobPolicy>
 [[nodiscard]] size_t FindNullDelimiterOrEnd(const std::vector<uint8_t>& b, const size_t start);
+template <OOBPolicy oobPolicy>
+[[nodiscard]] size_t FindNullDelimiterOrEnd(const std::string_view b, const size_t start);
 [[nodiscard]] const uint8_t* FindNullDelimiterInRangeOrEnd(const uint8_t* start, const uint8_t* end);
 [[nodiscard]] std::string GetStringAddressRange(const uint8_t* start, const uint8_t* end);
 [[nodiscard]] std::string GetStringAddressRange(const std::vector<uint8_t>& b, const size_t start, const size_t end);
 [[nodiscard]] std::vector<uint8_t> ExtractCString(const std::vector<uint8_t>& b, const size_t start);
 template <OOBPolicy oobPolicy, NullTerminatorPolicy nullPolicy, StringEncoding encoding>
 [[nodiscard]] std::string_view ExtractStringView(const std::vector<uint8_t>& b, const size_t start, const size_t maxSize);
+template <OOBPolicy oobPolicy, NullTerminatorPolicy nullPolicy, StringEncoding encoding>
+[[nodiscard]] std::string_view ExtractStringView(const std::string_view b, const size_t start, const size_t maxSize);
 [[nodiscard]] std::string_view ExtractUTF8View(const std::vector<uint8_t>& b, const size_t start, const size_t maxSize);
-[[nodiscard]] uint8_t ExtractHex(const std::vector<uint8_t>& b, const size_t start, bool bigEndian);
+[[nodiscard]] std::string_view ExtractUTF8View(const std::string_view b, const size_t start, const size_t maxSize);
 [[nodiscard]] std::vector<uint8_t> ExtractNumbers(const std::string& s, const uint32_t maxCount);
 [[nodiscard]] std::vector<uint8_t> ExtractHexNumbers(const std::string& s);
 [[nodiscard]] std::vector<uint8_t> ExtractIPv4(const std::string& s);
@@ -228,11 +264,12 @@ template <OOBPolicy oobPolicy, NullTerminatorPolicy nullPolicy, StringEncoding e
 [[nodiscard]] std::vector<uint32_t> SplitNumericArgs(const std::string& s, const uint8_t minCount, const uint8_t maxCount);
 void AssignLength(std::vector<uint8_t>& content);
 [[nodiscard]] bool ValidateLength(const std::vector<uint8_t>& content);
+[[nodiscard]] bool ValidateLength(const std::string_view content);
 [[nodiscard]] std::string AddPathSeparator(const std::string& path);
 [[nodiscard]] std::vector<uint8_t> EncodeStatString(const std::vector<uint8_t>& data);
 template <typename T>
 [[nodiscard]] std::vector<uint8_t> DecodeStatString(const T& data);
-[[nodiscard]] std::vector<std::string> SplitTokens(std::string_view s, const char delim);
+[[nodiscard]] std::vector<std::string_view> SplitTokens(std::string_view s, const char delim);
 [[nodiscard]] std::string::size_type GetLevenshteinDistance(const std::string& s1, const std::string& s2);
 [[nodiscard]] std::string::size_type GetLevenshteinDistanceForSearch(const std::string& s1, const std::string& s2, const std::string::size_type bestDistance);
 [[nodiscard]] std::string CheckIsValidHCLStandard(const std::string& s);

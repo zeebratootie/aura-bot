@@ -69,6 +69,10 @@
 
 using namespace std;
 
+// {220, 1, 203, 7}
+constexpr array<uint8_t, 4> BNET_INFO_CLIENT_TOKEN_BYTES = {220, 1, 203, 7};
+constexpr uint32_t BNET_INFO_CLIENT_TOKEN = ByteArrayToUInt32<Endianness::kLittle>(BNET_INFO_CLIENT_TOKEN_BYTES);
+
 //
 // CRealm
 //
@@ -111,10 +115,10 @@ CRealm::CRealm(CAura* nAura, CRealmConfig* nRealmConfig)
 
     m_LoginSalt({}),
     m_LoginServerPublicKey({}),
-    m_InfoClientToken({220, 1, 203, 7}),
-    m_InfoLogonType({}),
-    m_InfoServerToken({}),
-    m_InfoMPQFileTime({}),
+    m_InfoClientToken(BNET_INFO_CLIENT_TOKEN),
+    m_InfoLogonType(0),
+    m_InfoServerToken(0),
+    m_InfoMPQFileTime(0),
 
     m_HostName(nRealmConfig->m_HostName),
 
@@ -180,32 +184,36 @@ void CRealm::UpdateConnected(fd_set* fd, fd_set* send_fd)
 {
   // the socket is connected and everything appears to be working properly
   if (m_Socket->DoRecv(fd)) {
+    string_view data = m_Socket->GetRecvBufferView();
 
     // extract as many packets as possible from the socket's receive buffer and process them
-    string*              RecvBuffer         = m_Socket->GetBytes();
-    std::vector<uint8_t> Bytes              = CreateByteArray((uint8_t*)RecvBuffer->c_str(), RecvBuffer->size());
-    uint32_t             LengthProcessed    = 0;
-    bool Abort                              = false;
+    bool Abort = false;
 
     // a packet is at least 4 bytes so loop as long as the buffer contains 4 bytes
 
-    while (Bytes.size() >= 4) {
+    while (data.size() >= 4) {
       // bytes 2 and 3 contain the length of the packet
-      const uint16_t             Length = ByteArrayToUInt16(Bytes, false, 2);
-      if (Length < 4) {
+      const uint16_t packetSize = ByteArrayToUInt16<Endianness::kLittle>(data, 2);
+      if (packetSize < 4) {
         Abort = true;
         break;
       }
-      if (Bytes.size() < Length) break;
-      const vector<uint8_t> Data = vector<uint8_t>(begin(Bytes), begin(Bytes) + Length);
+      if (data.size() < packetSize) {
+        // we don't have the complete packet yet
+        break;
+      }
+
+      string_view packet = data.substr(0, packetSize);
+      const uint8_t packetFamily = GetByteAt(packet, 0);
+      const uint8_t packetType = GetByteAt(packet, 1);
 
       // byte 0 is always 255
-      if (Bytes[0] == BNETProtocol::Magic::BNET_HEADER)
+      if (packetFamily == BNETProtocol::Magic::BNET_HEADER)
       {
         // Any BNET packet is fine to reset app-level inactivity timeout.
         m_NullPacketsSent = 0;
 
-        switch (Bytes[1])
+        switch (packetType)
         {
           case BNETProtocol::Magic::ZERO:
             // warning: we do not respond to NULL packets with a NULL packet of our own
@@ -214,14 +222,15 @@ void CRealm::UpdateConnected(fd_set* fd, fd_set* send_fd)
             break;
 
           case BNETProtocol::Magic::GETADVLISTEX: {
-            vector<NetworkGameInfo> thirdPartyHostedGames = BNETProtocol::RECEIVE_SID_GETADVLISTEX(GetGameVersion(), Data);
+            vector<uint8_t> sanityBuffer = vector<uint8_t>(packet.begin(), packet.end()); // TODO: Convert RECEIVE_SID_GETADVLISTEX to std::string_view
+            vector<NetworkGameInfo> thirdPartyHostedGames = BNETProtocol::RECEIVE_SID_GETADVLISTEX(GetGameVersion(), sanityBuffer);
             if (!thirdPartyHostedGames.empty() && m_Aura->m_Net.m_Config.m_UDPForwardGameLists) {
               std::vector<uint8_t> relayPacket = {GameProtocol::Magic::W3FW_HEADER, 0, 0, 0};
               std::string ipString = m_Socket->GetIPString();
               AppendByteArrayString(relayPacket, ipString, true);
-              AppendByteArray(relayPacket, static_cast<uint16_t>(6112u), true);
-              AppendByteArray(relayPacket, (uint32_t)m_AuthGameVersion.second, false);
-              AppendByteArrayFast(relayPacket, Data);
+              AppendNumber<Endianness::kBig>(relayPacket, static_cast<uint16_t>(6112u));
+              AppendNumber<Endianness::kLittle>(relayPacket, (uint32_t)m_AuthGameVersion.second);
+              AppendByteArrayString(relayPacket, packet, false);
               AssignLength(relayPacket);
               DPRINT_IF(LogLevel::kTrace2, GetLogPrefix() + "sending game list to " + AddressToString(m_Aura->m_Net.m_Config.m_UDPForwardAddress) + " (" + to_string(relayPacket.size()) + " bytes)");
               m_Aura->m_Net.Send(&(m_Aura->m_Net.m_Config.m_UDPForwardAddress), relayPacket);
@@ -253,7 +262,7 @@ void CRealm::UpdateConnected(fd_set* fd, fd_set* send_fd)
           }
 
           case BNETProtocol::Magic::ENTERCHAT: {
-            BNETProtocol::EnterChatResult enterChatResult = BNETProtocol::RECEIVE_SID_ENTERCHAT(Data);
+            BNETProtocol::EnterChatResult enterChatResult = BNETProtocol::RECEIVE_SID_ENTERCHAT(packet);
             if (enterChatResult.success) {
               PRINT_IF(LogLevel::kDebug, GetLogPrefix() + "entered chat");
               m_ChatNickName = string(enterChatResult.uniqueName);
@@ -265,7 +274,7 @@ void CRealm::UpdateConnected(fd_set* fd, fd_set* send_fd)
           }
 
           case BNETProtocol::Magic::CHATEVENT: {
-            BNETProtocol::IncomingChatResult chatEventResult = BNETProtocol::RECEIVE_SID_CHATEVENT(Data);
+            BNETProtocol::IncomingChatResult chatEventResult = BNETProtocol::RECEIVE_SID_CHATEVENT(packet);
             if (chatEventResult.success) {
               ProcessChatEvent(chatEventResult.type, chatEventResult.userName, chatEventResult.message);
             }
@@ -273,7 +282,7 @@ void CRealm::UpdateConnected(fd_set* fd, fd_set* send_fd)
           }
 
           case BNETProtocol::Magic::CHECKAD:
-            //BNETProtocol::RECEIVE_SID_CHECKAD(Data);
+            //BNETProtocol::RECEIVE_SID_CHECKAD(packet);
             break;
 
           case BNETProtocol::Magic::STARTADVEX3:
@@ -282,7 +291,7 @@ void CRealm::UpdateConnected(fd_set* fd, fd_set* send_fd)
               break;
             }
             if (!m_GameBroadcast.expired()) {
-              if (BNETProtocol::RECEIVE_SID_STARTADVEX3(Data)) {
+              if (BNETProtocol::RECEIVE_SID_STARTADVEX3(packet)) {
                 DPRINT_IF(LogLevel::kTrace2, GetLogPrefix() + "Game published OK <<" + GetGameBroadcastName() + ">>");
                 m_Aura->EventBNETGameRefreshSuccess(shared_from_this());
               } else {
@@ -294,21 +303,23 @@ void CRealm::UpdateConnected(fd_set* fd, fd_set* send_fd)
             break;
 
           case BNETProtocol::Magic::PING:
-            SendAuth(BNETProtocol::SEND_SID_PING(BNETProtocol::RECEIVE_SID_PING(Data)));
+            SendAuth(BNETProtocol::SEND_SID_PING(BNETProtocol::RECEIVE_SID_PING(packet)));
             break;
 
           case BNETProtocol::Magic::AUTH_INFO: {
-            BNETProtocol::AuthInfoResult infoResult = BNETProtocol::RECEIVE_SID_AUTH_INFO(Data);
-            if (!infoResult.success)
-              break;
+            {
+              BNETProtocol::AuthInfoResult infoResult = BNETProtocol::RECEIVE_SID_AUTH_INFO(packet);
+              if (!infoResult.success)
+                break;
 
-            copy_n(infoResult.logonType, 4, m_InfoLogonType.begin());
-            copy_n(infoResult.serverToken, 4, m_InfoServerToken.begin());
-            copy_n(infoResult.mpqFileTime, 8, m_InfoMPQFileTime.begin());
-            m_InfoIX86VerFileName = vector<uint8_t>(infoResult.verFileNameStart, infoResult.verFileNameEnd);
-            m_InfoValueStringFormula = vector<uint8_t>(infoResult.valueStringFormulaStart, infoResult.valueStringFormulaEnd);
+              m_InfoLogonType = infoResult.logonType;
+              m_InfoServerToken = infoResult.serverToken;
+              m_InfoMPQFileTime = infoResult.mpqFileTime;
+              m_InfoIX86VerFileName.swap(infoResult.verFileName);
+              m_InfoValueStringFormula.swap(infoResult.valueStringFormula);
+            }
 
-            bool versionSuccess = m_BNCSUtil->HELP_SID_AUTH_CHECK(m_Aura->m_GameInstallPath, m_Aura->m_GameDataVersion, m_GameIsExpansion, m_AuthGameVersion, &m_Config, GetValueStringFormulaString(), GetIX86VerFileNameString(), GetInfoClientToken(), GetInfoServerToken());
+            bool versionSuccess = m_BNCSUtil->HELP_SID_AUTH_CHECK(m_Aura->m_GameInstallPath, m_Aura->m_GameDataVersion, m_GameIsExpansion, m_AuthGameVersion, &m_Config, GetValueStringFormula(), GetIX86VerFileName(), GetInfoClientToken(), GetInfoServerToken());
             if (versionSuccess) {
               const array<uint8_t, 4>& exeVersion = m_BNCSUtil->GetEXEVersion();
               const array<uint8_t, 4>& exeVersionHash = m_BNCSUtil->GetEXEVersionHash();
@@ -343,7 +354,7 @@ void CRealm::UpdateConnected(fd_set* fd, fd_set* send_fd)
           }
 
           case BNETProtocol::Magic::AUTH_CHECK: {
-            BNETProtocol::AuthCheckResult checkResult = BNETProtocol::RECEIVE_SID_AUTH_CHECK(Data);
+            BNETProtocol::AuthCheckResult checkResult = BNETProtocol::RECEIVE_SID_AUTH_CHECK(packet);
             if (m_Config.m_ExeAuthIgnoreVersionError || checkResult.state == BNETProtocol::KeyResult::GOOD)
             {
               // cd keys accepted
@@ -384,10 +395,11 @@ void CRealm::UpdateConnected(fd_set* fd, fd_set* send_fd)
           }
 
           case BNETProtocol::Magic::AUTH_ACCOUNTLOGON: {
-            BNETProtocol::AuthLoginResult loginResult = BNETProtocol::RECEIVE_SID_AUTH_ACCOUNTLOGON(Data);
+            BNETProtocol::AuthLoginResult loginResult = BNETProtocol::RECEIVE_SID_AUTH_ACCOUNTLOGON(packet);
             if (loginResult.success) {
-              copy_n(loginResult.salt, 32, m_LoginSalt.begin());
-              copy_n(loginResult.serverPublicKey, 32, m_LoginServerPublicKey.begin());
+              // TODO: copy_n std::string_view -> std::array<uint8_t, 32> ??
+              copy_n(loginResult.salt.data(), 32, m_LoginSalt.begin());
+              copy_n(loginResult.serverPublicKey.data(), 32, m_LoginServerPublicKey.begin());
               DPRINT_IF(LogLevel::kTrace, GetLogPrefix() + "username [" + m_Config.m_UserName + "] OK");
               Login();
             } else {
@@ -403,7 +415,7 @@ void CRealm::UpdateConnected(fd_set* fd, fd_set* send_fd)
           }
 
           case BNETProtocol::Magic::AUTH_ACCOUNTLOGONPROOF:
-            if (BNETProtocol::RECEIVE_SID_AUTH_ACCOUNTLOGONPROOF(Data)) {
+            if (BNETProtocol::RECEIVE_SID_AUTH_ACCOUNTLOGONPROOF(packet)) {
               OnLoginOkay();
             } else {
               m_FailedLogin = true;
@@ -414,7 +426,7 @@ void CRealm::UpdateConnected(fd_set* fd, fd_set* send_fd)
             break;
 
           case BNETProtocol::Magic::AUTH_ACCOUNTSIGNUP:
-            if (BNETProtocol::RECEIVE_SID_AUTH_ACCOUNTSIGNUP(Data)) {
+            if (BNETProtocol::RECEIVE_SID_AUTH_ACCOUNTSIGNUP(packet)) {
               OnSignupOkay();
             } else {
               m_FailedSignup = true;
@@ -425,15 +437,15 @@ void CRealm::UpdateConnected(fd_set* fd, fd_set* send_fd)
             break;
 
           case BNETProtocol::Magic::FRIENDLIST:
-            m_Friends = BNETProtocol::RECEIVE_SID_FRIENDLIST(Data);
+            m_Friends = BNETProtocol::RECEIVE_SID_FRIENDLIST(packet);
             break;
 
           case BNETProtocol::Magic::CLANMEMBERLIST:
-            m_Clan = BNETProtocol::RECEIVE_SID_CLANMEMBERLIST(Data);
+            m_Clan = BNETProtocol::RECEIVE_SID_CLANMEMBERLIST(packet);
             break;
 
           case BNETProtocol::Magic::GETGAMEINFO:
-            PRINT_IF(LogLevel::kWarning, GetLogPrefix() + "got SID_GETGAMEINFO: " + ByteArrayToHexString(Data));
+            PRINT_IF(LogLevel::kWarning, GetLogPrefix() + "got SID_GETGAMEINFO: " + GetStringBytesHex(packet));
             break;
 
           case BNETProtocol::Magic::HOSTGAME: {
@@ -441,7 +453,7 @@ void CRealm::UpdateConnected(fd_set* fd, fd_set* send_fd)
               break;
             }
 
-            optional<CConfig> hostedGameConfig = BNETProtocol::RECEIVE_HOSTED_GAME_CONFIG(Data);
+            optional<CConfig> hostedGameConfig = BNETProtocol::RECEIVE_HOSTED_GAME_CONFIG(packet);
             if (!hostedGameConfig.has_value()) {
               PRINT_IF(LogLevel::kWarning, GetLogPrefix() + "got invalid SID_HOSTGAME message");
               break;
@@ -472,14 +484,15 @@ void CRealm::UpdateConnected(fd_set* fd, fd_set* send_fd)
         }
       }
 
-      LengthProcessed += Length;
-      Bytes = vector<uint8_t>(begin(Bytes) + Length, end(Bytes));
+      data.remove_prefix(packetSize);
     }
 
     if (Abort) {
-      RecvBuffer->clear();
-    } else if (LengthProcessed > 0) {
-      *RecvBuffer = RecvBuffer->substr(LengthProcessed);
+      data.remove_prefix(data.size());
+    }
+
+    if (data.size() != m_Socket->GetRecvBufferSize()) {
+      m_Socket->UpdateRecvBuffer(data);
     }
   }
 
@@ -602,7 +615,7 @@ void CRealm::ProcessChatEvent(const uint32_t eventType, string_view fromUser, st
   bool isWhisper = (eventType == BNETProtocol::IncomingChatEvent::WHISPER);
 
   if (!m_Socket->GetConnected()) {
-    PRINT_IF(LogLevel::kDebug, GetLogPrefix() + "not connected - message from [" + string(fromUser) + "] rejected: [" + string(message) + "]");
+    PRINT_IF(LogLevel::kDebug, Concat(GetLogPrefix(), "not connected - message from [", fromUser, "] rejected: [", message, "]"));
     return;
   }
 
@@ -629,9 +642,9 @@ void CRealm::ProcessChatEvent(const uint32_t eventType, string_view fromUser, st
     }
     // FIXME: Chat logging kinda sucks
     if (isWhisper) {
-      PRINT_IF(LogLevel::kNotice, "[WHISPER: " + m_Config.m_UniqueName + "] [" + string(fromUser) + "] " + string(message));
+      PRINT_IF(LogLevel::kNotice, Concat("[WHISPER: ", m_Config.m_UniqueName, "] [", fromUser, "] ", message));
     } else if (GetShouldLogChatToConsole()) {
-      Print("[CHAT: " + m_Config.m_UniqueName + "] [" + string(fromUser) + "] " + string(message));
+      Print(Concat("[CHAT: ", m_Config.m_UniqueName, "] [", fromUser, "] ", message));
     }
 
     // handle bot commands
@@ -650,9 +663,9 @@ void CRealm::ProcessChatEvent(const uint32_t eventType, string_view fromUser, st
     uint8_t tokenMatch = ExtractMessageTokensAny(message, m_Config.m_PrivateCmdToken, m_Config.m_BroadcastCmdToken, cmdToken, command, target);
     if (tokenMatch == COMMAND_TOKEN_MATCH_NONE) {
       if (isWhisper && fromUser != "PvPGN Realm") {
-        string tokenName = GetTokenName(m_Config.m_PrivateCmdToken);
+        string_view tokenName = GetTokenName(m_Config.m_PrivateCmdToken);
         string example = m_Aura->m_Net.m_Config.m_AllowDownloads ? "host wc3maps-8" : "host castle";
-        QueueWhisper("Hi, " + string(fromUser) + ". Use " + m_Config.m_PrivateCmdToken + tokenName + " for commands. Example: " + m_Config.m_PrivateCmdToken + example, fromUser);
+        QueueWhisper(Concat("Hi, ", fromUser, ". Use ", m_Config.m_PrivateCmdToken, tokenName, " for commands. Example: ", m_Config.m_PrivateCmdToken, example), fromUser);
       }
       return;
     }
@@ -667,16 +680,16 @@ void CRealm::ProcessChatEvent(const uint32_t eventType, string_view fromUser, st
   }
   else if (eventType == BNETProtocol::IncomingChatEvent::CHANNEL)
   {
-    PRINT_IF(LogLevel::kInfo, GetLogPrefix() + "joined channel [" + string(message) + "]");
+    PRINT_IF(LogLevel::kInfo, Concat(GetLogPrefix(), "joined channel [", message, "]"));
     m_CurrentChannel = message;
   } else if (eventType == BNETProtocol::IncomingChatEvent::WHISPERSENT) {
-    PRINT_IF(LogLevel::kDebug, GetLogPrefix() + "whisper sent OK [" + string(message) + "]");
+    PRINT_IF(LogLevel::kDebug, Concat(GetLogPrefix(), "whisper sent OK [", message, "]"));
     if (!m_ChatSentWhispers.empty()) {
       CQueuedChatMessage* oldestWhisper = m_ChatSentWhispers.front();
       if (oldestWhisper->IsProxySent()) {
         shared_ptr<CCommandContext> fromCtx = oldestWhisper->GetProxyCtx();
         if (fromCtx->CheckActionMessage(message) && !fromCtx->GetPartiallyDestroyed()) {
-          fromCtx->SendReply("message sent to " + oldestWhisper->GetReceiver() + ".");
+          fromCtx->SendReply(Concat("message sent to ", oldestWhisper->GetReceiver(), "."));
         }
         fromCtx->ClearActionMessage();
       }
@@ -708,7 +721,7 @@ void CRealm::ProcessChatEvent(const uint32_t eventType, string_view fromUser, st
       }
     }
     if (LogInfo) {
-      PRINT_IF(LogLevel::kInfo, "[INFO: " + m_Config.m_UniqueName + "] " + string(message));
+      PRINT_IF(LogLevel::kInfo, Concat("[INFO: ", m_Config.m_UniqueName, "] ", message));
     }
   } else if (eventType == BNETProtocol::IncomingChatEvent::NOTICE) {
     // Note that the default English error message <<That user is not logged on.>> is also received in other two circumstances:
@@ -723,14 +736,14 @@ void CRealm::ProcessChatEvent(const uint32_t eventType, string_view fromUser, st
       if (oldestWhisper->IsProxySent()) {
         shared_ptr<CCommandContext> fromCtx = oldestWhisper->GetProxyCtx();
         if (!fromCtx->GetPartiallyDestroyed()) {
-          fromCtx->SendReply(oldestWhisper->GetReceiver() + " is offline.");
+          fromCtx->SendReply(Concat(oldestWhisper->GetReceiver(), " is offline."));
         }
         fromCtx->ClearActionMessage();
       }
       delete oldestWhisper;
       m_ChatSentWhispers.pop();
     }
-    PRINT_IF(LogLevel::kNotice, "[NOTE: " + m_Config.m_UniqueName + "] " + string(message));
+    PRINT_IF(LogLevel::kNotice, Concat("[NOTE: ", m_Config.m_UniqueName, "] ", message));
   }
 }
 
@@ -776,7 +789,7 @@ bool CRealm::SendQueuedMessage(CQueuedChatMessage* message)
   }
 
   if (m_Aura->MatchLogLevel(LogLevel::kInfo)) {
-    string modeFragment = "sent message <<";
+    string_view modeFragment = "sent message <<";
     if (message->GetWasThrottled()) {
       if (selectType == CHAT_RECV_SELECTED_WHISPER) {
         modeFragment = "sent whisper (throttled) <<";
@@ -786,13 +799,13 @@ bool CRealm::SendQueuedMessage(CQueuedChatMessage* message)
     } else if (selectType == CHAT_RECV_SELECTED_WHISPER) {
       modeFragment = "sent whisper <<";
     }
-    PRINT_IF(LogLevel::kInfo, GetLogPrefix() + modeFragment + message->GetInnerMessage() + ">>");
+    PRINT_IF(LogLevel::kInfo, Concat(GetLogPrefix(), modeFragment, message->GetInnerMessage(), ">>"));
   }
   if (selectType == CHAT_RECV_SELECTED_WHISPER) {
     m_ChatSentWhispers.push(message);
     if (m_ChatSentWhispers.size() > 25 && !m_AnyWhisperRejected && m_Aura->MatchLogLevel(LogLevel::kWarning)) {
-      Print(GetLogPrefix() + "warning - " + to_string(m_ChatSentWhispers.size()) + " sent whispers have not been confirmed by the server");
-      Print(GetLogPrefix() + "warning - <" + m_Config.m_CFGKeyPrefix + "protocol.whisper.error_reply = " + m_Config.m_WhisperErrorReply + "> may not match the language of this realm's system messages.");
+      Print(Concat(GetLogPrefix(), "warning - ", to_string(m_ChatSentWhispers.size()), " sent whispers have not been confirmed by the server"));
+      Print(Concat(GetLogPrefix(), "warning - <", m_Config.m_CFGKeyPrefix + "protocol.whisper.error_reply = ", m_Config.m_WhisperErrorReply, "> may not match the language of this realm's system messages."));
     }
     // Caller must not delete the message.
     deleteMessage = false;

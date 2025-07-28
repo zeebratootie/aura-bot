@@ -527,37 +527,41 @@ bool CGameUser::Update(fd_set* fd, int64_t timeout)
 
   bool Abort = false;
   if (m_Socket->DoRecv(fd)) {
+    CStreamIOSocket* socket = m_Socket;
+    string_view data = socket->GetRecvBufferView();
+
     // extract as many packets as possible from the socket's receive buffer and process them
-
-    string*              RecvBuffer         = m_Socket->GetBytes();
-    std::vector<uint8_t> Bytes              = CreateByteArray((uint8_t*)RecvBuffer->c_str(), RecvBuffer->size());
-    uint32_t             LengthProcessed    = 0;
-
     // a packet is at least 4 bytes so loop as long as the buffer contains 4 bytes
 
-    while (Bytes.size() >= 4)
+    while (data.size() >= 4)
     {
       // bytes 2 and 3 contain the length of the packet
-      const uint16_t Length = ByteArrayToUInt16(Bytes, false, 2);
-      if (Length < 4) {
+      const uint16_t packetSize = ByteArrayToUInt16<Endianness::kLittle>(data, 2);
+      if (packetSize < 4) {
         m_Game.get().EventUserDisconnectGameProtocolError(this, true);
         Abort = true;
         break;
       }
-      if (Bytes.size() < Length) break;
-      const std::vector<uint8_t> Data = std::vector<uint8_t>(begin(Bytes), begin(Bytes) + Length);
+      if (data.size() < packetSize) {
+        // we don't have the complete packet yet
+        break;
+      }
 
-      if (Bytes[0] == GameProtocol::Magic::W3GS_HEADER)
+      string_view packet = data.substr(0, packetSize);
+      const uint8_t packetFamily = GetByteAt(packet, 0);
+      const uint8_t packetType = GetByteAt(packet, 1);
+
+      if (packetFamily == GameProtocol::Magic::W3GS_HEADER)
       {
         m_GProxy->AddRecvPacket();
 
         // byte 1 contains the packet ID
 
-        switch (Bytes[1])
+        switch (packetType)
         {
           case GameProtocol::Magic::LEAVEGAME: {
-            if (ValidateLength(Data) && Data.size() >= 8) {
-              const uint32_t reason = ByteArrayToUInt32(Data, false, 4);
+            if (ValidateLength(packet) && packet.size() >= 8) {
+              const uint32_t reason = ByteArrayToUInt32<Endianness::kLittle>(packet, 4);
               m_Game.get().EventUserLeft(this, reason);
               m_Socket->SetLogErrors(false);
             } else {
@@ -568,7 +572,7 @@ bool CGameUser::Update(fd_set* fd, int64_t timeout)
           }
 
           case GameProtocol::Magic::GAMELOADED_SELF:
-            if (GameProtocol::RECEIVE_W3GS_GAMELOADED_SELF(Data)) {
+            if (GameProtocol::RECEIVE_W3GS_GAMELOADED_SELF(packet)) {
               if (m_Game.get().GetGameLoading() && !m_FinishedLoading) {
                 m_FinishedLoading      = true;
                 m_FinishedLoadingTicks = m_Aura->GetLoopTicks();
@@ -579,8 +583,8 @@ bool CGameUser::Update(fd_set* fd, int64_t timeout)
             break;
 
           case GameProtocol::Magic::OUTGOING_ACTION: {
-            if (ValidateLength(Data) && Data.size() >= 8) {
-              CIncomingAction action = GameProtocol::RECEIVE_W3GS_OUTGOING_ACTION(Data, m_UID);
+            if (ValidateLength(packet) && packet.size() >= 8) {
+              CIncomingAction action = GameProtocol::RECEIVE_W3GS_OUTGOING_ACTION(packet, m_UID);
               if (!m_Game.get().EventUserIncomingAction(this, action)) {
                 m_Game.get().EventUserDisconnectGameProtocolError(this, false);
                 Abort = true;
@@ -595,7 +599,7 @@ bool CGameUser::Update(fd_set* fd, int64_t timeout)
               m_Game.get().EventUserDisconnectGameProtocolError(this, false);
               Abort = true;
             } else {
-              m_CheckSums.push(GameProtocol::RECEIVE_W3GS_OUTGOING_KEEPALIVE(Data));
+              m_CheckSums.push(GameProtocol::RECEIVE_W3GS_OUTGOING_KEEPALIVE(packet));
               ++m_SyncCounter;
               m_Game.get().EventUserKeepAlive(this);
             }
@@ -603,7 +607,7 @@ bool CGameUser::Update(fd_set* fd, int64_t timeout)
           }
 
           case GameProtocol::Magic::CHAT_TO_HOST: {
-            CIncomingChatMessage incomingChatMessage = GameProtocol::RECEIVE_W3GS_CHAT_TO_HOST(Data);
+            CIncomingChatMessage incomingChatMessage = GameProtocol::RECEIVE_W3GS_CHAT_TO_HOST(packet);
 
             if (incomingChatMessage.GetIsValid()) {
               m_Game.get().EventUserChatOrPlayerSettings(this, incomingChatMessage);
@@ -625,7 +629,7 @@ bool CGameUser::Update(fd_set* fd, int64_t timeout)
               break;
             }
 
-            CIncomingMapFileSize incomingMapSize = GameProtocol::RECEIVE_W3GS_MAPSIZE(Data);
+            CIncomingMapFileSize incomingMapSize = GameProtocol::RECEIVE_W3GS_MAPSIZE(packet);
             if (incomingMapSize.GetIsValid()) {
               m_Game.get().EventUserMapSize(this, incomingMapSize);
             }
@@ -633,7 +637,7 @@ bool CGameUser::Update(fd_set* fd, int64_t timeout)
           }
 
           case GameProtocol::Magic::PONG_TO_HOST: {
-            uint32_t Pong = GameProtocol::RECEIVE_W3GS_PONG_TO_HOST(Data);
+            uint32_t Pong = GameProtocol::RECEIVE_W3GS_PONG_TO_HOST(packet);
 
             const bool bufferBloatForbidden = m_Game.get().m_Aura->m_Net.m_Config.m_HasBufferBloat && m_Game.get().IsDownloading();
             bool useSystemRTT = !m_Socket->GetIsLoopback() && m_Game.get().GetGameLoaded() && m_Game.get().m_Aura->m_Net.m_Config.m_UseSystemRTT;
@@ -711,10 +715,11 @@ bool CGameUser::Update(fd_set* fd, int64_t timeout)
           case GameProtocol::Magic::PROTO_BUF: {
             // Serialized protocol buffers
             // TODO: Not sure how to handle PROTO_BUF in the most compatible way yet.
+            vector<uint8_t> resendPacket = vector<uint8_t>(packet.begin(), packet.end());
             if (m_Game.get().GetIsSupportedGameVersion(GAMEVER(1u, 31u))) {
-              m_Game.get().SendAll(Data);
+              m_Game.get().SendAll(resendPacket);
             } else {
-              Send(Data);
+              Send(resendPacket);
             }
             break;
           }
@@ -728,31 +733,29 @@ bool CGameUser::Update(fd_set* fd, int64_t timeout)
           Abort = true;
         }
       }
-      else if (Bytes[0] == GPSProtocol::Magic::GPS_HEADER && m_Game.get().GetIsProxyReconnectable()) {
-        if (Bytes[1] == GPSProtocol::Magic::ACK && Length == 8) {
-          EventGProxyAck(ByteArrayToUInt32(Data, false, 4));
-        } else if (Bytes[1] == GPSProtocol::Magic::INIT) {
-          EventGProxyClientInit(/* version */ Length >= 8 ? ByteArrayToUInt32(Bytes, false, 4) : 0);
-        } else if (Bytes[1] == GPSProtocol::Magic::SUPPORT_EXTENDED && Length >= 8) {
-          EventGProxyExtendedClientInit(Data);
-        } else if (Bytes[1] == GPSProtocol::Magic::CHANGEKEY && Length >= 8) {
-          EventGProxyChangeKey(ByteArrayToUInt32(Bytes, false, 4));
+      else if (packetFamily == GPSProtocol::Magic::GPS_HEADER && m_Game.get().GetIsProxyReconnectable()) {
+        if (packetType == GPSProtocol::Magic::ACK && packetSize == 8) {
+          EventGProxyAck(ByteArrayToUInt32<Endianness::kLittle>(packet, 4));
+        } else if (packetType == GPSProtocol::Magic::INIT) {
+          EventGProxyClientInit(/* version */ packetSize >= 8 ? ByteArrayToUInt32<Endianness::kLittle>(packet, 4) : 0);
+        } else if (packetType == GPSProtocol::Magic::SUPPORT_EXTENDED && packetSize >= 8) {
+          EventGProxyExtendedClientInit(packet);
+        } else if (packetType == GPSProtocol::Magic::CHANGEKEY && packetSize >= 8) {
+          EventGProxyChangeKey(ByteArrayToUInt32<Endianness::kLittle>(packet, 4));
         }
       }
 
+      data.remove_prefix(packetSize);
+
       if (Abort) {
         // Process no more packets
+        data.remove_prefix(data.size());
         break;
       }
-
-      LengthProcessed += Length;
-      Bytes = std::vector<uint8_t>(begin(Bytes) + Length, end(Bytes));
     }
 
-    if (Abort) {
-      RecvBuffer->clear();
-    } else if (LengthProcessed > 0) {
-      *RecvBuffer = RecvBuffer->substr(LengthProcessed);
+    if (data.size() != socket->GetRecvBufferSize()) {
+      socket->UpdateRecvBuffer(data);
     }
   } else if (m_Aura->GetTicksIsAfterDelay(m_Socket->GetLastRecv(), timeout)) {
     // check for socket timeouts
@@ -879,7 +882,7 @@ void CGameUser::EventGProxyClientInit(const uint32_t version)
   Print(Concat(game.GetLogPrefix(), "player [", m_Name, "] will reconnect at port ", to_string(port), " if disconnected"));
 }
 
-void CGameUser::EventGProxyExtendedClientInit(const vector<uint8_t>& data)
+void CGameUser::EventGProxyExtendedClientInit(const string_view data)
 {
   GProxyExtendedClientResult extendedMode = m_GProxy->ConfirmExtended(data);
   switch (extendedMode) {

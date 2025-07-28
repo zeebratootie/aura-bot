@@ -107,12 +107,12 @@ private:
 
   std::array<uint8_t, 32>          m_LoginSalt;                 // set in RECEIVE_SID_AUTH_ACCOUNTLOGON
   std::array<uint8_t, 32>          m_LoginServerPublicKey;      // set in RECEIVE_SID_AUTH_ACCOUNTLOGON
-  std::array<uint8_t, 4>           m_InfoClientToken;           // set in constructor
-  std::array<uint8_t, 4>           m_InfoLogonType;             // set in RECEIVE_SID_AUTH_INFO
-  std::array<uint8_t, 4>           m_InfoServerToken;           // set in RECEIVE_SID_AUTH_INFO
-  std::array<uint8_t, 8>           m_InfoMPQFileTime;           // set in RECEIVE_SID_AUTH_INFO
-  std::vector<uint8_t>             m_InfoIX86VerFileName;       // set in RECEIVE_SID_AUTH_INFO
-  std::vector<uint8_t>             m_InfoValueStringFormula;    // set in RECEIVE_SID_AUTH_INFO
+  uint32_t                         m_InfoClientToken;           // set in constructor
+  uint32_t                         m_InfoLogonType;             // set in RECEIVE_SID_AUTH_INFO
+  uint32_t                         m_InfoServerToken;           // set in RECEIVE_SID_AUTH_INFO
+  uint64_t                         m_InfoMPQFileTime;           // set in RECEIVE_SID_AUTH_INFO
+  std::string                      m_InfoIX86VerFileName;       // set in RECEIVE_SID_AUTH_INFO
+  std::string                      m_InfoValueStringFormula;    // set in RECEIVE_SID_AUTH_INFO
   std::string                      m_ChatNickName;              // set in RECEIVE_SID_ENTERCHAT
 
   std::vector<std::string>         m_Friends;                   // std::vector of friends
@@ -138,14 +138,12 @@ public:
   ~CRealm();
   CRealm(CRealm&) = delete;
 
-  inline const std::array<uint8_t, 4>&    GetInfoClientToken() const { return m_InfoClientToken; }
-  inline const std::array<uint8_t, 4>&    GetInfoLogonType() const { return m_InfoLogonType; }
-  inline const std::array<uint8_t, 4>&    GetInfoServerToken() const { return m_InfoServerToken; }
-  inline const std::array<uint8_t, 8>&    GetMPQFileTime() const { return m_InfoMPQFileTime; }
-  inline const std::vector<uint8_t>       GetIX86VerFileName() const { return m_InfoIX86VerFileName; }
-  inline std::string                      GetIX86VerFileNameString() const { return std::string(begin(m_InfoIX86VerFileName), end(m_InfoIX86VerFileName)); }
-  inline const std::vector<uint8_t>&      GetValueStringFormula() const { return m_InfoValueStringFormula; }
-  inline std::string                      GetValueStringFormulaString() const { return std::string(begin(m_InfoValueStringFormula), end(m_InfoValueStringFormula)); }
+  inline uint32_t                         GetInfoClientToken() const { return m_InfoClientToken; }
+  inline uint32_t                         GetInfoLogonType() const { return m_InfoLogonType; }
+  inline uint32_t                         GetInfoServerToken() const { return m_InfoServerToken; }
+  inline uint64_t                         GetMPQFileTime() const { return m_InfoMPQFileTime; }
+  inline const std::string&               GetIX86VerFileName() const { return m_InfoIX86VerFileName; }
+  inline const std::string&               GetValueStringFormula() const { return m_InfoValueStringFormula; }
   inline const std::array<uint8_t, 32>&   GetLoginSalt() const { return m_LoginSalt; }
   inline const std::array<uint8_t, 32>&   GetLoginServerPublicKey() const { return m_LoginServerPublicKey; }
   inline const std::string&               GetChatNickName() const { return m_ChatNickName; }

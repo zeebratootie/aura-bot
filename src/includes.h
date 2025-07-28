@@ -49,6 +49,7 @@
 // STL
 
 #include <cmath>
+#include <cstddef>
 #include <cstring>
 #include <cstdint>
 #include <ctime>
@@ -164,6 +165,19 @@ std::string::size_type constexpr GetStringLength(const char* str)
         assert(_assert_val && T);\
     } while (0)
 #endif
+
+#define AppendNumberLE AppendNumber<Endianness::kLittle>
+#define AppendNumberBE AppendNumber<Endianness::kBig>
+#define EnsureFixedByteArrayLE EnsureFixedByteArray<Endianness::kLittle>
+#define EnsureFixedByteArrayBE EnsureFixedByteArray<Endianness::kBig>
+#define CreateByteArrayLE CreateByteArray<Endianness::kLittle>
+#define CreateByteArrayBE CreateByteArray<Endianness::kBig>
+#define CreateFixedByteArrayLE CreateFixedByteArray<Endianness::kLittle>
+#define CreateFixedByteArrayBE CreateFixedByteArray<Endianness::kBig>
+#define ByteArrayToUInt16LE ByteArrayToUInt16<Endianness::kLittle>
+#define ByteArrayToUInt16BE ByteArrayToUInt16<Endianness::kBig>
+#define ByteArrayToUInt32LE ByteArrayToUInt32<Endianness::kLittle>
+#define ByteArrayToUInt32BE ByteArrayToUInt32<Endianness::kBig>
 
 // time
 

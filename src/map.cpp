@@ -1062,8 +1062,8 @@ optional<MapEssentials> CMap::ParseMPQ()
             }
           }
 
-          EnsureFixedByteArray(mapEssentials->width, static_cast<uint16_t>(RawMapWidth), false);
-          EnsureFixedByteArray(mapEssentials->height, static_cast<uint16_t>(RawMapHeight), false);
+          EnsureFixedByteArray<Endianness::kLittle>(mapEssentials->width, static_cast<uint16_t>(RawMapWidth));
+          EnsureFixedByteArray<Endianness::kLittle>(mapEssentials->height, static_cast<uint16_t>(RawMapHeight));
           mapEssentials->numPlayers = static_cast<uint8_t>(RawMapNumPlayers) - closedSlots;
           mapEssentials->numDisabled = disabledSlots;
           mapEssentials->melee = (mapEssentials->options & MAPOPT_MELEE) != 0;
@@ -1210,7 +1210,7 @@ optional<MapEssentials> CMap::ParseMPQ()
         continue;
       }
       auto mapCryptoResults = mapEssentials->fragmentHashes.find(version);
-      EnsureFixedByteArray(mapCryptoResults->second.blizz, mapCryptoProcessor->second.blizz, false);
+      EnsureFixedByteArray<Endianness::kLittle>(mapCryptoResults->second.blizz, mapCryptoProcessor->second.blizz);
       DPRINT_IF(LogLevel::kTrace, "[MAP] calculated <map.scripts_hash.blizz.v" + ToVersionString(version) + " = " + ByteArrayToDecString(mapCryptoResults->second.blizz.value()) + ">");
 
       mapCryptoProcessor->second.sha1.Final();
@@ -1324,7 +1324,7 @@ void CMap::Load(CConfig* CFG)
   // calculate <map.file_hash.crc32>
   optional<array<uint8_t, 4>> crc32;
   if (mapFileCRC32.has_value()) {
-    EnsureFixedByteArray(crc32, mapFileCRC32.value(), true); // big-endian, matching SHA1
+    EnsureFixedByteArray<Endianness::kBig>(crc32, mapFileCRC32.value()); // big-endian, matching SHA1
   }
 
   // calculate <map.file_hash.sha1>
@@ -1426,7 +1426,7 @@ void CMap::Load(CConfig* CFG)
         }
       }
     } else {
-      mapContentMismatch[1] = ByteArrayToUInt32(cfgCRC32, 0, true) != ByteArrayToUInt32(crc32.value(), true);
+      mapContentMismatch[1] = ByteArrayToUInt32<Endianness::kBig>(cfgCRC32, 0) != ByteArrayToUInt32<Endianness::kBig>(crc32.value());
       copy_n(cfgCRC32.rbegin(), 4, m_MapCRC32.begin());
     }
   } else if (crc32.has_value()) {
@@ -1479,7 +1479,7 @@ void CMap::Load(CConfig* CFG)
         }
       } else {
         if (mapContentMismatch[3] == 0) {
-          mapContentMismatch[3] = ByteArrayToUInt32(cfgScriptsWeakHash, 0, false) != ByteArrayToUInt32(mapEssentials->fragmentHashes[version].blizz.value(), false);
+          mapContentMismatch[3] = ByteArrayToUInt32<Endianness::kLittle>(cfgScriptsWeakHash, 0) != ByteArrayToUInt32<Endianness::kLittle>(mapEssentials->fragmentHashes[version].blizz.value());
         }
         copy_n(cfgScriptsWeakHash.begin(), 4, scriptsHashBlizz.begin());
       }
@@ -1563,7 +1563,7 @@ void CMap::Load(CConfig* CFG)
     CFG->SetUint8Array("map.width", m_MapWidth.data(), 2);
     // already copied to m_MapWidth
   }
-  if (ByteArrayToUInt16(m_MapWidth, false) == 0) {
+  if (ByteArrayToUInt16<Endianness::kLittle>(m_MapWidth) == 0) {
     // Default invalid <map.width> values to 1
     m_MapWidth = {1, 0};
   }
@@ -1574,7 +1574,7 @@ void CMap::Load(CConfig* CFG)
   } else {
     CFG->SetUint8Array("map.height", m_MapHeight.data(), 2);
   }
-  if (ByteArrayToUInt16(m_MapHeight, false) == 0) {
+  if (ByteArrayToUInt16<Endianness::kLittle>(m_MapHeight) == 0) {
     // Default invalid <map.height> values to 1
     m_MapHeight = {1, 0};
   }
@@ -1897,13 +1897,13 @@ bool CMap::TryLoadMapFilePersistent(optional<uint32_t>& fileSize, optional<uint3
   static_assert(MAX_READ_FILE_SIZE <= 0xFFFFFFFF, "Deprecated method CMap::TryLoadMapFilePersistent() expects MAX_READ_FILE_SIZE to fit in uint32_t");
   fileSize = (uint32_t)m_MapFileContents->size();
 #ifdef DEBUG
-  array<uint8_t, 4> mapFileSizeBytes = CreateFixedByteArray(fileSize.value(), false);
+  array<uint8_t, 4> mapFileSizeBytes = CreateFixedByteArray<Endianness::kLittle>(fileSize.value());
   DPRINT_IF(LogLevel::kTrace, "[MAP] calculated <map.size = " + ByteArrayToDecString(mapFileSizeBytes) + ">");
 #endif
 
   crc32 = CRC32::CalculateCRC((uint8_t*)m_MapFileContents->data(), m_MapFileContents->size());
   optional<array<uint8_t, 4>> crc32Bytes;
-  EnsureFixedByteArray(crc32Bytes, crc32.value(), true); // Big endian, matching SHA1
+  EnsureFixedByteArray<Endianness::kBig>(crc32Bytes, crc32.value()); // Big endian, matching SHA1
   DPRINT_IF(LogLevel::kTrace, "[MAP] calculated <map.file_hash.crc32 = " + ByteArrayToDecString(crc32Bytes.value()) + ">");
 
   return true;
@@ -1936,13 +1936,13 @@ bool CMap::TryLoadMapFileChunked(optional<uint32_t>& fileSize, optional<uint32_t
 
   fileSize = result.second;
 #ifdef DEBUG
-  array<uint8_t, 4> mapFileSizeBytes = CreateFixedByteArray(fileSize.value(), false);
+  array<uint8_t, 4> mapFileSizeBytes = CreateFixedByteArray<Endianness::kLittle>(fileSize.value());
   DPRINT_IF(LogLevel::kTrace, "[MAP] calculated <map.size = " + ByteArrayToDecString(mapFileSizeBytes) + ">");
 #endif
 
   crc32 = rollingCRC32;
   optional<array<uint8_t, 4>> crc32Bytes;
-  EnsureFixedByteArray(crc32Bytes, rollingCRC32, true); // Big endian, matching SHA1
+  EnsureFixedByteArray<Endianness::kBig>(crc32Bytes, rollingCRC32); // Big endian, matching SHA1
   DPRINT_IF(LogLevel::kTrace, "[MAP] calculated <map.file_hash.crc32 = " + ByteArrayToDecString(crc32Bytes.value()) + ">");
 
   sha1.emplace();
@@ -1967,7 +1967,7 @@ bool CMap::CheckMapFileIntegrity()
   }
 
   bool sizeOK = reloadedFileSize.has_value() && reloadedFileSize.value() == m_MapSize;
-  bool crcOK = reloadedCRC.has_value() && reloadedCRC.value() == ByteArrayToUInt32(m_MapCRC32, true);
+  bool crcOK = reloadedCRC.has_value() && reloadedCRC.value() == ByteArrayToUInt32<Endianness::kBig>(m_MapCRC32);
   bool shaOK = reloadedSHA1.has_value() && memcmp(reloadedSHA1->data(), m_MapSHA1.data(), 20) == 0;
   if (!sizeOK) {
     m_MapContentMismatch[0] = 1;

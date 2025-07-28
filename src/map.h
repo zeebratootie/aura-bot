@@ -581,7 +581,7 @@ public:
   [[nodiscard]] inline uint8_t                           GetHMCMode() const { return m_HMC.toggle; }
   [[nodiscard]] inline uint8_t                           GetHMCSlot() const { return m_HMC.slot; }
   [[nodiscard]] inline const std::string&                GetHMCPlayerName() const { return m_HMC.playerName; }
-  [[nodiscard]] inline std::array<uint8_t, 8>            GetHMCTrigger() const { return CreateFixedByteArray64((uint64_t) m_HMC.dwordA | ((uint64_t)(m_HMC.dwordB) << 32u), false); }
+  [[nodiscard]] inline std::array<uint8_t, 8>            GetHMCTrigger() const { return CreateFixedByteArray64<Endianness::kLittle>((uint64_t) m_HMC.dwordA | ((uint64_t)(m_HMC.dwordB) << 32u)); }
   [[nodiscard]] inline const std::string&                GetHMCFileName() const { return m_HMC.fileName; }
   [[nodiscard]] inline const std::string&                GetHMCSecret() const { return m_HMC.secret; }
 

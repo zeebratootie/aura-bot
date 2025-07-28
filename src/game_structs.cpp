@@ -132,13 +132,13 @@ vector<uint8_t> CQueuedActionsFrame::GetBytes(const uint16_t sendInterval) const
   auto back = actions.end() - 1;
   while (it != back) {
     const vector<uint8_t> subPacket = GameProtocol::SEND_W3GS_INCOMING_ACTION2(*it);
-    AppendByteArrayFast(packet, subPacket);
+    AppendContainer(packet, subPacket);
     ++it;
   }
 
   {
     const vector<uint8_t> subPacket = GameProtocol::SEND_W3GS_INCOMING_ACTION(*it, sendInterval);
-    AppendByteArrayFast(packet, subPacket);
+    AppendContainer(packet, subPacket);
   }
 
   // Note: Must ensure Reset() is called afterwards
@@ -264,7 +264,7 @@ void GameHistory::UpdateSpectatorActions(int64_t spectatorDelay /* seconds */)
       case GAME_FRAME_TYPE_GPROXY:
       case GAME_FRAME_TYPE_LATENCY:
         // it stored, GAME_FRAME_TYPE_LATENCY always goes after GAME_FRAME_TYPE_ACTIONS
-        m_SpectatorActiveLatency = ByteArrayToUInt16(it->GetBytes(), false, 0);
+        m_SpectatorActiveLatency = ByteArrayToUInt16<Endianness::kLittle>(it->GetBytes(), 0);
         break;
       case GAME_FRAME_TYPE_ACTIONS:  
         gameDurationWanted -= m_SpectatorActiveLatency;

@@ -157,30 +157,33 @@ AsyncObserverStatus CAsyncObserver::Update(fd_set* fd, fd_set* send_fd, int64_t 
   if (m_Type == IncomingConnectionType::kKickedPlayer) {
     m_Socket->Discard(fd);
   } else if (m_Socket->DoRecv(fd)) {
-    // extract as many packets as possible from the socket's receive buffer and process them
-    string*              RecvBuffer         = m_Socket->GetBytes();
-    std::vector<uint8_t> Bytes              = CreateByteArray((uint8_t*)RecvBuffer->c_str(), RecvBuffer->size());
-    uint32_t             LengthProcessed    = 0;
+    CStreamIOSocket* socket = m_Socket;
+    string_view data = socket->GetRecvBufferView();
 
     // a packet is at least 4 bytes so loop as long as the buffer contains 4 bytes
 
-    while (Bytes.size() >= 4) {
+    while (data.size() >= 4) {
       // bytes 2 and 3 contain the length of the packet
-      const uint16_t Length = ByteArrayToUInt16(Bytes, false, 2);
-      if (Length < 4) {
+      const uint16_t packetSize = ByteArrayToUInt16<Endianness::kLittle>(data, 2);
+      if (packetSize < 4) {
         EventProtocolError();
         Abort = true;
         break;
       }
-      if (Bytes.size() < Length) break;
-      const std::vector<uint8_t> Data = std::vector<uint8_t>(begin(Bytes), begin(Bytes) + Length);
+      if (data.size() < packetSize) {
+        // we don't have the complete packet yet
+        break;
+      }
+      string_view packet = data.substr(0, packetSize);
+      const uint8_t packetFamily = GetByteAt(packet, 0);
+      const uint8_t packetType = GetByteAt(packet, 1);
 
-      switch (Bytes[0]) {
+      switch (packetFamily) {
         case GameProtocol::Magic::W3GS_HEADER: {
-          switch (Bytes[1]) {
+          switch (packetType) {
             case GameProtocol::Magic::LEAVEGAME: {
-              if (ValidateLength(Data) && Data.size() >= 8) {
-                const uint32_t reason = ByteArrayToUInt32(Data, false, 4);
+              if (ValidateLength(packet) && packet.size() >= 8) {
+                const uint32_t reason = ByteArrayToUInt32<Endianness::kLittle>(packet, 4);
                 EventLeft(reason);
                 //m_Socket->SetLogErrors(false);
               } else {
@@ -191,7 +194,7 @@ AsyncObserverStatus CAsyncObserver::Update(fd_set* fd, fd_set* send_fd, int64_t 
             }
 
             case GameProtocol::Magic::GAMELOADED_SELF: {
-              if (GameProtocol::RECEIVE_W3GS_GAMELOADED_SELF(Data)) {
+              if (GameProtocol::RECEIVE_W3GS_GAMELOADED_SELF(packet)) {
                 if (m_StartedLoading && !m_FinishedLoading) {
                   m_FinishedLoading      = true;
                   m_FinishedLoadingTicks = m_Aura->GetLoopTicks();
@@ -206,15 +209,16 @@ AsyncObserverStatus CAsyncObserver::Update(fd_set* fd, fd_set* send_fd, int64_t 
             case GameProtocol::Magic::OUTGOING_ACTION: {
               // Ignore all actions performed by observers,
               // and let's see how this turns out.
-              if (Length < 9) {
+              if (packetSize < 9) {
                 EventProtocolError();
                 Abort = true;
                 break;
               }
               bool skipActions = false;
-              switch (Data[8]) {
+              uint8_t actionType = GetByteAt(packet, 8);
+              switch (actionType) {
                 case ACTION_SCENARIO_TRIGGER: // seen in WarChasers, WormWar
-                  skipActions = (Length % GameProtocol::GetActionSize(Data[8]) == 8);
+                  skipActions = (packetSize % GameProtocol::GetActionSize(actionType) == 8);
                   break;
                 case ACTION_MINIMAPSIGNAL:
                 case ACTION_MODAL_BTN_CLICK:
@@ -222,20 +226,20 @@ AsyncObserverStatus CAsyncObserver::Update(fd_set* fd, fd_set* send_fd, int64_t 
                 case ACTION_PAUSE:
                 case ACTION_RESUME:
                 case ACTION_SAVE:
-                  skipActions = (Length == 8 + GameProtocol::GetActionSize(Data[8]));
+                  skipActions = (packetSize == 8 + GameProtocol::GetActionSize(actionType));
                   break;
                 case ACTION_SAVE_ENDED:
                   skipActions = true;
                   break;
               }
               if (!skipActions) {
-                Print(Concat(GetLogPrefix(), "got action <", ByteArrayToHexString(Data.data() + 8, Length - 8), ">"));
+                Print(Concat(GetLogPrefix(), "got action <", ByteArrayToHexString((uint8_t*)(packet.data() + 8), (size_t)(packetSize - 8)), ">"));
               }
               break;
             }
 
             case GameProtocol::Magic::OUTGOING_KEEPALIVE: {
-              EventClientGameState(GameProtocol::RECEIVE_W3GS_OUTGOING_KEEPALIVE(Data));
+              EventClientGameState(GameProtocol::RECEIVE_W3GS_OUTGOING_KEEPALIVE(packet));
 
               if (!m_Socket->GetConnected()) {
                 Abort = true;
@@ -244,7 +248,7 @@ AsyncObserverStatus CAsyncObserver::Update(fd_set* fd, fd_set* send_fd, int64_t 
             }
 
             case GameProtocol::Magic::CHAT_TO_HOST: {
-              CIncomingChatMessage incomingChatMessage = GameProtocol::RECEIVE_W3GS_CHAT_TO_HOST(Data);
+              CIncomingChatMessage incomingChatMessage = GameProtocol::RECEIVE_W3GS_CHAT_TO_HOST(packet);
 
               if (incomingChatMessage.GetIsValid()) {
                 EventChatOrPlayerSettings(incomingChatMessage);
@@ -263,7 +267,7 @@ AsyncObserverStatus CAsyncObserver::Update(fd_set* fd, fd_set* send_fd, int64_t 
                 break;
               }
 
-              CIncomingMapFileSize incomingMapSize = GameProtocol::RECEIVE_W3GS_MAPSIZE(Data);
+              CIncomingMapFileSize incomingMapSize = GameProtocol::RECEIVE_W3GS_MAPSIZE(packet);
 
               if (incomingMapSize.GetIsValid()) {
                 game->EventObserverMapSize(this, incomingMapSize);
@@ -288,7 +292,7 @@ AsyncObserverStatus CAsyncObserver::Update(fd_set* fd, fd_set* send_fd, int64_t 
         case GPSProtocol::Magic::GPS_HEADER: {
           // GProxy unsupported for observers
           //shared_ptr<CGame> game = m_Game.lock();
-          if (/*game && game->GetIsProxyReconnectable() && */Bytes[1] == GPSProtocol::Magic::INIT) {
+          if (/*game && game->GetIsProxyReconnectable() && */packetType == GPSProtocol::Magic::INIT) {
             Print(Concat(GetLogPrefix(), "client started GProxy handshake "));
           }
           break;
@@ -299,25 +303,25 @@ AsyncObserverStatus CAsyncObserver::Update(fd_set* fd, fd_set* send_fd, int64_t 
         }
       }
 
-      LengthProcessed += Length;
+      data.remove_prefix(packetSize);
 
       if (Abort) {
         // Process no more packets
+        data.remove_prefix(data.size());
         break;
       }
-
-      Bytes = std::vector<uint8_t>(begin(Bytes) + Length, end(Bytes));
     }
 
-    if (Abort && result != AsyncObserverStatus::kPromoted) {
-      result = AsyncObserverStatus::kDestroy;
-      RecvBuffer->clear();
-    } else if (LengthProcessed > 0) {
-      *RecvBuffer = RecvBuffer->substr(LengthProcessed);
+    if (data.size() != socket->GetRecvBufferSize()) {
+      socket->UpdateRecvBuffer(data);
     }
   } else if (m_Aura->GetTicksIsAfterDelay(m_Socket->GetLastRecv(), timeout)) {
     SetLeftReasonGeneric("connection timed out");
     return AsyncObserverStatus::kDestroy;
+  }
+
+  if (Abort) {
+    m_DeleteMe = true;
   }
 
   if (m_DeleteMe || !m_Socket->GetConnected() || m_Socket->HasError() || m_Socket->HasFin()) {
@@ -456,7 +460,7 @@ bool CAsyncObserver::PushGameFrames(bool isFlush)
         break;
       case GAME_FRAME_TYPE_LATENCY:
         // it stored, GAME_FRAME_TYPE_LATENCY always goes after GAME_FRAME_TYPE_ACTIONS
-        m_Latency = ByteArrayToUInt16(it->GetBytes(), false, 0);
+        m_Latency = ByteArrayToUInt16<Endianness::kLittle>(it->GetBytes(), 0);
         ResetClientFrameRate();
         break;
       case GAME_FRAME_TYPE_ACTIONS:
@@ -643,7 +647,7 @@ void CAsyncObserver::EventChat(const CIncomingChatMessage& incomingChatMessage)
   }
 
   bool shouldRelay = !isLobbyChat; // relay the chat message to other users
-  const uint8_t targetType = static_cast<uint8_t>(incomingChatMessage.GetExtraFlags());
+  const uint8_t targetType = static_cast<uint8_t>(incomingChatMessage.GetInGameChannel());
 
   if (!isLobbyChat && m_Aura->m_Config.m_LogGameChat == LOG_GAME_CHAT_ALWAYS) {
     Print(Concat(GetLogPrefix(), "[", GetName(), "] ", incomingChatMessage.GetMessage()));
@@ -823,7 +827,7 @@ void CAsyncObserver::SendOtherPlayersInfo()
   Send(m_GameHistory->m_PlayersBuffer);
 }
 
-void CAsyncObserver::SendChat(const string& message)
+void CAsyncObserver::SendChat(string_view message)
 {
   if (m_StartedLoading && !m_FinishedLoading) {
     return;

@@ -197,7 +197,7 @@ public:
   void Send(const std::vector<uint8_t>& data) final;
   void Send(const GameProtocol::PacketWrapper& data) final;
   void SendOtherPlayersInfo();
-  void SendChat(const std::string& message);
+  void SendChat(std::string_view message);
   void SendGameLoadedReport();
   void                                          SampleMaxSafeFrameRate();
   void                                          ResetClientFrameRate();

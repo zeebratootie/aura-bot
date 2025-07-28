@@ -753,7 +753,7 @@ bool CGame::EventGameCacheInteger(const uint8_t UID, const uint8_t* actionStart,
   key = string(reinterpret_cast<const char*>(stringStart), reinterpret_cast<const char*>(stringEnd));
 
   if (actionEnd != stringEnd + 5u) return false;
-  value = ByteArrayToUInt32(stringEnd + 1, false);
+  value = ByteArrayToUInt32<Endianness::kLittle>(stringEnd + 1);
 
   if (m_CustomStats) {
     if (!m_CustomStats->EventGameCacheInteger(UID, cacheFileName, missionKey, key, value)) {
@@ -2056,7 +2056,7 @@ void CGame::RunActionsScheduler()
   if (newLatency != oldLatency) {
     m_LatencyTicks = newLatency;
     if (m_BufferingEnabled & BUFFERING_ENABLED_PLAYING) {
-      vector<uint8_t> storedLatency = CreateByteArray(static_cast<uint16_t>(newLatency), false);
+      vector<uint8_t> storedLatency = CreateByteArray<Endianness::kLittle>(static_cast<uint16_t>(newLatency));
       m_GameHistory->m_PlayingBuffer.emplace_back(GAME_FRAME_TYPE_LATENCY, storedLatency);
       m_GameHistory->SetActiveLatency(newLatency);
       m_GameHistory->UpdateSpectatorActions((int64_t)m_Config.m_SpectatorDelay);
@@ -2269,7 +2269,7 @@ bool CGame::SendObserversAsChat(const std::vector<uint8_t>& data) const
   return success;
 }
 
-void CGame::SendChat(uint8_t fromUID, GameUser::CGameUser* user, const string& message, const LogLevelExtra logLevel) const
+void CGame::SendChat(uint8_t fromUID, GameUser::CGameUser* user, string_view message, const LogLevelExtra logLevel) const
 {
   // send a private message to one user - it'll be marked [Private] in Warcraft 3
 
@@ -2303,27 +2303,27 @@ void CGame::SendChat(uint8_t fromUID, GameUser::CGameUser* user, const string& m
   SendAsChat(user, packet);
 }
 
-void CGame::SendChat(uint8_t fromUID, uint8_t toUID, const string& message, const LogLevelExtra logLevel) const
+void CGame::SendChat(uint8_t fromUID, uint8_t toUID, string_view message, const LogLevelExtra logLevel) const
 {
   SendChat(fromUID, GetUserFromUID(toUID), message, logLevel);
 }
 
-void CGame::SendChat(GameUser::CGameUser* user, const string& message, const LogLevelExtra logLevel) const
+void CGame::SendChat(GameUser::CGameUser* user, string_view message, const LogLevelExtra logLevel) const
 {
   SendChat(GetHostUID(), user, message, logLevel);
 }
 
-void CGame::SendChat(uint8_t toUID, const string& message, const LogLevelExtra logLevel) const
+void CGame::SendChat(uint8_t toUID, string_view message, const LogLevelExtra logLevel) const
 {
   SendChat(GetHostUID(), toUID, message, logLevel);
 }
 
-void CGame::SendChat(CAsyncObserver* spectator, const string& message, const LogLevelExtra /*logLevel*/) const
+void CGame::SendChat(CAsyncObserver* spectator, string_view message, const LogLevelExtra /*logLevel*/) const
 {
   spectator->SendChat(message);
 }
 
-bool CGame::SendAllChat(uint8_t fromUID, const string& message) const
+bool CGame::SendAllChat(uint8_t fromUID, string_view message) const
 {
   if (m_GameLoading && !m_Config.m_LoadInGame)
     return false;
@@ -2360,12 +2360,12 @@ bool CGame::SendAllChat(uint8_t fromUID, const string& message) const
   return SendAllAsChat(packet);
 }
 
-bool CGame::SendAllChat(const string& message) const
+bool CGame::SendAllChat(string_view message) const
 {
   return SendAllChat(GetHostUID(), message);
 }
 
-bool CGame::SendObserverChat(uint8_t fromUID, const string& message) const
+bool CGame::SendObserverChat(uint8_t fromUID, string_view message) const
 {
   if (!m_GameLoaded)
     return false;
@@ -2397,12 +2397,12 @@ bool CGame::SendObserverChat(uint8_t fromUID, const string& message) const
   return SendObserversAsChat(packet);
 }
 
-bool CGame::SendObserverChat(const string& message) const
+bool CGame::SendObserverChat(string_view message) const
 {
   return SendObserverChat(GetHostUID(), message);
 }
 
-bool CGame::SendSpectatorChat(const CAsyncObserver* excludeSpectator, const string& prefix, string_view message) const
+bool CGame::SendSpectatorChat(const CAsyncObserver* excludeSpectator, string_view prefix, string_view message) const
 {
   if (!m_GameLoaded) return false;
   GameProtocol::MemoizedGameChatMessageBuilder builder(GameProtocol::ChatToHostType::CTH_MESSAGE_INGAME, prefix, message);
@@ -2416,7 +2416,7 @@ bool CGame::SendSpectatorChat(const CAsyncObserver* excludeSpectator, const stri
   return anySent;
 }
 
-bool CGame::SendSpectatorChat(const string& prefix, const string& message) const
+bool CGame::SendSpectatorChat(string_view prefix, string_view message) const
 {
   return SendSpectatorChat(nullptr, prefix, message);
 }
@@ -3402,7 +3402,7 @@ vector<uint8_t> CGame::GetFakeUsersLobbyInfo() const
       continue;
     }
     vector<uint8_t> playerInfo = fakeUser.GetPlayerInfoBytes(dontOverride);
-    AppendByteArrayFast(info, playerInfo);
+    AppendContainer(info, playerInfo);
   }
   return info;
 }
@@ -3416,7 +3416,7 @@ vector<uint8_t> CGame::GetFakeUsersLoadedInfo() const
       continue;
     }
     vector<uint8_t> playerInfo = fakeUser.GetPlayerInfoBytes(overrideLoaded);
-    AppendByteArrayFast(info, playerInfo);
+    AppendContainer(info, playerInfo);
   }
   return info;
 }
@@ -3428,7 +3428,7 @@ vector<uint8_t> CGame::GetJoinedPlayersInfo() const
     if (otherPlayer->GetDeleteMe()) {
       continue;
     }
-    AppendByteArrayFast(info,
+    AppendContainer(info,
       GameProtocol::SEND_W3GS_PLAYERINFO_EXCLUDE_IP(GetVersion(), otherPlayer->GetUID(), otherPlayer->GetDisplayName()/*, otherPlayer->GetIPv4(), otherPlayer->GetIPv4Internal()*/)
     );
   }
@@ -3543,7 +3543,7 @@ uint8_t CGame::NextSendMap(CConnection* user, const uint8_t UID, MapTransfer& ma
 
     if (fullySent) {
       mapTransfer.SetFinished();
-      if (mapTransfer.GetLastCRC32() == ByteArrayToUInt32(m_Map->GetMapCRC32(), false)) {
+      if (mapTransfer.GetLastCRC32() == ByteArrayToUInt32<Endianness::kLittle>(m_Map->GetMapCRC32())) {
         return MAP_TRANSFER_DONE;
       } else {
         return MAP_TRANSFER_INVALID;
@@ -3731,7 +3731,7 @@ void CGame::SendWelcomeMessage(GameUser::CGameUser *user) const
   }
 }
 
-void CGame::SendOwnerCommandsHelp(const string& cmdToken, GameUser::CGameUser* user) const
+void CGame::SendOwnerCommandsHelp(string_view cmdToken, GameUser::CGameUser* user) const
 {
   SendChat(user, Concat(cmdToken, "open [NUMBER] - opens a slot"), LogLevelExtra::kTrace);
   SendChat(user, Concat(cmdToken, "close [NUMBER] - closes a slot"), LogLevelExtra::kTrace);
@@ -3743,12 +3743,12 @@ void CGame::SendOwnerCommandsHelp(const string& cmdToken, GameUser::CGameUser* u
   SendChat(user, Concat(cmdToken, "terminator - sets humans vs computers"), LogLevelExtra::kTrace);
 }
 
-void CGame::SendCommandsHelp(const string& cmdToken, GameUser::CGameUser* user, const bool isIntro) const
+void CGame::SendCommandsHelp(string_view cmdToken, GameUser::CGameUser* user, const bool isIntro) const
 {
   if (isIntro) {
-    SendChat(user, Concat("Welcome, ", user->GetName(), ". Please use ", cmdToken + GetTokenName(cmdToken), " for commands."), LogLevelExtra::kTrace);
+    SendChat(user, Concat("Welcome, ", user->GetName(), ". Please use ", cmdToken, GetTokenName(cmdToken), " for commands."), LogLevelExtra::kTrace);
   } else {
-    SendChat(user, Concat("Use ", cmdToken + GetTokenName(cmdToken), " for commands."), LogLevelExtra::kTrace);
+    SendChat(user, Concat("Use ", cmdToken, GetTokenName(cmdToken), " for commands."), LogLevelExtra::kTrace);
   }
   if (!isIntro) return;
   SendChat(user, Concat(cmdToken, "ping - view your latency"), LogLevelExtra::kTrace);
@@ -3772,9 +3772,9 @@ void CGame::EventOutgoingAtomicAction(const uint8_t UID, const uint8_t* actionSt
       const uint8_t* chatMessageEnd = FindNullDelimiterInRangeOrStart(chatMessageStart, actionEnd);
       if (chatMessageStart < chatMessageEnd) {
         GameUser::CGameUser* user = GetUserFromUID(UID);
-        const string chatMessage = GetStringAddressRange(chatMessageStart, chatMessageEnd);
         if (user) {
-          EventChatTrigger(user, chatMessage, ByteArrayToUInt32(actionStart + 1u, false), ByteArrayToUInt32(actionStart + 5u, false));
+          string_view chatMessage = string_view(reinterpret_cast<const char*>(chatMessageStart), chatMessageEnd - chatMessageStart);
+          EventChatTrigger(user, chatMessage, ByteArrayToUInt32<Endianness::kLittle>(actionStart + 1u), ByteArrayToUInt32<Endianness::kLittle>(actionStart + 5u));
         }
       }
     }
@@ -3783,7 +3783,7 @@ void CGame::EventOutgoingAtomicAction(const uint8_t UID, const uint8_t* actionSt
   if (actionType == ACTION_ALLIANCE_SETTINGS && (actionEnd >= actionStart + 6u) && actionStart[1] < MAX_SLOTS_MODERN) {
     GameUser::CGameUser* user = GetUserFromUID(UID);
     if (user) {
-      const bool wantsShare = (ByteArrayToUInt32(actionStart + 2u, false) & ALLIANCE_SETTINGS_SHARED_CONTROL_FAMILY) == ALLIANCE_SETTINGS_SHARED_CONTROL_FAMILY;
+      const bool wantsShare = (ByteArrayToUInt32<Endianness::kLittle>(actionStart + 2u) & ALLIANCE_SETTINGS_SHARED_CONTROL_FAMILY) == ALLIANCE_SETTINGS_SHARED_CONTROL_FAMILY;
       const uint8_t targetSID = actionStart[1];
       if (user->GetIsSharingUnitsWithSlot(targetSID) != wantsShare) {
         if (wantsShare) {
@@ -4303,10 +4303,10 @@ vector<uint8_t> CGame::GetGameDiscoveryInfo(const Version& gameVersion, const ui
   uint32_t uptime = GetUptime();
   if (m_Config.m_CrossPlayMode != CrossPlayMode::kForce || (GAMEVER(1u, 24u) <= m_SupportedGameVersionsMin && m_SupportedGameVersionsMax <= GAMEVER(1u, 28u))) {
     vector<uint8_t> info = *(GetGameDiscoveryInfoTemplate());
-    WriteUint32(info, gameVersion.second, m_GameDiscoveryInfoVersionOffset);
-    WriteUint32(info, slotsOff, m_GameDiscoveryInfoDynamicOffset);
-    WriteUint32(info, uptime, m_GameDiscoveryInfoDynamicOffset + 4);
-    WriteUint16(info, hostPort, m_GameDiscoveryInfoDynamicOffset + 8);
+    WriteUint32<Endianness::kLittle>(info, gameVersion.second, m_GameDiscoveryInfoVersionOffset);
+    WriteUint32<Endianness::kLittle>(info, slotsOff, m_GameDiscoveryInfoDynamicOffset);
+    WriteUint32<Endianness::kLittle>(info, uptime, m_GameDiscoveryInfoDynamicOffset + 4);
+    WriteUint16<Endianness::kLittle>(info, hostPort, m_GameDiscoveryInfoDynamicOffset + 8);
     return info;    
   } else {
     vector<uint8_t> info = GameProtocol::SEND_W3GS_GAMEINFO(
@@ -4901,7 +4901,7 @@ void CGame::EventUserAfterDisconnect(GameUser::CGameUser* user, bool fromOpen)
   if (m_GameLoading && !user->GetFinishedLoading() && !m_Config.m_LoadInGame) {
     const vector<uint8_t> packet = GameProtocol::SEND_W3GS_GAMELOADED_OTHERS(user->GetUID());
     m_GameHistory->m_LoadingVirtualBuffer.reserve(m_GameHistory->m_LoadingVirtualBuffer.size() + packet.size());
-    AppendByteArrayFast(m_GameHistory->m_LoadingVirtualBuffer, packet);
+    AppendContainer(m_GameHistory->m_LoadingVirtualBuffer, packet);
     SendAll(packet);
   }
 }
@@ -5073,34 +5073,34 @@ void CGame::SendChatMessage(const GameUser::CGameUser* user, const CIncomingChat
   }
 
   if (!m_GameLoading && !m_GameLoaded) {
-    SendMulti(chatMessage.GetToUIDs(), GameProtocol::SEND_W3GS_CHAT_FROM_HOST_LOBBY(chatMessage.GetFromUID(), chatMessage.GetToUIDs(), chatMessage.GetFlag(), chatMessage.GetMessage()));
+    SendMulti(chatMessage.GetToUIDs(), GameProtocol::SEND_W3GS_CHAT_FROM_HOST_LOBBY(chatMessage.GetFromUID(), chatMessage.GetToUIDs(), chatMessage.GetDiscriminator(), chatMessage.GetMessage()));
     return;
   }
 
-  uint8_t extraFlags = (uint8_t)chatMessage.GetExtraFlags();
+  uint8_t inGameChannel = (uint8_t)chatMessage.GetInGameChannel();
 
   // Never allow observers/referees to send private messages to users.
   // Referee rulings/warnings are expected to be public.
-  if (user->GetIsObserver() && m_Map->GetGameObservers() == GameObserversMode::kReferees && extraFlags != CHAT_RECV_OBS) {
+  if (user->GetIsObserver() && m_Map->GetGameObservers() == GameObserversMode::kReferees && inGameChannel != CHAT_RECV_OBS) {
     vector<uint8_t> targetUIDs;
     if (m_UsesCustomReferees && !user->GetIsPowerObserver()) {
       // When custom referees are enabled, only designated referees can use [All] chat.
       // Others use [Ref] exclusively.
       targetUIDs = GetFilteredChatObserverUIDs(chatMessage.GetFromUID(), chatMessage.GetToUIDs());
-      extraFlags = CHAT_RECV_OBS;
+      inGameChannel = CHAT_RECV_OBS;
     } else {
       targetUIDs = GetFilteredChatUIDs(chatMessage.GetFromUID(), chatMessage.GetToUIDs());
-      extraFlags = CHAT_RECV_ALL;
+      inGameChannel = CHAT_RECV_ALL;
     }
     if (!targetUIDs.empty()) {
-      SendMulti(targetUIDs, GameProtocol::SEND_W3GS_CHAT_FROM_HOST_IN_GAME(chatMessage.GetFromUID(), targetUIDs, chatMessage.GetFlag(), extraFlags, chatMessage.GetMessage()));
+      SendMulti(targetUIDs, GameProtocol::SEND_W3GS_CHAT_FROM_HOST_IN_GAME(chatMessage.GetFromUID(), targetUIDs, chatMessage.GetDiscriminator(), inGameChannel, chatMessage.GetMessage()));
     }
     return;
   }
 
   // When observers on defeat (or full observers) are enabled, Aura cannot reliably figure out whether a player became an observer
   // therefore, we can only rely on game clients to properly manage chat visibility
-  SendMulti(chatMessage.GetToUIDs(), GameProtocol::SEND_W3GS_CHAT_FROM_HOST_IN_GAME(chatMessage.GetFromUID(), chatMessage.GetToUIDs(), chatMessage.GetFlag(), extraFlags, chatMessage.GetMessage()));
+  SendMulti(chatMessage.GetToUIDs(), GameProtocol::SEND_W3GS_CHAT_FROM_HOST_IN_GAME(chatMessage.GetFromUID(), chatMessage.GetToUIDs(), chatMessage.GetDiscriminator(), inGameChannel, chatMessage.GetMessage()));
 }
 
 void CGame::QueueLeftMessage(GameUser::CGameUser* user) const
@@ -5559,18 +5559,18 @@ bool CGame::CheckIPFlood(string_view joinName, const sockaddr_storage* sourceAdd
   return true;
 }
 
-uint8_t CGame::EventRequestJoin(CConnection* connection, const CIncomingJoinRequest& joinRequest)
+JoinRequestResult CGame::EventRequestJoin(CConnection* connection, const CIncomingJoinRequest& joinRequest)
 {
   if (!GetIsStageAcceptingJoins()) {
     connection->Send(GameProtocol::SEND_W3GS_REJECTJOIN(REJECTJOIN_STARTED));
-    return JOIN_RESULT_FAIL;
+    return JoinRequestResult::kFail;
   }
   if (
     joinRequest.GetName().empty() || joinRequest.GetName().size() > MAX_PLAYER_NAME_SIZE ||
     (joinRequest.GetIsCensored() && m_Config.m_UnsafeNameHandler == OnUnsafeNameHandler::kDeny)
   ) {
     connection->Send(GameProtocol::SENDWRAP_W3GS_GHOST_LOBBY_ERROR("Your username is not allowed."));
-    return JOIN_RESULT_FAIL;
+    return JoinRequestResult::kFailDelayed;
   }
 
   // identify their joined realm
@@ -5598,7 +5598,7 @@ uint8_t CGame::EventRequestJoin(CConnection* connection, const CIncomingJoinRequ
     // check if the user joining via LAN knows the entry key
     LOG_APP_IF(LogLevel::kDebug, Concat("user [", joinRequest.GetName(), "@", JoinedRealm, "] used a wrong LAN key (", to_string(joinRequest.GetEntryKey()), ") - [", connection->GetSocket()->GetName(), "] (", connection->GetIPString(), ")"));
     connection->Send(GameProtocol::SEND_W3GS_REJECTJOIN(REJECTJOIN_WRONGPASSWORD));
-    return JOIN_RESULT_FAIL;
+    return JoinRequestResult::kFail;
   }
 
   // Odd host counters are information requests
@@ -5608,14 +5608,14 @@ uint8_t CGame::EventRequestJoin(CConnection* connection, const CIncomingJoinRequ
     SendVirtualHostPlayerInfo(connection);
     SendFakeUsersInfo(connection);
     SendJoinedPlayersInfo(connection);
-    return JOIN_RESULT_FAIL;
+    return JoinRequestResult::kFail;
   }
 
   if (HostCounterID < 0x10 && HostCounterID != 0) {
     LOG_APP_IF(LogLevel::kDebug, Concat("user [", joinRequest.GetName(), "@", JoinedRealm, "] is trying to join over reserved realm ", to_string(HostCounterID), " - [", connection->GetSocket()->GetName(), "] (", connection->GetIPString(), ")"));
     if (HostCounterID > 0x2) {
       connection->Send(GameProtocol::SEND_W3GS_REJECTJOIN(REJECTJOIN_WRONGPASSWORD));
-      return JOIN_RESULT_FAIL;
+      return JoinRequestResult::kFail;
     }
   }
 
@@ -5631,25 +5631,25 @@ uint8_t CGame::EventRequestJoin(CConnection* connection, const CIncomingJoinRequ
     }
     LOG_APP_IF(LogLevel::kDebug, Concat("user [", joinRequest.GetName(), "] invalid name (taken) - [", connection->GetSocket()->GetName(), "] (", connection->GetIPString(), ")"));
     connection->Send(GameProtocol::SEND_W3GS_REJECTJOIN(REJECTJOIN_FULL));
-    return JOIN_RESULT_FAIL;
+    return JoinRequestResult::kFail;
   } else if (joinRequest.GetName() == GetLobbyVirtualHostName()) {
     LOG_APP_IF(LogLevel::kDebug, Concat("user [", joinRequest.GetName(), "] spoofer (matches host name) - [", connection->GetSocket()->GetName(), "] (", connection->GetIPString(), ")"));
     connection->Send(GameProtocol::SEND_W3GS_REJECTJOIN(REJECTJOIN_FULL));
-    return JOIN_RESULT_FAIL;
+    return JoinRequestResult::kFail;
   } else if (joinRequest.GetName().length() >= 7 && joinRequest.GetName().substr(0, 5) == "User[") {
     LOG_APP_IF(LogLevel::kDebug, Concat("user [", joinRequest.GetName(), "] spoofer (matches fake users) - [", connection->GetSocket()->GetName(), "] (", connection->GetIPString(), ")"));
     connection->Send(GameProtocol::SEND_W3GS_REJECTJOIN(REJECTJOIN_FULL));
-    return JOIN_RESULT_FAIL;
+    return JoinRequestResult::kFail;
   } else if (GetHMCEnabled() && joinRequest.GetName() == m_Map->GetHMCPlayerName()) {
     LOG_APP_IF(LogLevel::kDebug, Concat("user [", joinRequest.GetName(), "] spoofer (matches HMC name) - [", connection->GetSocket()->GetName(), "] (", connection->GetIPString(), ")"));
     connection->Send(GameProtocol::SEND_W3GS_REJECTJOIN(REJECTJOIN_FULL));
-    return JOIN_RESULT_FAIL;
+    return JoinRequestResult::kFail;
   } else if (joinRequest.GetName() == m_OwnerName && !m_OwnerRealm.empty() && !JoinedRealm.empty() && m_OwnerRealm != JoinedRealm) {
     // Prevent owner homonyms from other realms from joining. This doesn't affect LAN.
     // But LAN has its own rules, e.g. a LAN owner that leaves the game is immediately demoted.
     LOG_APP_IF(LogLevel::kDebug, Concat("user [", joinRequest.GetName(), "@", JoinedRealm, "] spoofer (matches owner name, but realm mismatch, expected ", m_OwnerRealm, ") - [", connection->GetSocket()->GetName(), "] (", connection->GetIPString(), ")"));
     connection->Send(GameProtocol::SEND_W3GS_REJECTJOIN(REJECTJOIN_FULL));
-    return JOIN_RESULT_FAIL;
+    return JoinRequestResult::kFail;
   }
 
   if (CheckScopeBanned(joinRequest.GetName(), JoinedRealm, connection->GetIPStringStrict()) ||
@@ -5659,12 +5659,12 @@ uint8_t CGame::EventRequestJoin(CConnection* connection, const CIncomingJoinRequ
     // this causes them to be kicked back to the chat channel on battle.net
     const vector<CGameSlot>& Slots = m_Map->InspectSlots();
     connection->Send(GameProtocol::SEND_W3GS_SLOTINFOJOIN(1, connection->GetSocket()->GetPortLE(), connection->GetIPv4(), Slots, 0, GetLayout(), m_Map->GetMapNumControllers()));
-    return JOIN_RESULT_FAIL;
+    return JoinRequestResult::kFail;
   }
 
   if (m_GameLoaded) {
     JoinObserver(connection, joinRequest, matchingRealm);
-    return JOIN_RESULT_OBSERVER;
+    return JoinRequestResult::kObserver;
   }
 
   matchingRealm = nullptr;
@@ -5675,14 +5675,14 @@ uint8_t CGame::EventRequestJoin(CConnection* connection, const CIncomingJoinRequ
   if (m_CheckReservation && !isReserved) {
     LOG_APP_IF(LogLevel::kDebug, Concat("user [", joinRequest.GetName(), "] missing reservation - [", connection->GetSocket()->GetName(), "] (", connection->GetIPString(), ")"));
     connection->Send(GameProtocol::SEND_W3GS_REJECTJOIN(REJECTJOIN_FULL));
-    return JOIN_RESULT_FAIL;
+    return JoinRequestResult::kFail;
   }
 
   if (!GetAllowsIPFlood()) {
     if (!CheckIPFlood(joinRequest.GetName(), &(connection->GetSocket()->m_RemoteHost))) {
       LOG_APP_IF(LogLevel::kWarning, Concat("ipflood rejected from ", AddressToStringStrict(connection->GetSocket()->m_RemoteHost)));
       connection->Send(GameProtocol::SEND_W3GS_REJECTJOIN(REJECTJOIN_FULL));
-      return JOIN_RESULT_FAIL;
+      return JoinRequestResult::kFail;
     }
   }
 
@@ -5760,7 +5760,7 @@ uint8_t CGame::EventRequestJoin(CConnection* connection, const CIncomingJoinRequ
 
   if (SID >= static_cast<uint8_t>(m_Slots.size())) {
     connection->Send(GameProtocol::SEND_W3GS_REJECTJOIN(REJECTJOIN_FULL));
-    return JOIN_RESULT_FAIL;
+    return JoinRequestResult::kFail;
   }
 
   // we have a slot for the new user
@@ -5771,7 +5771,7 @@ uint8_t CGame::EventRequestJoin(CConnection* connection, const CIncomingJoinRequ
 
   EventBeforeJoin(connection);
   JoinPlayer(connection, joinRequest, SID, UID, HostCounterID, JoinedRealm, isReserved, IsUnverifiedAdmin);
-  return JOIN_RESULT_PLAYER;
+  return JoinRequestResult::kPlayer;
 }
 
 void CGame::EventBeforeJoin(CConnection* connection)
@@ -5908,7 +5908,7 @@ void CGame::EventUserLoaded(GameUser::CGameUser* user)
   if (!m_Config.m_LoadInGame) {
     vector<uint8_t> packet = GameProtocol::SEND_W3GS_GAMELOADED_OTHERS(user->GetUID());
     if (m_BufferingEnabled & BUFFERING_ENABLED_LOADING) {
-      AppendByteArrayFast(m_GameHistory->m_LoadingRealBuffer, packet);
+      AppendContainer(m_GameHistory->m_LoadingRealBuffer, packet);
     }
     SendAll(packet);
   } else { // load-in-game
@@ -5973,7 +5973,7 @@ bool CGame::EventUserIncomingAction(GameUser::CGameUser* user, CIncomingAction& 
       } else if (delimiters[i][1] == MH_DOTA_SETTINGS_SYNC_DATA) {
         LOG_APP_IF(LogLevel::kDebug, Concat("Player [", user->GetName(), "] synchronizing DotA data"));
       } else if (delimiters[i][1] < MAX_SLOTS_MODERN) {
-        const bool wantsShare = (ByteArrayToUInt32(delimiters[i] + 2, false) & ALLIANCE_SETTINGS_SHARED_CONTROL_FAMILY) == ALLIANCE_SETTINGS_SHARED_CONTROL_FAMILY;
+        const bool wantsShare = (ByteArrayToUInt32<Endianness::kLittle>(delimiters[i] + 2) & ALLIANCE_SETTINGS_SHARED_CONTROL_FAMILY) == ALLIANCE_SETTINGS_SHARED_CONTROL_FAMILY;
         const uint8_t targetSID = delimiters[i][1];
 
         if (user->GetIsSharingUnitsWithSlot(targetSID) != wantsShare) {
@@ -6181,7 +6181,7 @@ void CGame::EventUserKeepAlive(GameUser::CGameUser* user)
   }
 }
 
-void CGame::EventChatTrigger(GameUser::CGameUser* user, const string& chatMessage, const uint32_t first, const uint32_t second)
+void CGame::EventChatTrigger(GameUser::CGameUser* user, string_view chatMessage, const uint32_t first, const uint32_t second)
 {
   bool canLogChatTriggers = m_Aura->m_Config.m_LogGameChat != LOG_GAME_CHAT_NEVER && (((m_Config.m_LogChatTypes & LOG_CHAT_TYPE_COMMANDS) > 0) || m_Aura->MatchLogLevel(LogLevel::kDebug));
   if (canLogChatTriggers && (m_Config.m_LogChatTypes & LOG_CHAT_TYPE_COMMANDS) > 0) {
@@ -6246,7 +6246,7 @@ void CGame::EventUserChat(GameUser::CGameUser* user, const CIncomingChatMessage&
   }
 
   // relay the chat message to other users
-  const uint8_t targetType = static_cast<uint8_t>(incomingChatMessage.GetExtraFlags());
+  const uint8_t targetType = static_cast<uint8_t>(incomingChatMessage.GetInGameChannel());
   bool muteAll = !isLobbyChat && m_MuteAll;
   bool shouldRelay = m_ChatEnabled && !(muteAll && targetType == CHAT_RECV_ALL) && !user->CheckMuted();
   bool didRelay = false;
@@ -6872,8 +6872,8 @@ void CGame::EventGameStartedLoading()
   LOG_APP_IF(LogLevel::kInfo, Concat("started loading: ", ToDecString(GetNumJoinedPlayers()), " p | ", ToDecString(GetNumComputers()), " comp | ", ToDecString(GetNumJoinedObservers()), " obs | ", to_string(m_FakeUsers.size() - m_JoinedVirtualHosts), " fake | ", ToDecString(m_JoinedVirtualHosts), " vhost | ", ToDecString(m_ControllersWithMap), " controllers"));
 
   if (m_BufferingEnabled & BUFFERING_ENABLED_PLAYING) {
-    AppendByteArrayFast(m_GameHistory->m_PlayersBuffer, GetFakeUsersLoadedInfo());
-    AppendByteArrayFast(m_GameHistory->m_PlayersBuffer, GetJoinedPlayersInfo());
+    AppendContainer(m_GameHistory->m_PlayersBuffer, GetFakeUsersLoadedInfo());
+    AppendContainer(m_GameHistory->m_PlayersBuffer, GetJoinedPlayersInfo());
   }
 
   // When load-in-game is disabled, m_LoadingVirtualBuffer also includes
@@ -6882,7 +6882,7 @@ void CGame::EventGameStartedLoading()
   m_GameHistory->m_LoadingVirtualBuffer.reserve(5 * m_FakeUsers.size());
   for (const CGameVirtualUser& fakeUser : m_FakeUsers) {
     // send a game loaded packet for each fake user
-    AppendByteArrayFast(m_GameHistory->m_LoadingVirtualBuffer, fakeUser.GetGameLoadedBytes());
+    AppendContainer(m_GameHistory->m_LoadingVirtualBuffer, fakeUser.GetGameLoadedBytes());
   }
 
   if (GetAnyUsingGProxy()) {
@@ -6923,7 +6923,7 @@ void CGame::EventGameStartedLoading()
   if (m_Config.m_LoadInGame) {
     for (const auto& user : m_Users) {
       vector<uint8_t> packet = GameProtocol::SEND_W3GS_GAMELOADED_OTHERS(user->GetUID());
-      AppendByteArrayFast(m_GameHistory->m_LoadingRealBuffer, packet);
+      AppendContainer(m_GameHistory->m_LoadingRealBuffer, packet);
     }
 
     // Only when load-in-game is enabled, initialize everyone's m_IsLagging flag to true
@@ -7116,11 +7116,12 @@ void CGame::RunPlayerObfuscation()
   }
 }
 
-bool CGame::CheckSmartCommands(GameUser::CGameUser* user, const std::string& message, const uint8_t activeCmd, CCommandConfig* commandCFG)
+bool CGame::CheckSmartCommands(GameUser::CGameUser* user, string_view message, const uint8_t activeCmd, CCommandConfig* commandCFG)
 {
   if (message.length() >= 2) {
-    string prefix = ToLowerCase(message.substr(0, 2));
-    if (prefix[0] == 'g' && prefix[1] == 'o' && message.find_first_not_of("goGO") == string::npos && !HasOwnerInGame()) {
+    string_view prefixSensitive = message.substr(0, 2);
+    string prefix = ToLowerCase(string(prefixSensitive));
+    if (prefix[0] == 'g' && prefix[1] == 'o' && prefixSensitive.find_first_not_of("goGO") == string_view::npos && !HasOwnerInGame()) {
       if (activeCmd == SMART_COMMAND_GO) {
         shared_ptr<CCommandContext> ctx = nullptr;
         try {
@@ -10177,7 +10178,7 @@ bool CGame::Save(GameUser::CGameUser* user, CQueuedActionsFrame& actionFrame, co
     ActionStart.push_back(ACTION_SAVE);
     AppendByteArrayString(ActionStart, fileName, true);
     ActionEnd.push_back(ACTION_SAVE_ENDED);
-    AppendByteArray(ActionEnd, success, false);
+    AppendNumber<Endianness::kLittle>(ActionEnd, success);
     actionFrame.AddAction(std::move(CIncomingAction(UID, ActionStart)));
     actionFrame.AddAction(std::move(CIncomingAction(UID, ActionEnd)));
   }
@@ -10196,7 +10197,7 @@ void CGame::SaveEnded(const uint8_t exceptUID, CQueuedActionsFrame& actionFrame)
     }
     vector<uint8_t> Action;
     Action.push_back(ACTION_SAVE_ENDED);
-    AppendByteArray(Action, success, false);
+    AppendNumber<Endianness::kLittle>(Action, success);
     actionFrame.AddAction(std::move(CIncomingAction(fakeUser.GetUID(), Action)));
   }
 }
@@ -10232,9 +10233,9 @@ bool CGame::SendMiniMapSignal(GameUser::CGameUser* user, CQueuedActionsFrame& ac
   {
     vector<uint8_t> Action;
     Action.push_back(ACTION_MINIMAPSIGNAL);
-    AppendByteArray(Action, x, false);
-    AppendByteArray(Action, y, false);
-    AppendByteArray(Action, duration, false);
+    AppendNumber<Endianness::kLittle>(Action, x);
+    AppendNumber<Endianness::kLittle>(Action, y);
+    AppendNumber<Endianness::kLittle>(Action, duration);
     actionFrame.AddAction(std::move(CIncomingAction(UID, Action)));
   }
 
@@ -10271,8 +10272,8 @@ bool CGame::Trade(const uint8_t fromUID, const uint8_t SID, CQueuedActionsFrame&
   vector<uint8_t> Action;
   Action.push_back(ACTION_TRANSFER_RESOURCES);
   Action.push_back(SID);
-  AppendByteArray(Action, gold, false);
-  AppendByteArray(Action, lumber, false);
+  AppendNumber<Endianness::kLittle>(Action, gold);
+  AppendNumber<Endianness::kLittle>(Action, lumber);
   actionFrame.AddAction(std::move(CIncomingAction(fromUID, Action)));
   return true;
 }
@@ -10293,7 +10294,7 @@ bool CGame::ShareUnits(const uint8_t fromUID, const uint8_t SID, CQueuedActionsF
   vector<uint8_t> Action;
   Action.push_back(ACTION_ALLIANCE_SETTINGS);
   Action.push_back(SID);
-  AppendByteArray(Action, ALLIANCE_SETTINGS_ALLY | ALLIANCE_SETTINGS_SHARED_VISION | ALLIANCE_SETTINGS_SHARED_CONTROL | ALLIANCE_SETTINGS_SHARED_VICTORY, false);
+  AppendNumber<Endianness::kLittle>(Action, ALLIANCE_SETTINGS_ALLY | ALLIANCE_SETTINGS_SHARED_VISION | ALLIANCE_SETTINGS_SHARED_CONTROL | ALLIANCE_SETTINGS_SHARED_VICTORY);
   actionFrame.AddAction(std::move(CIncomingAction(fromUID, Action)));
   return true;
 }
@@ -10312,8 +10313,8 @@ bool CGame::ShareUnits(GameUser::CGameUser* fromUser, const uint8_t SID, const b
 bool CGame::SendChatTrigger(const uint8_t UID, const string& message, const uint32_t firstValue, const uint32_t secondValue)
 {
   vector<uint8_t> action = {ACTION_CHAT_TRIGGER};
-  AppendByteArray(action, firstValue, false);
-  AppendByteArray(action, secondValue, false);
+  AppendNumber<Endianness::kLittle>(action, firstValue);
+  AppendNumber<Endianness::kLittle>(action, secondValue);
   AppendByteArrayString(action, message, true);
   GetLastActionFrame().AddAction(std::move(CIncomingAction(UID, action)));
   return true;
@@ -10322,7 +10323,7 @@ bool CGame::SendChatTrigger(const uint8_t UID, const string& message, const uint
 bool CGame::SendChatTriggerBytes(const uint8_t UID, const string& message, const array<uint8_t, 8>& triggerBytes)
 {
   vector<uint8_t> action = {ACTION_CHAT_TRIGGER};
-  AppendByteArrayFast(action, triggerBytes);
+  AppendContainer(action, triggerBytes);
   AppendByteArrayString(action, message, true);
   GetLastActionFrame().AddAction(std::move(CIncomingAction(UID, action)));
   return true;

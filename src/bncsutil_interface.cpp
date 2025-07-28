@@ -259,8 +259,8 @@ bool CBNCSUtilInterface::ExtractEXEFeatures(const Version& war3DataVersion, cons
 
     buffer.resize(requiredSize);
     m_EXEInfo        = buffer.data();
-    m_EXEVersion     = CreateFixedByteArray(EXEVersion, false);
-    m_EXEVersionHash = CreateFixedByteArray(int64_t(EXEVersionHash), false);
+    m_EXEVersion     = CreateFixedByteArray<Endianness::kLittle>(EXEVersion);
+    m_EXEVersionHash = CreateFixedByteArray<Endianness::kLittle>(int64_t(EXEVersionHash));
 
     return true;
   }
@@ -278,10 +278,10 @@ bool CBNCSUtilInterface::ExtractEXEFeatures(const Version& war3DataVersion, cons
   return false;
 }
 
-bool CBNCSUtilInterface::HELP_SID_AUTH_CHECK(const filesystem::path& war3Path, const optional<Version>& war3DataVersion, const bool realmIsExpansion, const Version& realmAuthGameVersion, const CRealmConfig* realmConfig, const string& valueStringFormula, const string& mpqFileName, const std::array<uint8_t, 4>& clientToken, const std::array<uint8_t, 4>& serverToken)
+bool CBNCSUtilInterface::HELP_SID_AUTH_CHECK(const filesystem::path& war3Path, const optional<Version>& war3DataVersion, const bool realmIsExpansion, const Version& realmAuthGameVersion, const CRealmConfig* realmConfig, const string& valueStringFormula, const string& mpqFileName, const uint32_t clientToken, const uint32_t serverToken)
 {
-  m_KeyInfoROC     = CreateKeyInfo(realmConfig->m_CDKeyROC, ByteArrayToUInt32(clientToken, false), ByteArrayToUInt32(serverToken, false));
-  m_KeyInfoTFT     = CreateKeyInfo(realmConfig->m_CDKeyTFT, ByteArrayToUInt32(clientToken, false), ByteArrayToUInt32(serverToken, false));
+  m_KeyInfoROC = CreateKeyInfo(realmConfig->m_CDKeyROC, clientToken, serverToken);
+  m_KeyInfoTFT = CreateKeyInfo(realmConfig->m_CDKeyTFT, clientToken, serverToken);
 
   if (m_KeyInfoROC.size() != 36)
     Print("[BNCS] unable to create ROC key info - invalid ROC key");
@@ -361,14 +361,14 @@ std::vector<uint8_t> CBNCSUtilInterface::CreateKeyInfo(const string& key, uint32
   if (Decoder.isKeyValid())
   {
     const uint8_t Zeros[] = {0, 0, 0, 0};
-    AppendByteArray(KeyInfo, (uint32_t)key.size(), false);
-    AppendByteArrayFast(KeyInfo, CreateByteArray(Decoder.getProduct(), false));
-    AppendByteArrayFast(KeyInfo, CreateByteArray(Decoder.getVal1(), false));
-    AppendByteArray(KeyInfo, Zeros, 4);
+    AppendNumber<Endianness::kLittle>(KeyInfo, (uint32_t)key.size());
+    AppendContainer(KeyInfo, CreateByteArray<Endianness::kLittle>(Decoder.getProduct()));
+    AppendContainer(KeyInfo, CreateByteArray<Endianness::kLittle>(Decoder.getVal1()));
+    AppendBytes(KeyInfo, Zeros, 4);
     size_t Length = Decoder.calculateHash(clientToken, serverToken);
     auto   buf    = new char[Length];
     Length        = Decoder.getHash(buf);
-    AppendByteArray(KeyInfo, reinterpret_cast<uint8_t*>(buf), Length);
+    AppendBytes(KeyInfo, reinterpret_cast<uint8_t*>(buf), Length);
     delete[] buf;
   }
 

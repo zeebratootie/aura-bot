@@ -88,15 +88,15 @@ vector<uint8_t> CMDNS::GetGameBroadcastData(shared_ptr<const CGame> game, const 
   string secret = to_string(game->GetEntryKey());
 
   vector<uint8_t> statInfo;
-  AppendByteArray(statInfo, game->GetGameFlags(), false);
+  AppendNumber<Endianness::kLittle>(statInfo, game->GetGameFlags());
   statInfo.push_back(0);
-  AppendByteArrayFast(statInfo, game->GetAnnounceWidth());
-  AppendByteArrayFast(statInfo, game->GetAnnounceHeight());
-  AppendByteArrayFast(statInfo, game->GetSourceFileHashBlizz(m_GameVersion));
+  AppendContainer(statInfo, game->GetAnnounceWidth());
+  AppendContainer(statInfo, game->GetAnnounceHeight());
+  AppendContainer(statInfo, game->GetSourceFileHashBlizz(m_GameVersion));
   AppendByteArrayString(statInfo, game->GetSourceFilePath(), true);
   AppendByteArrayString(statInfo, game->GetIndexHostName(), true);
   statInfo.push_back(0);
-  AppendByteArrayFast(statInfo, game->GetMap()->GetMapSHA1());
+  AppendContainer(statInfo, game->GetMap()->GetMapSHA1());
 
   if (statInfo.size() >= 0xFFFF) {
     return {};
@@ -110,21 +110,21 @@ vector<uint8_t> CMDNS::GetGameBroadcastData(shared_ptr<const CGame> game, const 
     const std::array<uint8_t, 4> magicNumber = {0x01, 0x20, 0x43, 0x00}; // 1.32.6700 ??
     AppendByteArrayString(game_data_d, gameName, true);
     game_data_d.push_back(0);
-    AppendByteArrayFast(game_data_d, encodedStatString);
+    AppendContainer(game_data_d, encodedStatString);
     game_data_d.push_back(0);
-    AppendByteArray(game_data_d, (uint32_t)slotsTotal, false);
-    AppendByteArrayFast(game_data_d, magicNumber);
-    AppendByteArray(game_data_d, hostPort, false);
+    AppendNumber<Endianness::kLittle>(game_data_d, (uint32_t)slotsTotal);
+    AppendContainer(game_data_d, magicNumber);
+    AppendNumber<Endianness::kLittle>(game_data_d, hostPort);
   } else {
     const uint32_t One = 1;
-    AppendByteArray(game_data_d, One, false);
+    AppendNumber<Endianness::kLittle>(game_data_d, One);
     AppendByteArrayString(game_data_d, gameName, true);
-    AppendByteArrayFast(game_data_d, encodedStatString);
+    AppendContainer(game_data_d, encodedStatString);
     game_data_d.push_back(0);
-    AppendByteArray(game_data_d, (uint32_t)slotsTotal, false);
+    AppendNumber<Endianness::kLittle>(game_data_d, (uint32_t)slotsTotal);
     AppendByteArrayString(game_data_d, gameName, true);
     game_data_d.push_back(0);
-    AppendByteArray(game_data_d, hostPort, false);
+    AppendNumber<Endianness::kLittle>(game_data_d, hostPort);
   }
 
   string game_data = Base64::Encode(reinterpret_cast<unsigned char*>(game_data_d.data()), game_data_d.size(), false);

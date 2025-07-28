@@ -22,8 +22,8 @@ namespace VLANProtocol
 
   // receive functions
 
-  [[nodiscard]] CIncomingVLanSearchGame RECEIVE_VLAN_SEARCHGAME(const std::vector<uint8_t>& data);
-  [[nodiscard]] CIncomingVLanGameInfo* RECEIVE_VLAN_GAMEINFO(const std::vector<uint8_t>& data);
+  [[nodiscard]] CIncomingVLanSearchGame RECEIVE_VLAN_SEARCHGAME(const std::string_view data);
+  [[nodiscard]] CIncomingVLanGameInfo* RECEIVE_VLAN_GAMEINFO(const std::string_view data);
 
   // send functions
 
@@ -42,15 +42,23 @@ struct CIncomingVLanSearchGame
 {
   bool isValid;
   bool isTFT;
-  uint32_t gameVersion;
+  Version gameVersion;
 
-  CIncomingVLanSearchGame(bool nValid, bool nTFT, uint32_t nVersion)
+  CIncomingVLanSearchGame()
+   : isValid(false),
+     isTFT(false),
+     gameVersion(GAMEVER(0u, 0u))
+  {}
+
+  CIncomingVLanSearchGame(bool nValid, bool nTFT, const Version& nVersion)
    : isValid(nValid),
      isTFT(nTFT),
      gameVersion(nVersion)
-  {};
+  {}
 
-  ~CIncomingVLanSearchGame() = default;
+  ~CIncomingVLanSearchGame()
+  {
+  }
 };
 
 //
@@ -63,7 +71,7 @@ private:
   uint32_t m_Version;
   uint32_t m_MapGameType;
   std::string m_GameName;
-  std::vector<uint8_t> m_StatString;
+  std::string m_StatString;
   int64_t m_ReceivedTime;
   uint32_t m_ElapsedTime;
   uint32_t m_SlotsTotal;
@@ -83,7 +91,7 @@ private:
   std::string m_HostName;
 
 public:
-  CIncomingVLanGameInfo(bool nTFT, uint32_t nVersion, uint32_t nMapGameType, std::string nGameName, uint32_t nElapsedTime, uint32_t nSlotsTotal, uint32_t nSlotsOpen, const std::array<uint8_t, 4>& nIP, uint16_t nPort, uint32_t nHostCounter, uint32_t nEntryKey, const std::vector<uint8_t>& nStatString);
+  CIncomingVLanGameInfo(bool nTFT, uint32_t nVersion, uint32_t nMapGameType, std::string nGameName, uint32_t nElapsedTime, uint32_t nSlotsTotal, uint32_t nSlotsOpen, const std::array<uint8_t, 4>& nIP, uint16_t nPort, uint32_t nHostCounter, uint32_t nEntryKey, std::string_view nStatString);
   ~CIncomingVLanGameInfo();
 
   [[nodiscard]] bool GetTFT( )                                        { return m_TFT; }
@@ -93,7 +101,7 @@ public:
   [[nodiscard]] uint16_t GetMapWidth( )                               { return m_MapWidth; }
   [[nodiscard]] uint16_t GetMapHeight( )                              { return m_MapHeight; }
   [[nodiscard]] std::string_view GetGameName( )                            { return m_GameName; }
-  [[nodiscard]] const std::vector<uint8_t>& GetStatString( )                 { return m_StatString; }
+  [[nodiscard]] std::string_view GetStatString( )                 { return m_StatString; }
   [[nodiscard]] std::string_view GetHostName( )                            { return m_HostName; }
   [[nodiscard]] int64_t GetReceivedTime( )                           { return m_ReceivedTime; }
   [[nodiscard]] uint32_t GetElapsedTime( )                            { return m_ElapsedTime; }

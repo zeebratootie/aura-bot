@@ -483,25 +483,25 @@ public:
 
   // functions to send packets to players
 
-  void                                                   SendChat(uint8_t fromUID, GameUser::CGameUser* user, const std::string& message, const LogLevelExtra logLevel = LogLevelExtra::kInfo) const;
-  void                                                   SendChat(uint8_t fromUID, uint8_t toUID, const std::string& message, const LogLevelExtra logLevel = LogLevelExtra::kInfo) const;
-  void                                                   SendChat(GameUser::CGameUser* user, const std::string& message, const LogLevelExtra logLevel = LogLevelExtra::kInfo) const;
-  void                                                   SendChat(CAsyncObserver* spectator, const std::string& message, const LogLevelExtra logLevel = LogLevelExtra::kInfo) const;
-  void                                                   SendChat(uint8_t toUID, const std::string& message, const LogLevelExtra logLevel = LogLevelExtra::kInfo) const;
-  bool                                                   SendAllChat(uint8_t fromUID, const std::string& message) const;
-  bool                                                   SendAllChat(const std::string& message) const;
-  bool                                                   SendObserverChat(uint8_t fromUID, const std::string& message) const;
-  bool                                                   SendObserverChat(const std::string& message) const;
-  bool                                                   SendSpectatorChat(const CAsyncObserver* excludeSpectator, const std::string& prefix, std::string_view message) const;
-  bool                                                   SendSpectatorChat(const std::string& prefix, const std::string& message) const;
+  void                                                   SendChat(uint8_t fromUID, GameUser::CGameUser* user, std::string_view message, const LogLevelExtra logLevel = LogLevelExtra::kInfo) const;
+  void                                                   SendChat(uint8_t fromUID, uint8_t toUID, std::string_view message, const LogLevelExtra logLevel = LogLevelExtra::kInfo) const;
+  void                                                   SendChat(GameUser::CGameUser* user, std::string_view message, const LogLevelExtra logLevel = LogLevelExtra::kInfo) const;
+  void                                                   SendChat(CAsyncObserver* spectator, std::string_view message, const LogLevelExtra logLevel = LogLevelExtra::kInfo) const;
+  void                                                   SendChat(uint8_t toUID, std::string_view message, const LogLevelExtra logLevel = LogLevelExtra::kInfo) const;
+  bool                                                   SendAllChat(uint8_t fromUID, std::string_view message) const;
+  bool                                                   SendAllChat(std::string_view message) const;
+  bool                                                   SendObserverChat(uint8_t fromUID, std::string_view message) const;
+  bool                                                   SendObserverChat(std::string_view message) const;
+  bool                                                   SendSpectatorChat(const CAsyncObserver* excludeSpectator, std::string_view prefix, std::string_view message) const;
+  bool                                                   SendSpectatorChat(std::string_view prefix, std::string_view message) const;
   void                                                   SendAllSlotInfo();
   void                                                   SendVirtualHostPlayerInfo(CConnection* user) const;
   void                                                   SendFakeUsersInfo(CConnection* user) const;
   void                                                   SendJoinedPlayersInfo(CConnection* user) const;
   void                                                   SendMapAndVersionCheck(CConnection* user, const Version& gameVersion) const;
   void                                                   SendWelcomeMessage(GameUser::CGameUser* user) const;
-  void                                                   SendOwnerCommandsHelp(const std::string& cmdToken, GameUser::CGameUser* user) const;
-  void                                                   SendCommandsHelp(const std::string& cmdToken, GameUser::CGameUser* user, const bool isIntro) const;
+  void                                                   SendOwnerCommandsHelp(std::string_view cmdToken, GameUser::CGameUser* user) const;
+  void                                                   SendCommandsHelp(std::string_view cmdToken, GameUser::CGameUser* user, const bool isIntro) const;
   void                                                   QueueLeftMessage(GameUser::CGameUser* user) const;
   void                                                   SendLeftMessage(GameUser::CGameUser* user, const bool sendChat) const;
   void                                                   SendChatMessage(const GameUser::CGameUser* user, const CIncomingChatMessage& chatMessage) const;
@@ -569,13 +569,13 @@ public:
   void                      EventUserKickHandleQueued(GameUser::CGameUser* user);
   void                      EventUserAfterDisconnect(GameUser::CGameUser* user, bool fromOpen);
   void                      EventUserCheckStatus(GameUser::CGameUser* user);
-  uint8_t                   EventRequestJoin(CConnection* connection, const CIncomingJoinRequest& joinRequest);
+  JoinRequestResult         EventRequestJoin(CConnection* connection, const CIncomingJoinRequest& joinRequest);
   void                      EventBeforeJoin(CConnection* connection);
   void                      EventUserLeft(GameUser::CGameUser* user, const uint32_t clientReason);
   void                      EventUserLoaded(GameUser::CGameUser* user);
   bool                      EventUserIncomingAction(GameUser::CGameUser* user, CIncomingAction& action);
   void                      EventUserKeepAlive(GameUser::CGameUser* user);
-  void                      EventChatTrigger(GameUser::CGameUser* user, const std::string& message, const uint32_t first, const uint32_t second);
+  void                      EventChatTrigger(GameUser::CGameUser* user, std::string_view message, const uint32_t first, const uint32_t second);
   void                      EventUserChatOrPlayerSettings(GameUser::CGameUser* user, const CIncomingChatMessage& incomingChatMessage);
   void                      EventUserChat(GameUser::CGameUser* user, const CIncomingChatMessage& incomingChatMessage);
   void                      EventUserRequestTeam(GameUser::CGameUser* user, uint8_t team);
@@ -609,7 +609,7 @@ public:
   void                      UpdateUserMapProgression(GameUser::CGameUser* user, const double current, const double expected);
   bool                      ResolvePlayerObfuscation() const;
   void                      RunPlayerObfuscation();
-  bool                      CheckSmartCommands(GameUser::CGameUser* user, const std::string& message, const uint8_t activeCmd, CCommandConfig* nConfig);
+  bool                      CheckSmartCommands(GameUser::CGameUser* user, std::string_view message, const uint8_t activeCmd, CCommandConfig* nConfig);
 
   // other functions
 

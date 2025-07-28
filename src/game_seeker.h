@@ -34,6 +34,7 @@ enum class GameSeekerStatus : uint8_t
   kOk = 0u,
   kDestroy = 1u,
   kPromoted = 2u,
+  kPromotedPassThrough = 3u,
 };
 
 //

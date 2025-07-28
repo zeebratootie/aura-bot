@@ -189,26 +189,27 @@ namespace BNETProtocol
   struct AuthInfoResult
   {
     const bool success;
-    const uint8_t* logonType;
-    const uint8_t* serverToken;
-    const uint8_t* mpqFileTime;
-    const uint8_t* verFileNameStart;
-    const uint8_t* verFileNameEnd;
-    const uint8_t* valueStringFormulaStart;
-    const uint8_t* valueStringFormulaEnd;
+    uint32_t logonType;
+    uint32_t serverToken;
+    uint64_t mpqFileTime;
+    std::string verFileName;
+    std::string valueStringFormula;
 
-    AuthInfoResult(const bool nSuccess, const uint8_t* nLogonType, const uint8_t* nServerToken, const uint8_t* nMPQFileTime, const uint8_t* nVerFileNameStart, const uint8_t* nVerFileNameEnd, const uint8_t* nValueStringFormulaStart, const uint8_t* nValueStringFormulaEnd)
+    AuthInfoResult()
+    : success(false)
+    {}
+
+    AuthInfoResult(const bool nSuccess, const uint32_t nLogonType, const uint32_t nServerToken, const uint64_t nMPQFileTime, const std::string_view nVerFileName, const std::string_view nValueStringFormula)
     : success(nSuccess),
       logonType(nLogonType),
       serverToken(nServerToken),
       mpqFileTime(nMPQFileTime),
-      verFileNameStart(nVerFileNameStart),
-      verFileNameEnd(nVerFileNameEnd),
-      valueStringFormulaStart(nValueStringFormulaStart),
-      valueStringFormulaEnd(nValueStringFormulaEnd)
-      {};
+      verFileName(nVerFileName),
+      valueStringFormula(nValueStringFormula)
+    {}
 
-    ~AuthInfoResult() = default;
+    ~AuthInfoResult()
+    {}
   };
 
   struct AuthCheckResult
@@ -231,15 +232,22 @@ namespace BNETProtocol
   struct AuthLoginResult
   {
     const bool success;
-    const uint8_t* salt;
-    const uint8_t* serverPublicKey;
+    std::string_view salt;
+    std::string_view serverPublicKey;
 
-    AuthLoginResult(const bool nSuccess, const uint8_t* nSalt, const uint8_t* nServerPublicKey)
+    AuthLoginResult()
+    : success(false)
+    {}
+
+    AuthLoginResult(const bool nSuccess, const std::string_view nSalt, const std::string_view nServerPublicKey)
     : success(nSuccess),
       salt(nSalt),
       serverPublicKey(nServerPublicKey)
-    {};
-    ~AuthLoginResult() = default;
+    {}
+
+    ~AuthLoginResult()
+    {
+    }
   };
 
   struct EnterChatResult
@@ -336,21 +344,21 @@ namespace BNETProtocol
       
   // receive functions
 
-  [[nodiscard]] bool RECEIVE_SID_ZERO(const std::vector<uint8_t>& data);
+  [[nodiscard]] bool RECEIVE_SID_ZERO(const std::string_view data);
   [[nodiscard]] std::vector<NetworkGameInfo> RECEIVE_SID_GETADVLISTEX(const Version& war3Version, const std::vector<uint8_t>& data);
-  [[nodiscard]] BNETProtocol::EnterChatResult RECEIVE_SID_ENTERCHAT(const std::vector<uint8_t>& data);
-  [[nodiscard]] BNETProtocol::IncomingChatResult RECEIVE_SID_CHATEVENT(const std::vector<uint8_t>& data);
-  [[nodiscard]] bool RECEIVE_SID_CHECKAD(const std::vector<uint8_t>& data);
-  [[nodiscard]] bool RECEIVE_SID_STARTADVEX3(const std::vector<uint8_t>& data);
-  [[nodiscard]] std::array<uint8_t, 4> RECEIVE_SID_PING(const std::vector<uint8_t>& data);
-  [[nodiscard]] BNETProtocol::AuthInfoResult RECEIVE_SID_AUTH_INFO(const std::vector<uint8_t>& data);
-  [[nodiscard]] BNETProtocol::AuthCheckResult RECEIVE_SID_AUTH_CHECK(const std::vector<uint8_t>& data);
-  [[nodiscard]] BNETProtocol::AuthLoginResult RECEIVE_SID_AUTH_ACCOUNTLOGON(const std::vector<uint8_t>& data);
-  [[nodiscard]] bool RECEIVE_SID_AUTH_ACCOUNTLOGONPROOF(const std::vector<uint8_t>& data);
-  [[nodiscard]] bool RECEIVE_SID_AUTH_ACCOUNTSIGNUP(const std::vector<uint8_t>& data);
-  [[nodiscard]] std::vector<std::string> RECEIVE_SID_FRIENDLIST(const std::vector<uint8_t>& data);
-  [[nodiscard]] std::vector<std::string> RECEIVE_SID_CLANMEMBERLIST(const std::vector<uint8_t>& data);
-  [[nodiscard]] std::optional<CConfig> RECEIVE_HOSTED_GAME_CONFIG(const std::vector<uint8_t>& data);
+  [[nodiscard]] BNETProtocol::EnterChatResult RECEIVE_SID_ENTERCHAT(const std::string_view data);
+  [[nodiscard]] BNETProtocol::IncomingChatResult RECEIVE_SID_CHATEVENT(const std::string_view data);
+  [[nodiscard]] bool RECEIVE_SID_CHECKAD(const std::string_view data);
+  [[nodiscard]] bool RECEIVE_SID_STARTADVEX3(const std::string_view data);
+  [[nodiscard]] uint32_t RECEIVE_SID_PING(const std::string_view data);
+  [[nodiscard]] BNETProtocol::AuthInfoResult RECEIVE_SID_AUTH_INFO(const std::string_view data);
+  [[nodiscard]] BNETProtocol::AuthCheckResult RECEIVE_SID_AUTH_CHECK(const std::string_view data);
+  [[nodiscard]] BNETProtocol::AuthLoginResult RECEIVE_SID_AUTH_ACCOUNTLOGON(const std::string_view data);
+  [[nodiscard]] bool RECEIVE_SID_AUTH_ACCOUNTLOGONPROOF(const std::string_view data);
+  [[nodiscard]] bool RECEIVE_SID_AUTH_ACCOUNTSIGNUP(const std::string_view data);
+  [[nodiscard]] std::vector<std::string> RECEIVE_SID_FRIENDLIST(const std::string_view data);
+  [[nodiscard]] std::vector<std::string> RECEIVE_SID_CLANMEMBERLIST(const std::string_view data);
+  [[nodiscard]] std::optional<CConfig> RECEIVE_HOSTED_GAME_CONFIG(const std::string_view data);
 
   [[nodiscard]] std::optional<BNETProtocol::WhoisInfo> PARSE_WHOIS_INFO(std::string_view message, const PvPGNLocale realmLocale);
 
@@ -371,11 +379,11 @@ namespace BNETProtocol
   [[nodiscard]] std::vector<uint8_t> SEND_SID_PUBLICHOST(const std::array<uint8_t, 4> address, uint16_t port);
   [[nodiscard]] std::vector<uint8_t> SEND_SID_STARTADVEX3(uint8_t state, const uint32_t mapGameType, const uint32_t gameFlags, const std::array<uint8_t, 2>& mapWidth, const std::array<uint8_t, 2>& mapHeight, std::string_view gameName, std::string_view hostName, uint32_t upTime, std::string_view mapPath, const std::array<uint8_t, 4>& mapBlizzHash, const std::optional<std::array<uint8_t, 20>>& mapSHA1, uint32_t hostCounter, uint8_t maxSupportedSlots);
   [[nodiscard]] std::vector<uint8_t> SEND_SID_NOTIFYJOIN(std::string_view gameName);
-  [[nodiscard]] std::vector<uint8_t> SEND_SID_PING(const std::array<uint8_t, 4>& pingValue);
+  [[nodiscard]] std::vector<uint8_t> SEND_SID_PING(const uint32_t pingValue);
   [[nodiscard]] std::vector<uint8_t> SEND_SID_LOGONRESPONSE(const std::vector<uint8_t>& clientToken, const std::vector<uint8_t>& serverToken, const std::vector<uint8_t>& passwordHash, std::string_view accountName);
   [[nodiscard]] std::vector<uint8_t> SEND_SID_NETGAMEPORT(uint16_t serverPort);
   [[nodiscard]] std::vector<uint8_t> SEND_SID_AUTH_INFO(const bool isExpansion, const Version& war3Version, uint32_t localeID, uint32_t languageID, const std::array<uint8_t, 4>& localeShort, std::string_view countryShort, std::string_view country);
-  [[nodiscard]] std::vector<uint8_t> SEND_SID_AUTH_CHECK(const std::array<uint8_t, 4>& clientToken, const bool isExpansion, const std::array<uint8_t, 4>& exeVersion, const std::array<uint8_t, 4>& exeVersionHash, const std::vector<uint8_t>& keyInfoROC, const std::vector<uint8_t>& keyInfoTFT, std::string_view exeInfo, std::string_view keyOwnerName);
+  [[nodiscard]] std::vector<uint8_t> SEND_SID_AUTH_CHECK(const uint32_t clientToken, const bool isExpansion, const std::array<uint8_t, 4>& exeVersion, const std::array<uint8_t, 4>& exeVersionHash, const std::vector<uint8_t>& keyInfoROC, const std::vector<uint8_t>& keyInfoTFT, std::string_view exeInfo, std::string_view keyOwnerName);
   [[nodiscard]] std::vector<uint8_t> SEND_SID_AUTH_ACCOUNTLOGON(const std::array<uint8_t, 32>& clientPublicKey, std::string_view accountName);
   [[nodiscard]] std::vector<uint8_t> SEND_SID_AUTH_ACCOUNTLOGONPROOF(const std::array<uint8_t, 20>& clientPasswordProof);
   [[nodiscard]] std::vector<uint8_t> SEND_SID_AUTH_ACCOUNTSIGNUP(std::string_view userName, const std::array<uint8_t, 20>& clientPasswordProof);

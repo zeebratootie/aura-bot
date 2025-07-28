@@ -136,7 +136,7 @@ bool CSaveGame::Parse()
     return false;
   }
 
-  m_SaveHash = CreateFixedByteArray(saveHash, false);
+  m_SaveHash = CreateFixedByteArray<Endianness::kLittle>(saveHash);
   m_Valid = true;
   return m_Valid;
 }

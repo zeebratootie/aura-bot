@@ -118,7 +118,7 @@ void CGProxyServer::StartExtendedHandShake(int64_t waitTicks, uint32_t gameID) c
   GetSocket().PutBytes(GPSProtocol::SEND_GPSS_SUPPORT_EXTENDED(waitTicks, gameID));
 }
 
-GProxyExtendedClientResult CGProxyServer::ConfirmExtended(const vector<uint8_t>& data)
+GProxyExtendedClientResult CGProxyServer::ConfirmExtended(const string_view data)
 {
   if (!m_SupportsExtended) return GProxyExtendedClientResult::kInvalid;
   if (m_IsExtended) return GProxyExtendedClientResult::kAlready;

@@ -118,33 +118,36 @@ GameSeekerStatus CGameSeeker::Update(fd_set* fd, fd_set* send_fd, int64_t timeou
   if (m_Type == IncomingConnectionType::kKickedPlayer) {
     m_Socket->Discard(fd);
   } else if (m_Socket->DoRecv(fd)) {
-    // extract as many packets as possible from the socket's receive buffer and process them
-    string*              RecvBuffer         = m_Socket->GetBytes();
-    std::vector<uint8_t> Bytes              = CreateByteArray((uint8_t*)RecvBuffer->c_str(), RecvBuffer->size());
-    uint32_t             LengthProcessed    = 0;
+    CStreamIOSocket* socket = m_Socket;
+    string_view data = socket->GetRecvBufferView();
 
     // a packet is at least 4 bytes so loop as long as the buffer contains 4 bytes
 
-    while (Bytes.size() >= 4) {
+    while (data.size() >= 4) {
       // bytes 2 and 3 contain the length of the packet
-      const uint16_t Length = ByteArrayToUInt16(Bytes, false, 2);
-      if (Length < 4) {
+      const uint16_t packetSize = ByteArrayToUInt16<Endianness::kLittle>(data, 2);
+      if (packetSize < 4) {
         Abort = true;
         break;
       }
-      if (Bytes.size() < Length) break;
-      const std::vector<uint8_t> Data = std::vector<uint8_t>(begin(Bytes), begin(Bytes) + Length);
+      if (data.size() < packetSize) {
+        // we don't have the complete packet yet
+        break;
+      }
 
-      switch (Bytes[0]) {
+      string_view packet = data.substr(0, packetSize);
+      const uint8_t packetFamily = GetByteAt(packet, 0);
+      const uint8_t packetType = GetByteAt(packet, 1);
+      switch (packetFamily) {
         case GameProtocol::Magic::W3GS_HEADER:
           if (m_Type != IncomingConnectionType::kUDPTunnel || !m_Aura->m_Net.m_Config.m_EnableTCPWrapUDP) {
             Abort = true;
             break;
           }
-          if (Bytes[1] == GameProtocol::Magic::REQJOIN) {
-            CIncomingJoinRequest joinRequest = GameProtocol::RECEIVE_W3GS_REQJOIN(Data);
+          if (packetType == GameProtocol::Magic::REQJOIN) {
+            CIncomingJoinRequest joinRequest = GameProtocol::RECEIVE_W3GS_REQJOIN(packet);
             if (!joinRequest.GetIsValid()) {
-              DPRINT_IF(LogLevel::kTrace2, "[AURA] Got invalid REQJOIN <" + ByteArrayToDecString(Bytes) + ">");
+              DPRINT_IF(LogLevel::kTrace2, "[AURA] Got invalid REQJOIN <" + GetStringBytesHex(packet) + ">");
               if (joinRequest.GetError() == JoinRequestError::kCannotParse) {
                 Abort = true;
               } else {
@@ -158,21 +161,22 @@ GameSeekerStatus CGameSeeker::Update(fd_set* fd, fd_set* send_fd, int64_t timeou
               break;
             }
             joinRequest.UpdateCensored(targetLobby->m_Config.m_UnsafeNameHandler, targetLobby->m_Config.m_PipeConsideredHarmful);
-            if (targetLobby->EventRequestJoin(this, joinRequest)) {
+            JoinRequestResult joinResult = targetLobby->EventRequestJoin(this, joinRequest);
+            if (joinResult != JoinRequestResult::kFail && joinResult != JoinRequestResult::kFailDelayed) {
               result = GameSeekerStatus::kPromoted;
               m_Type = IncomingConnectionType::kPlayer;
               m_Socket = nullptr;
             }
-          } else if (GameProtocol::Magic::SEARCHGAME <= Bytes[1] && Bytes[1] <= GameProtocol::Magic::DECREATEGAME) {
-            if (Length > 1024) {
+          } else if (GameProtocol::Magic::SEARCHGAME <= packetType && packetType <= GameProtocol::Magic::DECREATEGAME) {
+            if (packetSize > 1024) {
               Abort = true;
               break;
             }
             struct UDPPkt pkt;
             pkt.socket = m_Socket;
             pkt.sender = &(m_Socket->m_RemoteHost);
-            memcpy(pkt.buf, Bytes.data(), Length);
-            pkt.length = Length;
+            memcpy(pkt.buf, packet.data(), packetSize);
+            pkt.length = packetSize;
             m_Aura->m_Net.HandleUDP(&pkt);
           } else {
             Abort = true;
@@ -185,10 +189,10 @@ GameSeekerStatus CGameSeeker::Update(fd_set* fd, fd_set* send_fd, int64_t timeou
             Abort = true;
             break;
           }
-          if (Bytes[1] == VLANProtocol::Magic::SEARCHGAME) {
-            CIncomingVLanSearchGame vlanSearch = VLANProtocol::RECEIVE_VLAN_SEARCHGAME(Data);
+          if (packetType == VLANProtocol::Magic::SEARCHGAME) {
+            CIncomingVLanSearchGame vlanSearch = VLANProtocol::RECEIVE_VLAN_SEARCHGAME(packet);
             if (vlanSearch.isValid) {
-              m_GameVersion = GAMEVER(1, vlanSearch.gameVersion);
+              m_GameVersion = vlanSearch.gameVersion;
               for (const auto& game : m_Aura->GetJoinableGames()) {
                 if (game->GetIsStageAcceptingJoins()) {
                   game->SendGameDiscoveryInfoVLAN(this);
@@ -203,25 +207,27 @@ GameSeekerStatus CGameSeeker::Update(fd_set* fd, fd_set* send_fd, int64_t timeou
           Abort = true;
       }
 
-      LengthProcessed += Length;
+      //if (result != GameSeekerStatus::kPromotedPassThrough) {
+      data.remove_prefix(packetSize);
+      //}
 
       if (Abort) {
         // Process no more packets
+        data.remove_prefix(data.size());
         break;
       }
-
-      Bytes = std::vector<uint8_t>(begin(Bytes) + Length, end(Bytes));
     }
 
-    if (Abort && result != GameSeekerStatus::kPromoted) {
-      result = GameSeekerStatus::kDestroy;
-      RecvBuffer->clear();
-    } else if (LengthProcessed > 0) {
-      *RecvBuffer = RecvBuffer->substr(LengthProcessed);
+    if (data.size() != socket->GetRecvBufferSize()) {
+      socket->UpdateRecvBuffer(data);
     }
   } else if (m_Aura->GetTicksIsAfterDelay(m_Socket->GetLastRecv(), timeout)) {
     PRINT_IF(LogLevel::kDebug, "Game seeker timed out after " + to_string(timeout) + " ms");
     return GameSeekerStatus::kDestroy;
+  }
+
+  if (Abort) {
+    m_DeleteMe = true;
   }
 
   // At this point, m_Socket may have been transferred to GameUser::CGameUser

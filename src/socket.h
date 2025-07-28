@@ -198,7 +198,7 @@ struct UDPPkt
 {
   sockaddr_storage* sender;
   int length;
-  unsigned char buf[1024];
+  char buf[1024];
   CSocket* socket;
 };
 
@@ -410,8 +410,8 @@ public:
   [[nodiscard]] std::string                     GetErrorString() const;
   [[nodiscard]] std::string                     GetName() const;
   [[nodiscard]] inline uint16_t                 GetPort() const { return m_Port; }
-  [[nodiscard]] inline std::array<uint8_t, 2>   GetPortLE() const { return CreateFixedByteArray(m_Port, false); }
-  [[nodiscard]] inline std::array<uint8_t, 2>   GetPortBE() const { return CreateFixedByteArray(m_Port, true); } // Network-byte-order
+  [[nodiscard]] inline std::array<uint8_t, 2>   GetPortLE() const { return CreateFixedByteArray<Endianness::kLittle>(m_Port); }
+  [[nodiscard]] inline std::array<uint8_t, 2>   GetPortBE() const { return CreateFixedByteArray<Endianness::kBig>(m_Port); } // Network-byte-order
   [[nodiscard]] inline int32_t                  GetError() const { return m_Error; }
   [[nodiscard]] inline bool                     HasError() const { return m_HasError; }
   [[nodiscard]] inline bool                     HasFin() const { return m_HasFin; }
@@ -469,10 +469,10 @@ public:
   [[nodiscard]] inline bool                       GetLogErrors() const { return m_LogErrors; }
   void Disconnect();
 
-  [[nodiscard]] inline std::string*               GetBytes() { return &m_RecvBuffer; }
+  [[nodiscard]] inline std::string_view           GetRecvBufferView() { return m_RecvBuffer; }
   [[nodiscard]] inline std::string::size_type     GetRecvBufferSize() { return m_RecvBuffer.size(); }
   inline void ClearRecvBuffer() { m_RecvBuffer.clear(); }
-  inline void SubstrRecvBuffer(uint32_t i) { m_RecvBuffer = m_RecvBuffer.substr(i); }
+  inline void UpdateRecvBuffer(std::string_view data) { m_RecvBuffer.assign(data.begin(), data.end()); }
   bool DoRecv(fd_set* fd);
   void Discard(fd_set* fd);
 

@@ -1382,7 +1382,8 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
 
     case HashCode("version"):
     case HashCode("about"): {
-      SendReply("Aura " + m_Aura->m_Version + " is a permissive-licensed open source project. Say hi at <" + m_Aura->m_IssuesURL + ">");
+      SendReply("Aura " + m_Aura->m_Version + " is a permissive-licensed open source project.");
+      SendReply("Say hi at <" + m_Aura->m_IssuesURL + ">");
       break;
     }
 
@@ -1392,7 +1393,8 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
 
     case HashCode("git"):
     case HashCode("help"): {
-      SendReply("Aura " + m_Aura->m_Version + " is a permissive-licensed open source project. Read more at <" + m_Aura->m_RepositoryURL + ">");
+      SendReply("Aura " + m_Aura->m_Version + " is a permissive-licensed open source project.");
+      SendReply("Read more at <" + m_Aura->m_RepositoryURL + ">");
       break;
     }
 
@@ -1400,7 +1402,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
     // !SC
     //
     case HashCode("sc"): {
-      SendReply("To verify your identity and use commands in game rooms, whisper me two letters: sc");
+      SendReply("To verify your account and use commands in game rooms, whisper me these two letters: sc");
       break;
     }
 
@@ -1656,7 +1658,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
       }
       string FromFragment;
       if (m_Aura->m_Net.m_Config.m_EnableGeoLocalization) {
-        FromFragment = ", From: " + m_Aura->m_DB->FromCheck(ByteArrayToUInt32(targetPlayer->GetIPv4(), true));
+        FromFragment = ", From: " + m_Aura->m_DB->FromCheck(ByteArrayToUInt32<Endianness::kBig>(targetPlayer->GetIPv4()));
       }
       string realmFragment = "Realm: " + (targetPlayer->GetRealmHostName().empty() ? "LAN" : string(targetPlayer->GetRealmHostName()));
       string versionFragment;
@@ -1775,19 +1777,19 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
       if (!targetGame)
         break;
 
-      vector<string> output;
-      output.push_back("Game#" + to_string(targetGame->GetGameID()) + " - " + targetGame->GetMap()->GetMapTitle());
+      vector<string> generalInfo, playerInfo;
+      generalInfo.push_back("Game#" + to_string(targetGame->GetGameID()) + " - " + targetGame->GetMap()->GetMapTitle());
 
       switch (targetGame->GetMap()->GetGameObservers()) {
         case GameObserversMode::kNone:
-          output.push_back("Observers OFF");
+          generalInfo.push_back("Observers OFF");
           break;
         case GameObserversMode::kOnDefeat:
         case GameObserversMode::kStartOrOnDefeat:
-          output.push_back("Defeated players can observe the game. Observers cannot chat.");
+          generalInfo.push_back("Defeated players can observe the game. Observers cannot chat.");
           break;
         case GameObserversMode::kReferees:
-          output.push_back("Defeated players cannot observe the game. Observers can chat (referees.)");
+          generalInfo.push_back("Defeated players cannot observe the game. Observers can chat (referees.)");
           break;
         IGNORE_ENUM_LAST(GameObserversMode)
       }
@@ -1797,10 +1799,14 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
       for (const auto& player : players) {
         const CGameSlot* slot = targetGame->InspectSlot(targetGame->GetSIDFromUID(player->GetUID()));
         uint8_t race = slot->GetRaceFixed();
-        output.push_back("[" + player->GetName() + "] - " + GetRaceName(race));
+        playerInfo.push_back("[" + player->GetName() + "] - " + GetRaceName(race));
       }
-      vector<string> replyLines = JoinReplyListCompact(output);
-      for (const auto& line : replyLines) {
+      vector<string> generalLines = JoinReplyListCompact(generalInfo);
+      vector<string> playerLines = JoinReplyListCompact(playerInfo);
+      for (const auto& line : generalLines) {
+        SendReply(line);
+      }
+      for (const auto& line : playerLines) {
         SendReply(line);
       }
       break;
@@ -2439,12 +2445,12 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
       string name = target;
       uint8_t matchType = m_Aura->m_DB->FindData(MAP_TYPE_TWRPG, MAP_DATA_TYPE_ANY, name, false);
       if (matchType == MAP_DATA_TYPE_NONE) {
-        vector<string> words = SplitTokens(name, ' ');
+        vector<string_view> words = SplitTokens(name, ' ');
         if (words.size() <= 1) {
           ErrorReply("[" + target + "] not found.");
           break;
         }
-        string intermediate = words[0];
+        string_view intermediate = words[0];
         words[0] = words[words.size() - 1];
         words[words.size() - 1] = intermediate;
         name = JoinStrings(words, " ");
@@ -2505,7 +2511,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
 
         Froms += (*i)->GetDisplayName();
         Froms += ": (";
-        Froms += m_Aura->m_DB->FromCheck(ByteArrayToUInt32((*i)->GetIPv4(), true));
+        Froms += m_Aura->m_DB->FromCheck(ByteArrayToUInt32<Endianness::kBig>((*i)->GetIPv4()));
         Froms += ")";
 
         if (i != end(targetGame->m_Users) - 1)

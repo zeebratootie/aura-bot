@@ -268,9 +268,9 @@ bool CW3MMD::HandleTokens(uint8_t fromUID, uint32_t valueID, vector<string> Toke
   } else if (actionType == "Blank") {
     // ignore
   } else if (actionType == "Custom") {
-    LogMetaData(m_Game.get().GetEffectiveTicks(), "custom: " + JoinStrings(Tokens));
+    LogMetaData(m_Game.get().GetEffectiveTicks(), "custom: " + SanitizeStringUTF8(JoinStrings(Tokens)));
   } else {
-    LogMetaData(m_Game.get().GetEffectiveTicks(), "unknown action type [" + actionType + "] found, ignoring");
+    LogMetaData(m_Game.get().GetEffectiveTicks(), "unknown action type " + SanitizeStringUTF8(actionType) + " found, ignoring");
   }
   return true;
 }
@@ -528,7 +528,7 @@ bool CW3MMD::ProcessAction(CW3MMDAction* action)
         ReplaceText(Format, "{" + to_string(i) + "}", values[i]);
       }
     }
-    LogMetaData(action->GetRecvTicks(), "Event " + SanitizeStringUTF8(action->GetName()) + ": " + Format);
+    LogMetaData(action->GetRecvTicks(), "Event " + SanitizeStringUTF8(action->GetName()) + ": " + SanitizeStringUTF8(Format));
     return true;
   }
 }

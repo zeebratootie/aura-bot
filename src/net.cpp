@@ -169,9 +169,12 @@ bool CGameTestConnection::Update(fd_set* fd, fd_set* send_fd)
   } else if (m_Socket->GetConnected() && !m_Aura->GetTicksIsAfter(m_TimeoutTicks)) {
     bool gotJoinedMessage = false;
     if (m_Socket->DoRecv(fd)) {
-      string* RecvBuffer = m_Socket->GetBytes();
-      std::vector<uint8_t> Bytes = CreateByteArray((uint8_t*)RecvBuffer->c_str(), RecvBuffer->size());
-      gotJoinedMessage = Bytes.size() >= 2 && Bytes[0] == GameProtocol::Magic::W3GS_HEADER && Bytes[1] == GameProtocol::Magic::SLOTINFOJOIN;
+      string_view data = m_Socket->GetRecvBufferView();
+      gotJoinedMessage = (
+        data.size() >= 2 &&
+        (GetByteAt(data, 0) == GameProtocol::Magic::W3GS_HEADER) &&
+        (GetByteAt(data, 1) == GameProtocol::Magic::SLOTINFOJOIN)
+      );
       m_Passed = true;
     }
     if (!m_SentJoinRequest) {
@@ -306,12 +309,12 @@ bool CIPAddressAPIConnection::QueryIPAddress()
   const vector<uint8_t> end = {0xd, 0xa, 0xd, 0xa}; // \n\r\n\r
 
   vector<uint8_t> query;
-  AppendByteArrayFast(query, method);
+  AppendContainer(query, method);
   AppendByteArrayString(query, m_EndPoint, false);
-  AppendByteArrayFast(query, httpVersion);
-  AppendByteArrayFast(query, hostHeader);
+  AppendContainer(query, httpVersion);
+  AppendContainer(query, hostHeader);
   AppendByteArrayString(query, m_HostName, false);
-  AppendByteArrayFast(query, end);
+  AppendContainer(query, end);
   m_Socket->PutBytes(query);
   m_SentQuery = true;
   return true;
@@ -332,23 +335,24 @@ bool CIPAddressAPIConnection::Update(fd_set* fd, fd_set* send_fd)
   } else if (m_Socket->GetConnected() && !m_Aura->GetTicksIsAfter(m_TimeoutTicks)) {
     bool gotAddress = false;
     if (m_Socket->DoRecv(fd)) {
-      string* RecvBuffer = m_Socket->GetBytes();
-      std::vector<uint8_t> Bytes = CreateByteArray((uint8_t*)RecvBuffer->c_str(), RecvBuffer->size());
-      uint16_t size = static_cast<uint16_t>(Bytes.size());
-      const bool is200 = size >= 15 && Bytes[9] == 0x32 && Bytes[10] == 0x30 && Bytes[11] == 0x30;
+      string_view data = m_Socket->GetRecvBufferView();
+      size_t size = data.size();
+      const bool is200 = size >= 15 && data.substr(9, 3) == "200";
       if (is200) {
-        uint16_t endIndex = size;
-        if (Bytes[endIndex - 1] == 0xa) endIndex = Bytes[endIndex - 2] == 0xd ? endIndex - 2 : endIndex - 1; // Ignore EOF
-        uint16_t responseStart = endIndex;
-        uint16_t index = endIndex;
+        size_t endIndex = size;
+        if (GetByteAt(data, endIndex - 1) == 0xa) {
+          endIndex = GetByteAt(data, endIndex - 2) == 0xd ? endIndex - 2 : endIndex - 1; // Ignore EOF
+        }
+        size_t responseStart = endIndex;
+        size_t index = endIndex;
         while (index--) {
-          if (Bytes[index] == 0xa) {
+          if (GetByteAt(data, index) == 0xa) {
             responseStart = index + 1;
             break;
           }
         }
-        if (endIndex > responseStart) {
-          string responseBody = string(Bytes.begin() + responseStart, Bytes.begin() + endIndex);
+        if (responseStart < endIndex) {
+          string responseBody(data.substr(responseStart, endIndex - responseStart));
           optional<sockaddr_storage> maybeAddress = CNet::ParseAddress(responseBody, m_TargetHost.ss_family == AF_INET6 ? ACCEPT_IPV6 : ACCEPT_IPV4);
           if (maybeAddress.has_value()) {
             m_Result = move(maybeAddress);
@@ -1035,22 +1039,22 @@ void CNet::HandleUDP(UDPPkt* pkt)
     RelayUDPPacket(pkt, ipAddress, remotePort);
   }
 
-  if (pkt->buf[0] != GameProtocol::Magic::W3GS_HEADER) {
+  string_view data(pkt->buf, (size_t)pkt->length);
+  if (GetByteAt(data, 0) != GameProtocol::Magic::W3GS_HEADER) {
     return;
   }
 
-  if (!(pkt->length >= 16 && pkt->buf[1] == GameProtocol::Magic::SEARCHGAME)) {
+  if (!(pkt->length >= 16 && GetByteAt(data, 1) == GameProtocol::Magic::SEARCHGAME)) {
     return;
   }
 
-  bool isExpansion = false;
-  if (memcmp(pkt->buf + 4, ProductID_TFT, 4) == 0) {
-    isExpansion = true;
-  } else if (memcmp(pkt->buf + 4, ProductID_ROC, 4) != 0) {
+  const uint32_t productID = ByteArrayToUInt32<Endianness::kLittle>(data, 4);
+  const bool isExpansion = productID == ProductID_TFT_LE;
+  if (!isExpansion && productID != ProductID_ROC_LE) {
     return;
   }
 
-  const Version requestVersion = GAMEVER(1, pkt->buf[8]);
+  const Version requestVersion = GAMEVER(1, GetByteAt(data, 8));
 
   DPRINT_IF(LogLevel::kTrace3, "[NET] IP " + ipAddress + " searching games from port " + to_string(remotePort) + "...");
 
@@ -1061,7 +1065,7 @@ void CNet::HandleUDP(UDPPkt* pkt)
     if (isExpansion != game->GetIsExpansion()) {
       continue;
     }
-    if (pkt->buf[8] == 0 || game->GetIsSupportedGameVersion(requestVersion)) {
+    if (requestVersion.second == 0 || game->GetIsSupportedGameVersion(requestVersion)) {
       DPRINT_IF(LogLevel::kTrace3, "[NET] Sent game info to " + ipAddress + ":" + to_string(remotePort) + "...");
       game->ReplySearch(pkt->sender, pkt->socket, requestVersion);
 

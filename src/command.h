@@ -178,8 +178,8 @@ public:
   ~CCommandContext();
 };
 
-[[nodiscard]] inline std::string GetTokenName(const std::string& token) {
-  if (token.length() != 1) return std::string();
+[[nodiscard]] inline std::string_view GetTokenName(std::string_view token) {
+  if (token.length() != 1) return std::string_view();
   switch (token[0]) {
     case '.':
       return " (period.)";
@@ -198,7 +198,7 @@ public:
     case '%':
       return " (percent.)";
   }
-  return std::string();
+  return std::string_view();
 }
 
 [[nodiscard]] inline std::string HelpMissingComma(const std::string& target) {

@@ -34,10 +34,11 @@
 enum class IncomingConnectionStatus : uint8_t {
   kOk = 0,
   kDestroy = 1,
-  kPromoted = 2,
-  kPromotedPassThrough = 3,
-  kReconnected = 4,
-  LAST = 5,
+  kDestroyDelayed = 2,
+  kPromoted = 3,
+  kPromotedPassThrough = 4,
+  kReconnected = 5,
+  LAST = 6,
 };
 
 enum class IncomingConnectionType : uint8_t {
