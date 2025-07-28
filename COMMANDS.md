@@ -341,6 +341,7 @@ Commands
 ## \`restart\`
 
 ## \`resume\`
+- Aliases: unpause
 
 ## \`rmk\`
 - Aliases: remake

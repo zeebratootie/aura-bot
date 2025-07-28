@@ -461,9 +461,9 @@ Map
 - Default value: false
 - Error handling: Use default value
 
-## \`map.hosting.latency.equalizer.frames\`
-- Type: uint8
-- Default value: PING_EQUALIZER_DEFAULT_FRAMES
+## \`map.hosting.latency.equalizer.max_delay\`
+- Type: uint16
+- Default value: 320
 - Error handling: Use default value
 
 ## \`map.hosting.load_in_game.enabled\`
@@ -496,6 +496,11 @@ Map
 - Default value: false
 - Error handling: Use default value
 
+## \`map.hosting.pause_game.allowed\`
+- Type: bool
+- Default value: false
+- Error handling: Use default value
+
 ## \`map.hosting.realm_broadcast.error_handler\`
 - Type: enum\<onrealmbroadcasterrorhandler\>
 - Default value: OnRealmBroadcastErrorHandler::kExitOnMaxErrors
@@ -504,6 +509,11 @@ Map
 ## \`map.hosting.save_game.allowed\`
 - Type: bool
 - Default value: false
+- Error handling: Use default value
+
+## \`map.hosting.spectator_delay\`
+- Type: uint32
+- Default value: 300
 - Error handling: Use default value
 
 ## \`map.load_screen.image.mime_type\`
@@ -560,14 +570,24 @@ Map
 - Default value: false
 - Error handling: Abort operation
 
-## \`map.net.start_lag.sync_limit\`
+## \`map.net.sync.start_lag.observers.default_ms\`
 - Type: uint32
-- Default value: 32
+- Default value: 90000
 - Error handling: Use default value
 
-## \`map.net.stop_lag.sync_limit\`
+## \`map.net.sync.start_lag.players.default_ms\`
 - Type: uint32
-- Default value: 8
+- Default value: 3200
+- Error handling: Use default value
+
+## \`map.net.sync.stop_lag.observers.default_ms\`
+- Type: uint32
+- Default value: 60000
+- Error handling: Use default value
+
+## \`map.net.sync.stop_lag.players.default_ms\`
+- Type: uint32
+- Default value: 800
 - Error handling: Use default value
 
 ## \`map.num_disabled\`

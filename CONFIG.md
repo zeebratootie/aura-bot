@@ -794,7 +794,22 @@ Config
 
 ## \`hosting.latency.default\`
 - Type: uint16
-- Default value: 100
+- Default value: 40
+- Error handling: Use default value
+
+## \`hosting.latency.default\`
+- Type: keyvalue
+- Default value: to_string(m_Latency
+- Error handling: Use default value
+
+## \`hosting.latency.default\`
+- Type: keyvalue
+- Default value: to_string(m_Latency
+- Error handling: Use default value
+
+## \`hosting.latency.default\`
+- Type: keyvalue
+- Default value: to_string(m_Latency
 - Error handling: Use default value
 
 ## \`hosting.latency.drift.max\`
@@ -807,9 +822,14 @@ Config
 - Default value: false
 - Error handling: Use default value
 
-## \`hosting.latency.equalizer.frames\`
-- Type: uint8
-- Default value: PING_EQUALIZER_DEFAULT_FRAMES
+## \`hosting.latency.equalizer.max_delay\`
+- Type: uint16
+- Default value: 320
+- Error handling: Use default value
+
+## \`hosting.latency.equalizer.max_delay\`
+- Type: keyvalue
+- Default value: to_string(m_LatencyEqualizerMaxDelay
 - Error handling: Use default value
 
 ## \`hosting.latency.max\`
@@ -934,6 +954,11 @@ Config
 - Default value: false
 - Error handling: Use default value
 
+## \`hosting.pause_game.allowed\`
+- Type: bool
+- Default value: true
+- Error handling: Use default value
+
 ## \`hosting.realm_broadcast.error_handler\`
 - Type: enum\<onrealmbroadcasterrorhandler\>
 - Constraints: ignore, exit_main_error, exit_empty_main_error, exit_any_error, exit_empty_any_error, exit_max_errors.
@@ -949,6 +974,11 @@ Config
 - Type: string
 - Constraints: Min length: 1. Max length: 15.
 - Default value: |cFF4080C0Aura
+- Error handling: Use default value
+
+## \`hosting.spectator_delay\`
+- Type: uint32
+- Default value: 300
 - Error handling: Use default value
 
 ## \`hosting.vote_kick.min_percent\`
@@ -1290,29 +1320,89 @@ Config
 - Default value: true
 - Error handling: Use default value
 
-## \`net.start_lag.sync_limit.default\`
-- Type: uint32
-- Default value: 32
+## \`net.sync.normalization.enabled\`
+- Type: bool
+- Default value: true
 - Error handling: Use default value
 
-## \`net.start_lag.sync_limit.max_ms\`
-- Type: uint32
+## \`net.sync.start_lag.observers.default_ms\`
+- Type: nonzerouint32
+- Default value: 90000
+- Error handling: Use default value
+
+## \`net.sync.start_lag.observers.default_ms\`
+- Type: keyvalue
+- Default value: to_string(m_LagStartDefaultObserverSyncMilliSeconds
+- Error handling: Use default value
+
+## \`net.sync.start_lag.observers.default_ms\`
+- Type: keyvalue
+- Default value: to_string(m_LagStopDefaultObserverSyncMilliSeconds
+- Error handling: Use default value
+
+## \`net.sync.start_lag.observers.max_ms\`
+- Type: nonzerouint32
+- Default value: 4294967295
+- Error handling: Use default value
+
+## \`net.sync.start_lag.observers.min_ms\`
+- Type: nonzerouint32
 - Default value: 3500
 - Error handling: Use default value
 
-## \`net.stop_lag.sync_limit.default\`
-- Type: uint32
-- Default value: 8
+## \`net.sync.start_lag.players.default_ms\`
+- Type: nonzerouint32
+- Default value: 3200
 - Error handling: Use default value
 
-## \`net.stop_lag.sync_limit.min_ms\`
-- Type: uint32
+## \`net.sync.start_lag.players.default_ms\`
+- Type: keyvalue
+- Default value: to_string(m_LagStartDefaultControllerSyncMilliSeconds
+- Error handling: Use default value
+
+## \`net.sync.start_lag.players.default_ms\`
+- Type: keyvalue
+- Default value: to_string(m_LagStopDefaultControllerSyncMilliSeconds
+- Error handling: Use default value
+
+## \`net.sync.start_lag.players.max_ms\`
+- Type: nonzerouint32
+- Default value: 4294967295
+- Error handling: Use default value
+
+## \`net.sync.start_lag.players.min_ms\`
+- Type: nonzerouint32
+- Default value: 500
+- Error handling: Use default value
+
+## \`net.sync.stop_lag.observers.default_ms\`
+- Type: nonzerouint32
+- Default value: 60000
+- Error handling: Use default value
+
+## \`net.sync.stop_lag.observers.max_ms\`
+- Type: nonzerouint32
+- Default value: 4294967295
+- Error handling: Use default value
+
+## \`net.sync.stop_lag.observers.min_ms\`
+- Type: nonzerouint32
 - Default value: 100
 - Error handling: Use default value
 
-## \`net.sync_normalization.enabled\`
-- Type: bool
-- Default value: true
+## \`net.sync.stop_lag.players.default_ms\`
+- Type: nonzerouint32
+- Default value: 800
+- Error handling: Use default value
+
+## \`net.sync.stop_lag.players.max_ms\`
+- Type: nonzerouint32
+- Default value: 4294967295
+- Error handling: Use default value
+
+## \`net.sync.stop_lag.players.min_ms\`
+- Type: nonzerouint32
+- Default value: 200
 - Error handling: Use default value
 
 ## \`net.tcp_extensions.gproxy_legacy.reconnect_wait\`
@@ -1769,6 +1859,6 @@ Config
 - Error handling: Use default value
 
 ## \`ui.notify_joins.exceptions\`
-- Type: setsensitive
+- Type: set
 - Default value: 
 - Error handling: Use default value
