@@ -6684,8 +6684,8 @@ bool CDotaStats::EventGameCacheInteger(const uint8_t fromUID, const std::string&
       }
 
       case HashCode("Roshan"): {
-        if (!eventStringData.empty()) break;
-        LogMetaData(m_Game.get().GetEffectiveTicks(), "[" + GetTeamNameBaseZero(cacheValue) + "] slain Roshan");
+        if (!eventStringData.empty() || cacheValue > 1) break;
+        LogMetaData(m_Game.get().GetEffectiveTicks(), "[" + GetTeamNameBaseZero((uint8_t)cacheValue) + "] slain Roshan");
         break;
       }
 
@@ -6867,7 +6867,7 @@ bool CDotaStats::EventGameCacheInteger(const uint8_t fromUID, const std::string&
         optional<uint32_t> toColor = ToUint32(toString);
         if (!fromColor.has_value() || !toColor.has_value()) break;
         if (!GetIsHeroColor(*fromColor) || !GetIsHeroColor(*toColor)) break;
-        if (!m_SwitchEnabled && !GetAreSameTeamColors(*fromColor, *toColor)) {
+        if (!m_SwitchEnabled && !GetAreSameTeamColors((uint8_t)(*fromColor), (uint8_t)(*toColor))) {
           // shouldn't happen with regular gameplay
           Print(GetLogPrefix() + "got event " + SanitizeStringUTF8(key) + ", but game mode is not -so");
           break;

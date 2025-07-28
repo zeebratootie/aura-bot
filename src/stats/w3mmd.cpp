@@ -513,11 +513,11 @@ bool CW3MMD::ProcessAction(CW3MMDAction* action)
       if (DefEvent[i].substr(0, 4) == "pid:") {
         // replace it with the player's name rather than their SID
         optional<uint32_t> SID = ToUint32(values[i]);
-        if (!SID.has_value()) {
+        if (!SID.has_value() || SID.value() > 0xFF) {
           Print(GetLogPrefix() + "Event " + SanitizeStringUTF8(action->GetName()) + " passed invalid PID " + SanitizeStringUTF8(values[i]));
           return false;
         }
-        auto it = m_SIDToName.find(*SID);
+        auto it = m_SIDToName.find((uint8_t)(*SID));
         if (it == m_SIDToName.end()) {
           Print(GetLogPrefix() + "Event " + SanitizeStringUTF8(action->GetName()) + " passed undefined PID " + to_string(*SID));
           ReplaceText(Format, "{" + to_string(i) + "}", "SID:" + values[i]);
