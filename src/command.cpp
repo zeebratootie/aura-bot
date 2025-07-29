@@ -3545,7 +3545,9 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
       }
 
       if (cmdHash == HashCode("star")) {
-        SendAll(u8"Twinkle \u00a4, twinkle \u00a4, little star \u00a4\u00a4\u00a4");
+        // P1423R2: char8_t backward compatibility remediation
+        const char* message = reinterpret_cast<const char*>(u8"Twinkle \u00a4, twinkle \u00a4, little star \u00a4\u00a4\u00a4");
+        SendAll(message);
       }
       targetGame->StartCountDown(true, IsForce);
       break;
@@ -3734,7 +3736,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
 
       vector<string> Args = SplitArgs(target, 2u, 2u);
       if (Args.empty()) {
-        ErrorReply("Usage: " + cmdToken + "swap <PLAYER> , <PLAYER>" + HelpMissingComma(target));
+        ErrorReply(Concat("Usage: ", cmdToken, "swap <PLAYER> , <PLAYER>", HelpMissingComma(target)));
         break;
       }
 
@@ -5387,7 +5389,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
 
       vector<string> Args = SplitArgs(target, 2u, 2u);
       if (Args.empty()) {
-        ErrorReply("Usage: " + cmdToken + "color <PLAYER> , <COLOR> - Color goes from 1 to 12" + HelpMissingComma(target));
+        ErrorReply(Concat("Usage: ", cmdToken, "color <PLAYER> , <COLOR> - Color goes from 1 to 12", HelpMissingComma(target)));
         break;
       }
 
@@ -5455,7 +5457,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
 
       vector<string> Args = SplitArgs(target, 2u, 2u);
       if (Args.empty()) {
-        ErrorReply("Usage: " + cmdToken + "handicap <PLAYER> , <HANDICAP> - Handicap is percent: 50/60/70/80/90/100" + HelpMissingComma(target));
+        ErrorReply(Concat("Usage: ", cmdToken, "handicap <PLAYER> , <HANDICAP> - Handicap is percent: 50/60/70/80/90/100", HelpMissingComma(target)));
         break;
       }
 
@@ -5532,7 +5534,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
 
       vector<string> Args = SplitArgs(target, 1u, 2u);
       if (Args.empty()) {
-        ErrorReply("Usage: " + cmdToken + "race <PLAYER> , <RACE> - Race is human/orc/undead/elf/random/roll" + HelpMissingComma(target));
+        ErrorReply(Concat("Usage: ", cmdToken, "race <PLAYER> , <RACE> - Race is human/orc/undead/elf/random/roll", HelpMissingComma(target)));
         break;
       }
       if (Args.size() == 1) {
@@ -8559,3 +8561,79 @@ CCommandContext::~CCommandContext()
   ResetServiceSource();
 }
 
+//
+// Helpers
+//
+
+string_view GetTokenName(string_view token) {
+  if (token.length() != 1) return string_view();
+  switch (token[0]) {
+    case '.':
+      return " (period.)";
+    case ',':
+      return " (comma.)";
+    case '~':
+      return " (tilde.)";
+    case '-':
+      return " (hyphen.)";
+    case '#':
+      return " (hashtag.)";
+    case '@':
+      return " (at.)";
+    case '$':
+      return " (dollar.)";
+    case '%':
+      return " (percent.)";
+  }
+  return string_view();
+}
+
+string_view HelpMissingComma(string_view target) {
+  if (target.find(',') == string_view::npos) return " - did you miss the comma?";
+  return {};
+}
+
+bool ExtractMessageTokens(string_view message, string_view token, CommandTokensView& output)
+{
+  assert((!message.empty()) && "Message passed to ExtractMessageTokens cannot be empty");
+  string_view::size_type tokenSize = token.length();
+  if (message.length() <= tokenSize || (tokenSize > 0 && message.substr(0, tokenSize) != token)) {
+    return false;
+  }
+  string_view::size_type cmdStart = message.find_first_not_of(' ', tokenSize);
+  if (cmdStart == string_view::npos) {
+    return false;
+  }
+  if (cmdStart > tokenSize) {
+    // keyword-based tokens
+    output.token = message.substr(0, tokenSize + 1);
+  } else {
+    output.token = message.substr(0, tokenSize);
+  }
+  string_view::size_type cmdEnd = message.find_first_of(' ', cmdStart);
+  if (cmdEnd == string_view::npos) {
+    output.cmd = message.substr(cmdStart);
+    output.target = {};
+  } else {
+    output.cmd = message.substr(cmdStart, cmdEnd - cmdStart);
+    string_view::size_type targetStart = message.find_first_not_of(' ', cmdEnd);
+    if (targetStart == string_view::npos) {
+      output.target = {};
+    } else {
+      string_view::size_type targetEnd = message.find_last_not_of(' ');
+      assert((targetEnd != string_view::npos) && "Whitespace should be guaranteed to exist.");
+      output.target = message.substr(targetStart, targetEnd + 1 - targetStart);
+    }
+  }
+  return true;
+}
+
+void ExtractMessageTokensAny(string_view message, string_view privateToken, string_view broadcastToken, CommandTokensView& output)
+{
+  assert((!message.empty()) && "Message passed to ExtractMessageTokensAny cannot be empty");
+  if (!privateToken.empty() && ExtractMessageTokens(message, privateToken, output)) {
+    output.matchType = CommandTokensMatchType::kPrivate;
+  } else if (!broadcastToken.empty() && ExtractMessageTokens(message, broadcastToken, output)) {
+    output.matchType = CommandTokensMatchType::kBroadcast;
+  }
+}

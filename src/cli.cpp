@@ -1210,12 +1210,13 @@ bool CCLI::QueueActions(CAura* nAura) const
     }
   }
 
+  CommandTokensView commandTokens;
   for (const auto& execEntry : m_ExecCommands) {
-    bool padding = false;
-    string cmdToken, command, target;
-    if (ExtractMessageTokens(execEntry, cmdToken, padding, command, target)) {
+    if (ExtractMessageTokens(execEntry, {}, commandTokens)) {
+      string cmd = ToLowerCase(commandTokens.cmd);
+      string target(commandTokens.target);
       pair<string, string> identity = SplitAddress(m_ExecAs.value());
-      LazyCommandContext lazyCommand = LazyCommandContext(m_ExecBroadcast, m_ExecOnline, command, target, ToLowerCase(identity.first), ToLowerCase(identity.second), m_ExecAuth);
+      LazyCommandContext lazyCommand = LazyCommandContext(m_ExecBroadcast, m_ExecOnline, cmd, target, ToLowerCase(identity.first), ToLowerCase(identity.second), m_ExecAuth);
       nAura->m_PendingActions.push(lazyCommand);
     }
   }

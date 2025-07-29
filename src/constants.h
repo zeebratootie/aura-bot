@@ -1428,6 +1428,14 @@ enum class PermissionsFilterMode : uint8_t {
   LAST = 4,
 };
 
+// command.h
+
+enum class CommandTokensMatchType : uint8_t {
+  kNone = 0,
+  kPrivate = 1,
+  kBroadcast = 2,
+};
+
 // config_commands.h
 
 constexpr uint8_t COMMAND_PERMISSIONS_DISABLED = 0;

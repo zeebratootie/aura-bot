@@ -252,6 +252,8 @@ AsyncObserverStatus CAsyncObserver::Update(fd_set* fd, fd_set* send_fd, int64_t 
 
               if (incomingChatMessage.GetIsValid()) {
                 EventChatOrPlayerSettings(incomingChatMessage);
+              } else {
+                // empty chat, not UTF8 or contains control characters: ignore it
               }
               break;
             }
@@ -646,11 +648,13 @@ void CAsyncObserver::EventChat(const CIncomingChatMessage& incomingChatMessage)
     return;
   }
 
+  string_view textContent = incomingChatMessage.GetMessage();
+  assert((!textContent.empty()) && "Chat message cannot be empty");
   bool shouldRelay = !isLobbyChat; // relay the chat message to other users
   const uint8_t targetType = static_cast<uint8_t>(incomingChatMessage.GetInGameChannel());
 
   if (!isLobbyChat && m_Aura->m_Config.m_LogGameChat == LOG_GAME_CHAT_ALWAYS) {
-    Print(Concat(GetLogPrefix(), "[", GetName(), "] ", incomingChatMessage.GetMessage()));
+    Print(Concat(GetLogPrefix(), "[", GetName(), "] ", textContent));
   }
 
   CGameConfig* gameConfig;
@@ -675,11 +679,13 @@ void CAsyncObserver::EventChat(const CIncomingChatMessage& incomingChatMessage)
     //const uint8_t activeSmartCommand = cmdHistory->GetSmartCommand();
     //cmdHistory->ClearSmartCommand();
     if (commandsEnabled) {
-      string message(incomingChatMessage.GetMessage());
-      string cmdToken, command, target;
-      uint8_t tokenMatch = ExtractMessageTokensAny(message, gameConfig->m_PrivateCmdToken, gameConfig->m_BroadcastCmdToken, cmdToken, command, target);
-      isCommand = tokenMatch != COMMAND_TOKEN_MATCH_NONE;
+      CommandTokensView commandTokens;
+      ExtractMessageTokensAny(textContent, gameConfig->m_PrivateCmdToken, gameConfig->m_BroadcastCmdToken, commandTokens);
+      isCommand = commandTokens.matchType != CommandTokensMatchType::kNone;
       if (isCommand) {
+        string cmdToken(commandTokens.token);
+        string command = ToLowerCase(commandTokens.cmd);
+        string target(commandTokens.target);
         cmdHistory->SetUsedAnyCommands(true);
         // If we want users identities hidden, we must keep bot responses private.
         if (shouldRelay) {
@@ -691,14 +697,14 @@ void CAsyncObserver::EventChat(const CIncomingChatMessage& incomingChatMessage)
           ctx = make_shared<CCommandContext>(ServiceType::kLAN /* or realm, actually*/, m_Aura, commandCFG, game, this, false, &std::cout);
         } catch (...) {}
         if (ctx) ctx->Run(cmdToken, command, target);
-      } else if (message == "?trigger") {
+      } else if (textContent == "?trigger") {
         if (shouldRelay) {
           //SendChat(incomingChatMessage);
           shouldRelay = false;
         }
         //TODO:SendCommandsHelp()
         //game->SendCommandsHelp(gameConfig->m_BroadcastCmdToken.empty() ? gameConfig->m_PrivateCmdToken : gameConfig->m_BroadcastCmdToken, this, false);
-      } else if (message == "/p" || message == "/ping" || message == "/game") {
+      } else if (textContent == "/p" || textContent == "/ping" || textContent == "/game") {
         // Note that when the WC3 client is connected to a realm, all slash commands are sent to the bnet server.
         // Therefore, these commands are only effective over LAN.
         if (shouldRelay) {
@@ -710,8 +716,9 @@ void CAsyncObserver::EventChat(const CIncomingChatMessage& incomingChatMessage)
           ctx = make_shared<CCommandContext>(ServiceType::kLAN /* or realm, actually*/, m_Aura, commandCFG, game, this, false, &std::cout);
         } catch (...) {}
         if (ctx) {
-          cmdToken = gameConfig->m_PrivateCmdToken;
-          command = message.substr(1);
+          string cmdToken(gameConfig->m_PrivateCmdToken);
+          string command(textContent.substr(1));
+          string target;
           ctx->Run(cmdToken, command, target);
         }
       } else if (isLobbyChat && !cmdHistory->GetUsedAnyCommands()) {
@@ -721,7 +728,7 @@ void CAsyncObserver::EventChat(const CIncomingChatMessage& incomingChatMessage)
         }
         /*
         // TODO: CAsyncObserver smart commands
-        if (!game->CheckSmartCommands(this, message, activeSmartCommand, commandCFG) && !GetCommandHistory()->GetSentAutoCommandsHelp()) {
+        if (!game->CheckSmartCommands(this, textContent, activeSmartCommand, commandCFG) && !GetCommandHistory()->GetSentAutoCommandsHelp()) {
           bool anySentCommands = false;
           for (const auto& otherPlayer : m_Users) {
             if (otherPlayer->GetCommandHistory()->GetUsedAnyCommands()) anySentCommands = true;
@@ -739,7 +746,7 @@ void CAsyncObserver::EventChat(const CIncomingChatMessage& incomingChatMessage)
     bool relaySuccess = false;
     if (shouldRelay && game) {
       string prefix = Concat("[", ToFormattedTimeStamp(m_GameTicks / 1000), "] [", m_Name, "]: ");
-      relaySuccess = game->SendSpectatorChat(this, prefix, incomingChatMessage.GetMessage());
+      relaySuccess = game->SendSpectatorChat(this, prefix, textContent);
     }
     if (shouldRelay && !relaySuccess && m_IsObserver && targetType != CHAT_RECV_OBS) {
       SendChat("You are in spectator mode, and may only chat with other spectators.");

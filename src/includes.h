@@ -243,10 +243,13 @@ inline void Print(const char* message)
   LogStream(std::cout, message);
 }
 
-[[nodiscard]] inline std::string ToLowerCase(const std::string& input)
+[[nodiscard]] inline std::string ToLowerCase(std::string_view input)
 {
-  std::string output = input;
-  std::transform(std::begin(output), std::end(output), std::begin(output), [](char c) { return static_cast<char>(std::tolower(c)); });
+  std::string output;
+  output.reserve(input.size());
+  for (auto c : input) {
+    output += static_cast<char>(std::tolower(c));
+  }
   return output;
 }
 

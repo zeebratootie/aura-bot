@@ -423,9 +423,7 @@ namespace GameProtocol
     if (ValidateLength(data)) {
       uint32_t i = 5;
       const uint8_t receiverCount = GetByteAt(data, 4);
-
-      if (receiverCount > 0 && data.size() >= i + receiverCount)
-      {
+      if (0 < receiverCount && receiverCount <= MAX_SLOTS_MODERN && (i + receiverCount <= data.size())) {
         const std::vector<uint8_t> ToUIDs = vector<uint8_t>(begin(data) + i, begin(data) + i + receiverCount);
         i += receiverCount;
         const uint8_t fromUID = GetByteAt(data, i);

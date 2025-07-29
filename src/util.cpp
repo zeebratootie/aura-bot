@@ -2118,6 +2118,25 @@ bool HasUnsafeUTF8CodePoints(string_view unsafeUTF8Input)
   return false;
 }
 
+string ToLowerCasePreserveUTF8(string_view input)
+{
+  string output;
+  output.reserve(input.size());
+  auto it = input.begin();
+  auto end = input.end();
+
+  while (it != end) {
+    char32_t cp = utf8::unchecked::next(it);
+    if (cp >= 0x80) {
+      u32string_view sv(&cp, 1);
+      output += utf8::utf32to8(sv);
+    } else {
+      output += static_cast<char>(tolower(static_cast<unsigned char>(cp)));
+    }
+  }
+  return output;
+}
+
 bool IsArbitraryStringUTF8Safe(string_view unsafeInput)
 {
   if (!utf8::is_valid(unsafeInput)) {

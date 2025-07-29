@@ -127,6 +127,7 @@ struct AppAction;
 struct BannableUserSearchResult;
 struct CGameLogRecord;
 struct CommandHistory;
+struct CommandTokensView;
 struct FileChunkCached;
 struct FileChunkTransient;
 struct GameControllerSearchResult;

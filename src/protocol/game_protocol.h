@@ -382,7 +382,7 @@ class CIncomingChatMessage
 public:
 private:
   bool                                m_Valid;
-  std::string                         m_Message;
+  std::string_view                    m_Message;
   GameProtocol::ChatToHostType        m_Type;
   uint8_t                             m_Byte;
   uint8_t                             m_FromUID;

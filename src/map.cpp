@@ -2458,12 +2458,13 @@ void CMap::LoadMapSpecificConfig(CConfig& CFG)
   --m_MapCustomizableObserverTeam;
 
   if (CFG.Exists("map.auto_commands.init")) {
+    CommandTokensView commandTokens;
     vector<string> initCommands = CFG.GetList("map.auto_commands.init", ',', false, {});
     for (const auto& execEntry : initCommands) {
-      bool padding = false;
-      string cmdToken, command, target;
-      if (ExtractMessageTokens(execEntry, cmdToken, padding, command, target)) {
-        m_InitCommands.emplace_back(command, target);
+      if (ExtractMessageTokens(execEntry, {}, commandTokens)) {
+        string cmd = ToLowerCase(commandTokens.cmd);
+        string target(commandTokens.target);
+        m_InitCommands.emplace_back(cmd, target);
       }
     }
   }

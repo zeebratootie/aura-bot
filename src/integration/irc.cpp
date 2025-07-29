@@ -342,13 +342,20 @@ void CIRC::ProcessPacket(string_view packet)
       return;
     }
 
-    string cmdToken, command, target;
-    uint8_t tokenMatch = ExtractMessageTokensAny(message, m_Config.m_PrivateCmdToken, m_Config.m_BroadcastCmdToken, cmdToken, command, target);
-    if (tokenMatch != COMMAND_TOKEN_MATCH_NONE) {
+    CommandTokensView commandTokens;
+    ExtractMessageTokensAny(message, m_Config.m_PrivateCmdToken, m_Config.m_BroadcastCmdToken, commandTokens);
+    if (commandTokens.matchType != CommandTokensMatchType::kNone) {
+      string cmdToken(commandTokens.token);
+      string command = ToLowerCase(commandTokens.cmd);
+      string target(commandTokens.target);
       const bool isWhisper = channel[0] != '#';
       shared_ptr<CCommandContext> ctx = nullptr;
       try {
-        ctx = make_shared<CCommandContext>(ServiceType::kIRC, m_Aura, m_Config.m_CommandCFG, channel, nickName, isWhisper, hostName, !isWhisper && tokenMatch == COMMAND_TOKEN_MATCH_BROADCAST, &std::cout);
+        ctx = make_shared<CCommandContext>(
+          ServiceType::kIRC, m_Aura, m_Config.m_CommandCFG,
+          channel, nickName, isWhisper,
+          hostName, (!isWhisper && commandTokens.matchType == CommandTokensMatchType::kBroadcast), &std::cout
+       );
       } catch (...) {
       }
       if (ctx) {
@@ -356,8 +363,6 @@ void CIRC::ProcessPacket(string_view packet)
         ctx->Run(cmdToken, command, target);
       }
     }
-
-    return;
   }
 
   // kick packet

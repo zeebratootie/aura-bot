@@ -658,23 +658,31 @@ void CRealm::ProcessChatEvent(const uint32_t eventType, string_view fromUser, st
       return;
     }
 
-    string cmdToken, command, target;
-    uint8_t tokenMatch = ExtractMessageTokensAny(message, m_Config.m_PrivateCmdToken, m_Config.m_BroadcastCmdToken, cmdToken, command, target);
-    if (tokenMatch == COMMAND_TOKEN_MATCH_NONE) {
+    CommandTokensView commandTokens;
+    ExtractMessageTokensAny(message, m_Config.m_PrivateCmdToken, m_Config.m_BroadcastCmdToken, commandTokens);
+    if (commandTokens.matchType == CommandTokensMatchType::kNone) {
       if (isWhisper && fromUser != "PvPGN Realm") {
         string_view tokenName = GetTokenName(m_Config.m_PrivateCmdToken);
-        string example = m_Aura->m_Net.m_Config.m_AllowDownloads ? "host wc3maps-8" : "host castle";
+        string_view example = m_Aura->m_Net.m_Config.m_AllowDownloads ? "host wc3maps-8" : "host castle";
         QueueWhisper(Concat("Hi, ", fromUser, ". Use ", m_Config.m_PrivateCmdToken, tokenName, " for commands. Example: ", m_Config.m_PrivateCmdToken, example), fromUser);
       }
       return;
-    }
-    shared_ptr<CCommandContext> ctx = nullptr;
-    try {
-      ctx = make_shared<CCommandContext>(ServiceType::kRealm, m_Aura, m_Config.m_CommandCFG, shared_from_this(), fromUser, isWhisper, !isWhisper && tokenMatch == COMMAND_TOKEN_MATCH_BROADCAST, &std::cout);
-    } catch (...) {
-    }
-    if (ctx) {
-      ctx->Run(cmdToken, command, target);
+    } else {
+      string cmdToken(commandTokens.token);
+      string command = ToLowerCase(commandTokens.cmd);
+      string target(commandTokens.target);
+      shared_ptr<CCommandContext> ctx = nullptr;
+      try {
+        ctx = make_shared<CCommandContext>(
+          ServiceType::kRealm, m_Aura, m_Config.m_CommandCFG,
+          shared_from_this(), fromUser, isWhisper,
+          (!isWhisper && commandTokens.matchType == CommandTokensMatchType::kBroadcast), &std::cout
+        );
+      } catch (...) {
+      }
+      if (ctx) {
+        ctx->Run(cmdToken, command, target);
+      }
     }
   }
   else if (eventType == BNETProtocol::IncomingChatEvent::CHANNEL)

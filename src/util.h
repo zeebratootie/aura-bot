@@ -95,6 +95,19 @@ void TrimStringView(std::string_view& str);
 [[nodiscard]] std::string RemoveDuplicateWhiteSpace(const std::string& str);
 void EllideEmptyElementsInPlace(std::vector<std::string>& list);
 
+[[nodiscard]] inline std::string U8ToString(const std::string &s) {
+  return s;
+}
+[[nodiscard]] inline std::string U8ToString(std::string &&s) {
+  return std::move(s);
+}
+#if defined(__cpp_lib_char8_t)
+[[nodiscard]] inline std::string U8ToString(const std::u8string &s) {
+  return std::string(s.begin(), s.end());
+}
+#endif
+
+
 [[nodiscard]] inline std::string_view ToStringView(const char* s) {
   return s ? std::string_view{s} : std::string_view{};
 }
@@ -303,6 +316,7 @@ template<typename Container>
 [[nodiscard]] bool IsUnsafeCodePoint(char32_t codePoint);
 [[nodiscard]] bool IsASCII(std::string_view unsafeInput);
 [[nodiscard]] bool HasUnsafeUTF8CodePoints(std::string_view unsafeUTF8Input);
+[[nodiscard]] std::string ToLowerCasePreserveUTF8(std::string_view input);
 [[nodiscard]] bool IsArbitraryStringUTF8Safe(std::string_view unsafeInput);
 [[nodiscard]] std::string_view SanitizeUTF8(std::string_view unsafeInput, std::string_view = {});
 [[nodiscard]] std::string_view SanitizeASCII(std::string_view unsafeInput, std::string_view = {});

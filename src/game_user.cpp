@@ -611,6 +611,8 @@ bool CGameUser::Update(fd_set* fd, int64_t timeout)
 
             if (incomingChatMessage.GetIsValid()) {
               m_Game.get().EventUserChatOrPlayerSettings(this, incomingChatMessage);
+            } else {
+              // empty chat, not UTF8 or contains control characters: ignore it
             }
             break;
           }

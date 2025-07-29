@@ -175,13 +175,13 @@ IncomingConnectionStatus CConnection::Update(fd_set* fd, fd_set* send_fd, int64_
               case JoinRequestResult::kPlayer: {
                 result = IncomingConnectionStatus::kPromoted; // must be destroyed
                 m_Type = IncomingConnectionType::kPlayer;
-                m_Socket = nullptr;
+                assert((m_Socket == nullptr) && "Connection should no longer have a socket");
                 break;
               }
               case JoinRequestResult::kObserver: {
                 result = IncomingConnectionStatus::kPromoted; // must be destroyed
                 m_Type = IncomingConnectionType::kObserver;
-                m_Socket = nullptr; // TODO: Investigate why this wasn't nulled before
+                assert((m_Socket == nullptr) && "Connection should no longer have a socket");
                 break;
               }
               case JoinRequestResult::kFailDelayed: {

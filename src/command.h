@@ -32,6 +32,53 @@
 #include <ostream>
 
 //
+// CommandTokens
+//
+
+struct CommandTokensView
+{
+  CommandTokensMatchType matchType;
+  bool padding;
+  std::string_view token;
+  std::string_view cmd;
+  std::string_view target;
+
+  CommandTokensView()
+  : matchType(CommandTokensMatchType::kNone),
+    padding(false)
+  {
+  }
+
+  CommandTokensView(CommandTokensMatchType nType, std::string_view nToken, std::string_view nPadding, std::string_view nCmd, std::string_view nTarget)
+  : matchType(nType),
+    padding(false),
+    token(nToken),
+    cmd(nCmd),
+    target(nTarget)
+  {
+  }
+
+  ~CommandTokensView()
+  {
+  }
+
+  void Reset()
+  {
+    matchType = CommandTokensMatchType::kNone;
+    token = {};
+    padding = false;
+    cmd = {};
+    target = {};
+  }
+
+  void ResetInner()
+  {
+    cmd = {};
+    target = {};
+  }
+};
+
+//
 // CCommandContext
 //
 
@@ -178,106 +225,9 @@ public:
   ~CCommandContext();
 };
 
-[[nodiscard]] inline std::string_view GetTokenName(std::string_view token) {
-  if (token.length() != 1) return std::string_view();
-  switch (token[0]) {
-    case '.':
-      return " (period.)";
-    case ',':
-      return " (comma.)";
-    case '~':
-      return " (tilde.)";
-    case '-':
-      return " (hyphen.)";
-    case '#':
-      return " (hashtag.)";
-    case '@':
-      return " (at.)";
-    case '$':
-      return " (dollar.)";
-    case '%':
-      return " (percent.)";
-  }
-  return std::string_view();
-}
-
-[[nodiscard]] inline std::string HelpMissingComma(const std::string& target) {
-  if (target.find(',') == std::string::npos) return " - did you miss the comma?";
-  return std::string();
-}
-
-[[nodiscard]] inline bool ExtractMessageTokens(const std::string& message, const std::string& token, bool& matchPadding, std::string& matchCmd, std::string& matchTarget)
-{
-  matchTarget.clear();
-  if (message.empty()) return false;
-  std::string::size_type tokenSize = token.length();
-  if (message.length() <= tokenSize || (tokenSize > 0 && message.substr(0, tokenSize) != token)) {
-    return false;
-  }
-  std::string::size_type cmdStart = message.find_first_not_of(' ', tokenSize);
-  matchPadding = cmdStart > tokenSize;
-  if (cmdStart == std::string::npos) {
-    return false;
-  }
-  std::string::size_type cmdEnd = message.find_first_of(' ', cmdStart);
-  if (cmdEnd == std::string::npos) {
-    matchCmd = message.substr(cmdStart);
-  } else {
-    matchCmd = message.substr(cmdStart, cmdEnd - cmdStart);
-    std::string::size_type targetStart = message.find_first_not_of(' ', cmdEnd);
-    if (targetStart != std::string::npos) {
-      std::string::size_type targetEnd = message.find_last_not_of(' ');
-      if (targetEnd != std::string::npos) {
-        matchTarget = message.substr(targetStart, targetEnd + 1 - targetStart);
-      }
-    }
-  }
-  return true;
-}
-
-[[nodiscard]] inline uint8_t ExtractMessageTokensAny(const std::string& message, const std::string& privateToken, const std::string& broadcastToken, std::string& matchToken, std::string& matchCmd, std::string& matchTarget)
-{
-  // TODO: Refactor ExtractMessageTokensAny to accept string_view
-  uint8_t result = COMMAND_TOKEN_MATCH_NONE;
-  if (message.empty()) return result;
-  if (!privateToken.empty()) {
-    bool matchPadding = false;
-    if (ExtractMessageTokens(message, privateToken, matchPadding, matchCmd, matchTarget)) {
-      result = COMMAND_TOKEN_MATCH_PRIVATE;
-      if (matchPadding) {
-        matchToken = privateToken + " "; // keyword-based tokens
-      } else {
-        matchToken = privateToken;
-      }
-    }
-  }    
-  if (result == COMMAND_TOKEN_MATCH_NONE && !broadcastToken.empty()) {
-    bool matchPadding = false;
-    if (ExtractMessageTokens(message, broadcastToken, matchPadding, matchCmd, matchTarget)) {
-      result = COMMAND_TOKEN_MATCH_BROADCAST;
-      if (matchPadding) {
-        matchToken = broadcastToken + " "; // keyword-based tokens
-      } else {
-        matchToken = broadcastToken;
-      }
-    }
-  }
-
-  if (result != COMMAND_TOKEN_MATCH_NONE) {
-    std::transform(std::begin(matchCmd), std::end(matchCmd), std::begin(matchCmd), [](unsigned char c) {
-      return static_cast<char>(std::tolower(c));
-    });
-  }
-
-  return result;
-}
-
-[[nodiscard]] inline uint8_t ExtractMessageTokensAny(std::string_view message, std::string_view privateToken, std::string_view broadcastToken, std::string& matchToken, std::string& matchCmd, std::string& matchTarget)
-{
-  const std::string msg(message);
-  const std::string privToken(privateToken);
-  const std::string pubToken(broadcastToken);
-  return ExtractMessageTokensAny(msg, privToken, pubToken, matchToken, matchCmd, matchTarget);
-}
+[[nodiscard]] std::string_view GetTokenName(std::string_view token);
+[[nodiscard]] std::string_view HelpMissingComma(std::string_view target);
+[[nodiscard]] bool ExtractMessageTokens(std::string_view message, std::string_view token, CommandTokensView& output);
+void ExtractMessageTokensAny(std::string_view message, std::string_view privateToken, std::string_view broadcastToken, CommandTokensView& output);
 
 #endif

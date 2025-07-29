@@ -6247,16 +6247,18 @@ void CGame::EventUserChat(GameUser::CGameUser* user, const CIncomingChatMessage&
 
   // relay the chat message to other users
   const uint8_t targetType = static_cast<uint8_t>(incomingChatMessage.GetInGameChannel());
-  bool muteAll = !isLobbyChat && m_MuteAll;
+  string_view textContent = incomingChatMessage.GetMessage();
+  assert((!textContent.empty()) && "Chat message cannot be empty");
+  const bool muteAll = !isLobbyChat && m_MuteAll;
   bool shouldRelay = m_ChatEnabled && !(muteAll && targetType == CHAT_RECV_ALL) && !user->CheckMuted();
   bool didRelay = false;
 
   string chatTypeFragment;
   if (isLobbyChat) {
     if (m_Aura->m_Config.m_LogGameChat != LOG_GAME_CHAT_NEVER) {
-      Log(Concat("[", user->GetDisplayName(), "] ", incomingChatMessage.GetMessage()));
-      if ((m_Config.m_LogChatTypes & LOG_CHAT_TYPE_NON_ASCII) && !IsASCII(incomingChatMessage.GetMessage())) {
-        m_Aura->LogPersistent(Concat(GetLogPrefix(), "[Lobby] ["+ user->GetExtendedName(), "] ", incomingChatMessage.GetMessage()));
+      Log(Concat("[", user->GetDisplayName(), "] ", textContent));
+      if ((m_Config.m_LogChatTypes & LOG_CHAT_TYPE_NON_ASCII) && !IsASCII(textContent)) {
+        m_Aura->LogPersistent(Concat(GetLogPrefix(), "[Lobby] ["+ user->GetExtendedName(), "] ", textContent));
       }
     }
   } else {
@@ -6280,7 +6282,7 @@ void CGame::EventUserChat(GameUser::CGameUser* user, const CIncomingChatMessage&
     }
 
     if (m_Aura->m_Config.m_LogGameChat == LOG_GAME_CHAT_ALWAYS) {
-      Log(Concat(chatTypeFragment, "[", user->GetDisplayName(), "] ", incomingChatMessage.GetMessage()));
+      Log(Concat(chatTypeFragment, "[", user->GetDisplayName(), "] ", textContent));
     }
   }
 
@@ -6296,11 +6298,13 @@ void CGame::EventUserChat(GameUser::CGameUser* user, const CIncomingChatMessage&
     const uint8_t activeSmartCommand = cmdHistory->GetSmartCommand();
     cmdHistory->ClearSmartCommand();
     if (commandsEnabled) {
-      const string textContent(incomingChatMessage.GetMessage());
-      string cmdToken, command, target;
-      uint8_t tokenMatch = ExtractMessageTokensAny(textContent, m_Config.m_PrivateCmdToken, m_Config.m_BroadcastCmdToken, cmdToken, command, target);
-      isCommand = tokenMatch != COMMAND_TOKEN_MATCH_NONE;
+      CommandTokensView commandTokens;
+      ExtractMessageTokensAny(textContent, m_Config.m_PrivateCmdToken, m_Config.m_BroadcastCmdToken, commandTokens);
+      isCommand = commandTokens.matchType != CommandTokensMatchType::kNone;
       if (isCommand) {
+        string cmdToken(commandTokens.token);
+        string command = ToLowerCase(commandTokens.cmd);
+        string target(commandTokens.target);
         cmdHistory->SetUsedAnyCommands(true);
         shouldRelay = shouldRelay && !GetIsHiddenPlayerNames();
         // If we want users identities hidden, we must keep bot responses private.
@@ -6310,7 +6314,11 @@ void CGame::EventUserChat(GameUser::CGameUser* user, const CIncomingChatMessage&
         }
         shared_ptr<CCommandContext> ctx = nullptr;
         try {
-          ctx = make_shared<CCommandContext>(ServiceType::kLAN /* or realm, actually*/, m_Aura, commandCFG, shared_from_this(), user, !muteAll && !GetIsHiddenPlayerNames() && (tokenMatch == COMMAND_TOKEN_MATCH_BROADCAST), &std::cout);
+          ctx = make_shared<CCommandContext>(
+            ServiceType::kLAN /* or realm, actually*/, m_Aura, commandCFG,
+            shared_from_this(), user, !muteAll && !GetIsHiddenPlayerNames() && (commandTokens.matchType == CommandTokensMatchType::kBroadcast),
+            &std::cout
+          );
         } catch (...) {}
         if (ctx) ctx->Run(cmdToken, command, target);
       } else if (textContent == "?trigger") {
@@ -6335,8 +6343,9 @@ void CGame::EventUserChat(GameUser::CGameUser* user, const CIncomingChatMessage&
           ctx = make_shared<CCommandContext>(ServiceType::kLAN /* or realm, actually*/, m_Aura, commandCFG, shared_from_this(), user, false, &std::cout);
         } catch (...) {}
         if (ctx) {
-          cmdToken = m_Config.m_PrivateCmdToken;
-          command = textContent.substr(1);
+          string cmdToken(m_Config.m_PrivateCmdToken);
+          string command(textContent.substr(1));
+          string target;
           ctx->Run(cmdToken, command, target);
         }
       } else if (isLobbyChat && !cmdHistory->GetUsedAnyCommands()) {
@@ -6372,7 +6381,6 @@ void CGame::EventUserChat(GameUser::CGameUser* user, const CIncomingChatMessage&
     }
     if (m_Aura->m_Config.m_LogGameChat != LOG_GAME_CHAT_NEVER) {
       bool logMessage = false;
-      string textContent(incomingChatMessage.GetMessage());
       for (const auto& word : m_Config.m_LoggedWords) {
         if (textContent.find(word) != string::npos) {
           logMessage = true;

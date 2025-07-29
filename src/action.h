@@ -69,7 +69,7 @@ struct LazyCommandContext
   std::string identityLoc;
   CommandAuth auth;
 
-  LazyCommandContext(bool nBroadcast, bool nOnline, const std::string& nCommand, const std::string& nTarget, const std::string& nIdentityName, const std::string& nIdentityLoc, const CommandAuth nAuth)
+  LazyCommandContext(bool nBroadcast, bool nOnline, std::string_view nCommand, std::string_view nTarget, const std::string& nIdentityName, const std::string& nIdentityLoc, const CommandAuth nAuth)
    : broadcast(nBroadcast),
      online(nOnline),
      queuedTicks(GetTicks()),
