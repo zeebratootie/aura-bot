@@ -6869,7 +6869,7 @@ bool CDotaStats::EventGameCacheInteger(const uint8_t fromUID, const std::string&
         if (!GetIsHeroColor(*fromColor) || !GetIsHeroColor(*toColor)) break;
         if (!m_SwitchEnabled && !GetAreSameTeamColors((uint8_t)(*fromColor), (uint8_t)(*toColor))) {
           // shouldn't happen with regular gameplay
-          Print(GetLogPrefix() + "got event " + SanitizeStringUTF8(key) + ", but game mode is not -so");
+          Print(GetLogPrefix() + "got event " + SanitizeWrapUTF8(key) + ", but game mode is not -so");
           break;
         }
         //GameUser::CGameUser* fromPlayer = m_Game.get().GetUserFromColor(*fromColor);
@@ -6880,7 +6880,7 @@ bool CDotaStats::EventGameCacheInteger(const uint8_t fromUID, const std::string&
         string toHeroName = GetHeroName(FourCC(toData->GetHero()));
         string fromName = GetUserNameFromColor(*fromColor);
         string toName = GetUserNameFromColor(*toColor);
-        Print(GetLogPrefix() + "got event " + SanitizeStringUTF8(key) + " (" + GetHeroName(cacheValue) + ") [" + fromName + "] <-> [" + toName + "]");
+        Print(GetLogPrefix() + "got event " + SanitizeWrapUTF8(key) + " (" + GetHeroName(cacheValue) + ") [" + fromName + "] <-> [" + toName + "]");
         if (FourCC(toData->GetHero()) != cacheValue) {
           Print(GetLogPrefix() + " swap ignored - got " + GetHeroName(cacheValue) + " but heroes were [" + fromHeroName + ", " + toHeroName + "]");
           // This event is expected!
@@ -6989,7 +6989,7 @@ bool CDotaStats::EventGameCacheInteger(const uint8_t fromUID, const std::string&
 
       default: {
         if (m_Game.get().m_Aura->MatchLogLevel(LogLevel::kDebug)) {
-          Print(GetLogPrefix() + "unhandled dota event: " + SanitizeStringUTF8(key) + " for " + to_string(cacheValue));
+          Print(GetLogPrefix() + "unhandled dota event: " + SanitizeWrapUTF8(key) + " for " + to_string(cacheValue));
         }
       }
     }

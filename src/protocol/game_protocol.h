@@ -253,7 +253,6 @@ namespace GameProtocol
 
   [[nodiscard]] inline std::string_view JoinRequestErrorToString(JoinRequestError errorCode)
   {
-    // TODO: For every fn(a, b, c) that accepts std::string_view, ensure that no argument is a function call returning a temporary std::string
     switch (errorCode) {
       case JoinRequestError::kOk:
         return std::string_view();

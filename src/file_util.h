@@ -117,6 +117,8 @@ struct FileChunkTransient
 [[nodiscard]] PLATFORM_STRING_TYPE GetFileExtension(const PLATFORM_STRING_TYPE& inputPath);
 [[nodiscard]] std::string PathToString(const std::filesystem::path& file);
 [[nodiscard]] std::string PathToAbsoluteString(const std::filesystem::path& file);
+[[nodiscard]] std::string_view SanitizeUTF8Path(const std::filesystem::path& filePath, std::string_view = {});
+[[nodiscard]] std::string SanitizeWrapUTF8Path(const std::filesystem::path& filePath, std::string_view = "REDACTED");
 [[nodiscard]] std::vector<std::filesystem::path> FilesMatch(const std::filesystem::path& path, const std::vector<PLATFORM_STRING_TYPE>& extensionList);
 
 [[nodiscard]] std::uintmax_t FileSize(const std::filesystem::path& filePath) noexcept;

@@ -158,6 +158,18 @@ string PathToAbsoluteString(const filesystem::path& inputPath) {
   return PathToString(displayPath);
 }
 
+string SanitizeUTF8Path(const filesystem::path& unsafePath, string_view fallback)
+{
+  string unsafeInput = PathToString(unsafePath);
+  return string(SanitizeUTF8(unsafeInput, fallback));
+}
+
+string SanitizeWrapUTF8Path(const filesystem::path& unsafePath, string_view fallback)
+{
+  string unsafeInput = PathToString(unsafePath);
+  return SanitizeWrapUTF8(unsafeInput, fallback);
+}
+
 vector<filesystem::path> FilesMatch(const filesystem::path& path, const vector<PLATFORM_STRING_TYPE>& extensionList)
 {
   set<PLATFORM_STRING_TYPE> extensions(extensionList.begin(), extensionList.end());

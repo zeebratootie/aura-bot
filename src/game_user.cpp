@@ -714,7 +714,7 @@ bool CGameUser::Update(fd_set* fd, int64_t timeout)
 
           case GameProtocol::Magic::PROTO_BUF: {
             // Serialized protocol buffers
-            // TODO: Not sure how to handle PROTO_BUF in the most compatible way yet.
+            // TODO(REFORGED): Not sure how to handle PROTO_BUF in the most compatible way yet.
             vector<uint8_t> resendPacket = vector<uint8_t>(packet.begin(), packet.end());
             if (m_Game.get().GetIsSupportedGameVersion(GAMEVER(1u, 31u))) {
               m_Game.get().SendAll(resendPacket);

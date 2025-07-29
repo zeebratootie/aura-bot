@@ -1268,11 +1268,11 @@ uint8_t CGame::GetNumTeamControllersOrOpen(const uint8_t team) const
 
 string CGame::GetClientFileName() const
 {
-  size_t LastSlash = m_MapPath.rfind('\\');
-  if (LastSlash == string::npos) {
+  size_t lastSlash = m_MapPath.rfind('\\');
+  if (lastSlash == string::npos) {
     return m_MapPath;
   }
-  return m_MapPath.substr(LastSlash + 1);
+  return m_MapPath.substr(lastSlash + 1);
 }
 
 string CGame::GetGameSpectatorName() const
@@ -3713,10 +3713,10 @@ void CGame::SendWelcomeMessage(GameUser::CGameUser *user) const
       Line.replace(matchIndex, 26, m_Config.m_BroadcastCmdToken.empty() ? m_Config.m_PrivateCmdToken : m_Config.m_BroadcastCmdToken);
     }
     while ((matchIndex = Line.find("{URL}")) != string::npos) {
-      Line.replace(matchIndex, 5, GetMapSiteURL());
+      Line.replace(matchIndex, 5, SanitizeUTF8(GetMapSiteURL()));
     }
     while ((matchIndex = Line.find("{FILENAME}")) != string::npos) {
-      Line.replace(matchIndex, 10, GetClientFileName());
+      Line.replace(matchIndex, 10, SanitizeUTF8(GetClientFileName()));
     }
     while ((matchIndex = Line.find("{SHORTDESC}")) != string::npos) {
       Line.replace(matchIndex, 11, m_Map->GetMapShortDesc());
@@ -4071,7 +4071,7 @@ string CGame::GetAnnounceText(shared_ptr<const CRealm> realm) const
     capabilityWord = " hosted: ";
   }
 
-  return Concat(versionPrefix, typeWord, capabilityWord, m_Map->GetServerFileName(), startedPhrase);
+  return Concat(versionPrefix, typeWord, capabilityWord, SanitizeUTF8(m_Map->GetServerFileName()), startedPhrase);
 }
 
 uint16_t CGame::CalcHostPortFromType(const uint8_t type) const
@@ -5490,7 +5490,7 @@ void CGame::EventObserverMapSize(CAsyncObserver* user, const CIncomingMapFileSiz
       if (GetMapSiteURL().empty()) {
         user->SendChat(Concat("Spectator [", user->GetName(), "], please download the map before joining. (Kick in ", to_string(m_Config.m_LacksMapKickDelay / 1000), " seconds...)"));
       } else {
-        user->SendChat(Concat("Spectator [", user->GetName(), "], please download the map from <", GetMapSiteURL(), "> before joining. (Kick in ", to_string(m_Config.m_LacksMapKickDelay / 1000), " seconds...)"));
+        user->SendChat(Concat("Spectator [", user->GetName(), "], please download the map from <", SanitizeUTF8(GetMapSiteURL()), "> before joining. (Kick in ", to_string(m_Config.m_LacksMapKickDelay / 1000), " seconds...)"));
       }
 
       if (!user->HasLeftReason()) {
@@ -6185,7 +6185,7 @@ void CGame::EventChatTrigger(GameUser::CGameUser* user, string_view chatMessage,
 {
   bool canLogChatTriggers = m_Aura->m_Config.m_LogGameChat != LOG_GAME_CHAT_NEVER && (((m_Config.m_LogChatTypes & LOG_CHAT_TYPE_COMMANDS) > 0) || m_Aura->MatchLogLevel(LogLevel::kDebug));
   if (canLogChatTriggers && (m_Config.m_LogChatTypes & LOG_CHAT_TYPE_COMMANDS) > 0) {
-    m_Aura->LogPersistent(Concat(GetLogPrefix(), "[", m_Map->GetServerFileName(), "] [CMD] ["+ user->GetExtendedName(), "] ", chatMessage));
+    m_Aura->LogPersistent(Concat(GetLogPrefix(), SanitizeWrapUTF8(m_Map->GetServerFileName()), " [CMD] ["+ user->GetExtendedName(), "] ", chatMessage));
   }
 
   // Enable --log-level debug to figure out HMC map-specific constants
@@ -6216,9 +6216,9 @@ void CGame::EventChatTrigger(GameUser::CGameUser* user, string_view chatMessage,
 
   if (canLogChatTriggers) {
     if (IsArbitraryStringUTF8Safe(chatMessage)) {
-      LOG_APP_IF(LogLevel::kDebug, Concat("[", m_Map->GetServerFileName(), "] Message by [", user->GetName(), "]: <<", chatMessage, ">> triggered : [0x", ToHexString(first), " | 0x", ToHexString(second), "]"));
+      LOG_APP_IF(LogLevel::kDebug, Concat(SanitizeWrapUTF8(m_Map->GetServerFileName()), " Message by [", user->GetName(), "]: <<", chatMessage, ">> triggered : [0x", ToHexString(first), " | 0x", ToHexString(second), "]"));
     } else {
-      LOG_APP_IF(LogLevel::kDebug, Concat("[", m_Map->GetServerFileName(), "] Message by [", user->GetName(), "]: REDACTED triggered : [0x", ToHexString(first), " | 0x", ToHexString(second), "]"));
+      LOG_APP_IF(LogLevel::kDebug, Concat(SanitizeWrapUTF8(m_Map->GetServerFileName()), " Message by [", user->GetName(), "]: REDACTED triggered : [0x", ToHexString(first), " | 0x", ToHexString(second), "]"));
     }
   }
 
@@ -6614,7 +6614,7 @@ void CGame::EventUserMapSize(GameUser::CGameUser* user, const CIncomingMapFileSi
       if (isFirstCheck) {
         string fromURL, kickFragment;
         if (!GetMapSiteURL().empty()) {
-          fromURL = Concat(" from <", GetMapSiteURL(), ">");
+          fromURL = Concat(" from <", SanitizeUTF8(GetMapSiteURL()), ">");
         }
         if (willKick) {
            kickFragment = Concat(" (Kick in ", to_string(m_Config.m_LacksMapKickDelay / 1000), " seconds...)");
@@ -7325,11 +7325,14 @@ void CGame::HandleGameLoadedStats()
   }
   m_Aura->m_DB->UpdateLatestHistoryGameId(m_PersistentId);
 
+  string mapClientPath(SanitizeUTF8(m_Map->GetClientPath()));
+  string mapServerPath(SanitizeUTF8Path(m_Map->GetServerPath()));
+
   m_Aura->m_DB->GameAdd(
     m_PersistentId,
     m_CreatorText,
-    string(m_Map->GetClientPath()),
-    PathToString(m_Map->GetServerPath()),
+    mapClientPath,
+    mapServerPath,
     m_Map->GetMapCRC32(),
     exportPlayerNames,
     exportPlayerIDs,

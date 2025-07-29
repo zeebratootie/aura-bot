@@ -2079,7 +2079,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
       // so that they can be checked in successful whisper acks from the server (BNETProtocol::IncomingChatEvent::WHISPERSENT)
       // Note that the server doesn't provide any way to recognize whisper targets if the whisper fails.
       if (lastSlashIndex != string::npos && lastSlashIndex <= mapPath.length() - 6) {
-        m_ActionMessage = Concat(targetName, ", ", GetSender(), " invites you to play [", mapPath.substr(lastSlashIndex + 1), "]. Join game \"", targetGame->GetCustomGameName(targetRealm), "\"");
+        m_ActionMessage = Concat(targetName, ", ", GetSender(), " invites you to play ", SanitizeWrapUTF8(mapPath.substr(lastSlashIndex + 1)), ". Join game \"", targetGame->GetCustomGameName(targetRealm), "\"");
       } else {
         m_ActionMessage = Concat(targetName, ", ", GetSender(), " invites you to join game \"", targetGame->GetCustomGameName(targetRealm), "\"");
       }
@@ -2685,7 +2685,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
         if (targetGame->GetMapSiteURL().empty()) {
           SendAll("Download URL unknown.");
         } else {
-          SendAll("Visit  <" + targetGame->GetMapSiteURL() + "> to download [" + targetGame->GetClientFileName() + "]");
+          SendAll(Concat("Visit <", SanitizeUTF8(targetGame->GetMapSiteURL()), "> to download ", SanitizeWrapUTF8(targetGame->GetClientFileName())));
         }
         break;
       }

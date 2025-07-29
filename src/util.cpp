@@ -2126,20 +2126,36 @@ bool IsArbitraryStringUTF8Safe(string_view unsafeInput)
   return !HasUnsafeUTF8CodePoints(unsafeInput);
 }
 
-string SanitizeStringUTF8(string_view unsafeInput)
+string_view SanitizeUTF8(string_view unsafeInput, string_view fallback)
+{
+  if (IsArbitraryStringUTF8Safe(unsafeInput)) {
+    return unsafeInput;
+  }
+  return fallback;
+}
+
+string_view SanitizeASCII(string_view unsafeInput, string_view fallback)
+{
+  if (IsASCII(unsafeInput)) {
+    return unsafeInput;
+  }
+  return fallback;
+}
+
+string SanitizeWrapUTF8(string_view unsafeInput, string_view fallback)
 {
   if (IsArbitraryStringUTF8Safe(unsafeInput)) {
     return "[" + string(unsafeInput) + "]";
   }
-  return "REDACTED";
+  return string(fallback);
 }
 
-string SanitizeStringASCII(string_view unsafeInput)
+string SanitizeWrapASCII(string_view unsafeInput, string_view fallback)
 {
   if (IsASCII(unsafeInput)) {
     return "[" + string(unsafeInput) + "]";
   }
-  return "REDACTED";
+  return string(fallback);
 }
 
 uint32_t ASCIIHexToNum(const array<uint8_t, 8>& data, bool reverse)
@@ -2224,12 +2240,12 @@ vector<string> ReadChatTemplate(const filesystem::path& filePath) {
   return fileContents;
 }
 
-string GetNormalizedAlias(const string& alias)
+string GetNormalizedAlias(string_view alias)
 {
-  if (alias.empty()) return alias;
+  if (alias.empty()) return string();
 
   string result;
-  if (!utf8::is_valid(alias.begin(), alias.end())) {
+  if (!IsArbitraryStringUTF8Safe(alias)) {
     return result;
   }
 

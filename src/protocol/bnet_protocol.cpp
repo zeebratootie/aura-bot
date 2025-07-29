@@ -499,7 +499,6 @@ namespace BNETProtocol
     vector<uint8_t> rehostSeed = vector<uint8_t>(4, 0);
     vector<uint8_t> mapSHA1 = vector<uint8_t>(20, 0);
 
-    // TODO: copy_n std::string_view -> std::array<uint8_t, 32> ??
     copy_n(packet.data() + 12, 4, mapSize.begin());
     gameConfig->SetUint8Vector("map.size", mapSize);
 

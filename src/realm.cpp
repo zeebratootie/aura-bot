@@ -397,7 +397,6 @@ void CRealm::UpdateConnected(fd_set* fd, fd_set* send_fd)
           case BNETProtocol::Magic::AUTH_ACCOUNTLOGON: {
             BNETProtocol::AuthLoginResult loginResult = BNETProtocol::RECEIVE_SID_AUTH_ACCOUNTLOGON(packet);
             if (loginResult.success) {
-              // TODO: copy_n std::string_view -> std::array<uint8_t, 32> ??
               copy_n(loginResult.salt.data(), 32, m_LoginSalt.begin());
               copy_n(loginResult.serverPublicKey.data(), 32, m_LoginServerPublicKey.begin());
               DPRINT_IF(LogLevel::kTrace, GetLogPrefix() + "username [" + m_Config.m_UserName + "] OK");

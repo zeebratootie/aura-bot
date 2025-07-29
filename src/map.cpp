@@ -372,11 +372,11 @@ string CMap::GetServerFileName() const
 
 string CMap::GetClientFileName() const
 {
-  size_t LastSlash = m_ClientMapPath.rfind('\\');
-  if (LastSlash == string::npos) {
+  size_t lastSlash = m_ClientMapPath.rfind('\\');
+  if (lastSlash == string::npos) {
     return m_ClientMapPath;
   }
-  return m_ClientMapPath.substr(LastSlash + 1);
+  return m_ClientMapPath.substr(lastSlash + 1);
 }
 
 [[nodiscard]] filesystem::path CMap::GetResolvedServerPath() const
@@ -1982,7 +1982,7 @@ bool CMap::CheckMapFileIntegrity()
     m_MapFileIsValid = false;
   }
   if (!sizeOK || !crcOK || !shaOK) {
-    PRINT_IF(LogLevel::kWarning, "Map file [" + PathToString(m_MapServerPath) + "] integrity check failure - file has been tampered");
+    PRINT_IF(LogLevel::kWarning, "Map file " + SanitizeWrapUTF8Path(m_MapServerPath) + " integrity check failure - file has been tampered");
   }
   return m_MapFileIsValid;
 }
@@ -2036,7 +2036,7 @@ bool CMap::UnlinkFile()
     result = FileDelete(resolvedPath.lexically_normal());
   }
   if (result) {
-    PRINT_IF(LogLevel::kNotice, "[MAP] Deleted [" + PathToString(m_MapServerPath) + "]");
+    PRINT_IF(LogLevel::kNotice, "[MAP] Deleted " + SanitizeWrapUTF8Path(m_MapServerPath));
   }
   return result;
 }
@@ -2065,8 +2065,15 @@ string CMap::CheckProblems()
     return m_ErrorMessage;
   }
 
-  if (m_ClientMapPath.find('/') != string::npos)
+  if (m_ClientMapPath.find('/') != string::npos) {
     Print(R"(warning - map.path contains forward slashes '/' but it must use Windows style back slashes '\')");
+  }
+  if (!IsArbitraryStringUTF8Safe(m_ClientMapPath)) {
+    Print(R"(warning - map.path contains unsafe bytes (expected UTF8 encoding)");
+  }
+  if (!IsArbitraryStringUTF8Safe(PathToString(m_MapServerPath))) {
+    Print(R"(warning - map.local_path contains unsafe bytes (expected UTF8 encoding)");
+  }
 
   else/* if (HasMapFileContents() && m_MapFileContents->size() != m_MapSize)
   {

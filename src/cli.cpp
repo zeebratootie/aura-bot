@@ -1047,7 +1047,7 @@ void CCLI::MapOpt(const string& optName, const optional<T>& operand, F&& mapFn, 
 bool CCLI::RunGameLoadParameters(shared_ptr<CGameSetup> gameSetup) const
 {
   if (!gameSetup->RestoreFromSaveFile()) {
-    Print("[AURA] Invalid save file [" + PathToString(gameSetup->m_SaveFile) + "]");
+    Print(Concat("[AURA] Invalid save file ", SanitizeWrapUTF8Path(gameSetup->m_SaveFile)));
     return false;
   }
   return true;
@@ -1185,7 +1185,7 @@ bool CCLI::QueueActions(CAura* nAura) const
       string normalizedAlias = GetNormalizedAlias(m_GameMapAlias.value());
       string mapFileName = gameSetup->GetMap()->GetServerFileName();
       if (nAura->m_DB->AliasAdd(normalizedAlias, mapFileName)) {
-        Print("[AURA] Alias <<" + m_GameMapAlias.value() + ">> added for [" + mapFileName + "]");
+        Print("[AURA] Alias <<" + m_GameMapAlias.value() + ">> added for " + SanitizeWrapUTF8(mapFileName));
       } else {
         Print("Failed to add alias.");
       }
