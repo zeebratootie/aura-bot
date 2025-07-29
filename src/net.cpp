@@ -1867,7 +1867,7 @@ shared_ptr<CTCPServer> CNet::GetOrCreateTCPServer(uint16_t inputPort, const stri
     // it maybe invalidated
   }
 
-  shared_ptr<CTCPServer> gameServer = make_shared<CTCPServer>(m_SupportTCPOverIPv6 ? AF_INET6 : AF_INET);
+  shared_ptr<CTCPServer> gameServer = make_shared<CTCPServer>(static_cast<uint8_t>(m_SupportTCPOverIPv6 ? AF_INET6 : AF_INET));
   if (!gameServer->Listen(m_SupportTCPOverIPv6 ? m_Config.m_BindAddress6 : m_Config.m_BindAddress4, inputPort, false)) {
     Print("[TCP] " + name + " Error listening on port " + to_string(inputPort));
     gameServer.reset();

@@ -49,9 +49,9 @@ struct CommandTokensView
   {
   }
 
-  CommandTokensView(CommandTokensMatchType nType, std::string_view nToken, std::string_view nPadding, std::string_view nCmd, std::string_view nTarget)
+  CommandTokensView(CommandTokensMatchType nType, bool nPadding, std::string_view nToken, std::string_view nCmd, std::string_view nTarget)
   : matchType(nType),
-    padding(false),
+    padding(nPadding),
     token(nToken),
     cmd(nCmd),
     target(nTarget)

@@ -8604,7 +8604,8 @@ bool ExtractMessageTokens(string_view message, string_view token, CommandTokensV
   if (cmdStart == string_view::npos) {
     return false;
   }
-  if (cmdStart > tokenSize) {
+  output.padding = cmdStart > tokenSize;
+  if (output.padding) {
     // keyword-based tokens
     output.token = message.substr(0, tokenSize + 1);
   } else {
