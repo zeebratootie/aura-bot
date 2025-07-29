@@ -7326,7 +7326,7 @@ void CGame::HandleGameLoadedStats()
   m_Aura->m_DB->UpdateLatestHistoryGameId(m_PersistentId);
 
   string mapClientPath(SanitizeUTF8(m_Map->GetClientPath()));
-  string mapServerPath(SanitizeUTF8Path(m_Map->GetServerPath()));
+  string mapServerPath = SanitizeUTF8Path(m_Map->GetServerPath());
 
   m_Aura->m_DB->GameAdd(
     m_PersistentId,
