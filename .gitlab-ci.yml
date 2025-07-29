@@ -137,6 +137,7 @@ Assemble:
   - export AURABUILD_MINIUPNP=1
   # Not yet supported in Linux
   - export AURABUILD_PJASS=0
+  - export AURABUILD_SANITIZE=1
   - ccache -z
   - make WFLAGS="-Wall -Wextra" OFLAGS="-O1"
   - ccache -s
@@ -146,6 +147,7 @@ Assemble:
   - unset AURABUILD_MDNS
   - unset AURABUILD_MINIUPNP
   - unset AURABUILD_PJASS
+  - unset AURABUILD_SANITIZE
   ## on static build failures, the error is reported iff mv below fails
   - mv /usr/bin/aura dist/bin-shared
   - cd dist/bin-shared

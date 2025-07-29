@@ -5,6 +5,7 @@ AURABUILD_DPP ?= 1
 AURABUILD_MDNS ?= 0
 AURABUILD_MINIUPNP ?= 1
 AURABUILD_PJASS ?= 0
+AURABUILD_SANITIZE ?= 0
 
 AURABUILD_CI := $(strip $(AURABUILD_CI))
 AURABUILD_STATIC := $(strip $(AURABUILD_STATIC))
@@ -13,6 +14,7 @@ AURABUILD_DPP := $(strip $(AURABUILD_DPP))
 AURABUILD_MDNS := $(strip $(AURABUILD_MDNS))
 AURABUILD_MINIUPNP := $(strip $(AURABUILD_MINIUPNP))
 AURABUILD_PJASS := $(strip $(AURABUILD_PJASS))
+AURABUILD_SANITIZE := $(strip $(AURABUILD_SANITIZE))
 
 # This doesn't work...
 #define VALIDATE_BOOL
@@ -37,6 +39,11 @@ CC ?= gcc
 CXX ?= g++
 CCFLAGS += -fno-builtin
 CXXFLAGS += -g0 -std=c++17 -pipe -pthread $(WFLAGS) -fno-builtin -fno-rtti -MMD -MP
+
+ifeq ($(AURABUILD_SANITIZE),1)
+  CCFLAGS += -fsanitize=address -fsanitize=undefined
+  CXXFLAGS += -fsanitize=address -fsanitize=undefined
+endif
 
 LDLIBS_CORE = -lstorm -lbncsutil -lgmp -lbz2 -lz
 LDLIBS_SYS = 
