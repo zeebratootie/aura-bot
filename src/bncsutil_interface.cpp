@@ -260,7 +260,7 @@ bool CBNCSUtilInterface::ExtractEXEFeatures(const Version& war3DataVersion, cons
     buffer.resize(requiredSize);
     m_EXEInfo        = buffer.data();
     m_EXEVersion     = CreateFixedByteArrayLE(EXEVersion);
-    m_EXEVersionHash = CreateFixedByteArrayLossy<Endianness::kLittle>(static_cast<const int64_t>(EXEVersionHash)); // Only uses 4 bytes
+    m_EXEVersionHash = CreateFixedByteArrayLossy<Endianness::kLittle>(static_cast<int64_t>(EXEVersionHash)); // Only uses 4 bytes
 
     return true;
   }
