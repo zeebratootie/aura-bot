@@ -1,9 +1,9 @@
-/* $Id: miniupnpc.c,v 1.163 2024/07/27 11:53:45 nanard Exp $ */
+/* $Id: miniupnpc.c,v 1.165 2025/01/10 22:57:21 nanard Exp $ */
 /* vim: tabstop=4 shiftwidth=4 noexpandtab
  * Project : miniupnp
  * Web : http://miniupnp.free.fr/ or https://miniupnp.tuxfamily.org/
  * Author : Thomas BERNARD
- * copyright (c) 2005-2024 Thomas Bernard
+ * copyright (c) 2005-2025 Thomas Bernard
  * This software is subjet to the conditions detailed in the
  * provided LICENSE file. */
 #include <stdlib.h>
@@ -11,6 +11,7 @@
 #include <string.h>
 #ifdef _WIN32
 /* Win32 Specific includes and defines */
+#define WIN32_LEAN_AND_MEAN
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #include <io.h>
@@ -98,8 +99,8 @@ MINIUPNP_LIBSPEC void parserootdesc(const char * buffer, int bufsize, struct IGD
  *   pointer - OK
  *   NULL - error */
 char *
-simpleUPnPcommand(int s, const char * url, const char * service,
-                  const char * action, struct UPNParg * args,
+simpleUPnPcommand(const char * url, const char * service,
+                  const char * action, const struct UPNParg * args,
                   int * bufsize)
 {
 	char hostname[MAXHOSTNAMELEN+1];
@@ -111,6 +112,7 @@ simpleUPnPcommand(int s, const char * url, const char * service,
 	char * buf;
 	int n;
 	int status_code;
+	SOCKET s;
 
 	*bufsize = 0;
 	snprintf(soapact, sizeof(soapact), "%s#%s", service, action);
@@ -197,12 +199,10 @@ simpleUPnPcommand(int s, const char * url, const char * service,
 			return NULL;
 	}
 	if(!parseURL(url, hostname, &port, &path, NULL)) return NULL;
-	if(ISINVALID((SOCKET)s)) {
-		s = connecthostport(hostname, port, 0);
-		if(ISINVALID((SOCKET)s)) {
-			/* failed to connect */
-			return NULL;
-		}
+	s = connecthostport(hostname, port, 0);
+	if(ISINVALID(s)) {
+		/* failed to connect */
+		return NULL;
 	}
 
 	n = soapPostSubmit(s, path, hostname, port, soapact, soapbody, "1.1");
