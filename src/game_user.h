@@ -420,7 +420,7 @@ namespace GameUser
     // processing functions
 
     [[nodiscard]] bool Update(fd_set* fd, int64_t timeout);
-    [[nodiscard]] uint8_t NextSendMap();
+    [[nodiscard]] MapTransferStatus NextSendMap();
 
     // other functions
 

@@ -466,13 +466,6 @@ enum class AIType : uint8_t {
 // 142 UTF-16 chracters, including Latin, Cyrillic, digits, and punctuation
 constexpr const wchar_t* AHCL_DEFAULT_CHARSET = L"\u0030\u0031\u0032\u0033\u0034\u0035\u0036\u0037\u0038\u0039\u0061\u0062\u0063\u0064\u0065\u0066\u0067\u0068\u0069\u006a\u006b\u006c\u006d\u006e\u006f\u0070\u0071\u0072\u0073\u0074\u0075\u0076\u0077\u0078\u0079\u007a\u0041\u0042\u0043\u0044\u0045\u0046\u0047\u0048\u0049\u004a\u004b\u004c\u004d\u004e\u004f\u0050\u0051\u0052\u0053\u0054\u0055\u0056\u0057\u0058\u0059\u005a\u0430\u0431\u0432\u0433\u0434\u0435\u0451\u0436\u0437\u0438\u0439\u043a\u043b\u043c\u043d\u043e\u043f\u0440\u0441\u0442\u0443\u0444\u0445\u0446\u0447\u0448\u0449\u044a\u044b\u044c\u044d\u044e\u044f\u0410\u0411\u0412\u0413\u0414\u0415\u0401\u0416\u0417\u0418\u0419\u041a\u041b\u041c\u041d\u041e\u041f\u0420\u0421\u0422\u0423\u0424\u0425\u0426\u0427\u0428\u0429\u042a\u042b\u042c\u042d\u042e\u042f\u0020\u002d\u003d\u002c\u002e\u0021\u003f\u002a\u005f\u002b\u003d\u007c\u003a\u003b";
 
-constexpr uint8_t MAP_TRANSFER_NONE = 0u;
-constexpr uint8_t MAP_TRANSFER_DONE = 1u;
-constexpr uint8_t MAP_TRANSFER_IN_PROGRESS = 2u;
-constexpr uint8_t MAP_TRANSFER_RATE_LIMITED = 3u;
-constexpr uint8_t MAP_TRANSFER_MISSING = 4u;
-constexpr uint8_t MAP_TRANSFER_INVALID = 5u;
-
 enum class MapTransferStatus : uint8_t {
   kNone = 0,
   kDone = 1,
@@ -480,16 +473,7 @@ enum class MapTransferStatus : uint8_t {
   kRateLimited = 3,
   kMissing = 4,
   kInvalid = 5,
-  LAST = 6,
 };
-
-constexpr uint8_t MAP_TRANSFER_CHECK_ALLOWED = 0u;
-constexpr uint8_t MAP_TRANSFER_CHECK_INVALID = 1u;
-constexpr uint8_t MAP_TRANSFER_CHECK_MISSING = 2u;
-constexpr uint8_t MAP_TRANSFER_CHECK_DISABLED = 3u;
-constexpr uint8_t MAP_TRANSFER_CHECK_TOO_LARGE_VERSION = 4u;
-constexpr uint8_t MAP_TRANSFER_CHECK_TOO_LARGE_CONFIG = 5u;
-constexpr uint8_t MAP_TRANSFER_CHECK_BUFFERBLOAT = 6u;
 
 enum class MapTransferCheckResult : uint8_t {
   kAllowed = 0,
@@ -499,7 +483,6 @@ enum class MapTransferCheckResult : uint8_t {
   kTooLargeVersion = 4,
   kTooLargeConfig = 5,
   kBufferBloat = 6,
-  LAST = 7,
 };
 
 // game.h

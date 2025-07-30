@@ -784,15 +784,15 @@ void CNet::UpdateMapTransfers()
     }
 
     bool mapIsInvalid = false;
-    const uint8_t sendResult = user->NextSendMap();
+    const MapTransferStatus sendResult = user->NextSendMap();
     switch (sendResult) {
-      case MAP_TRANSFER_IN_PROGRESS:
-      case MAP_TRANSFER_DONE:
-      case MAP_TRANSFER_NONE: // not really needed
-      case MAP_TRANSFER_RATE_LIMITED: // not used
+      case MapTransferStatus::kInProgress:
+      case MapTransferStatus::kDone:
+      case MapTransferStatus::kNone: // not really needed
+      case MapTransferStatus::kRateLimited: // not used
         break;
-      case MAP_TRANSFER_MISSING:
-      case MAP_TRANSFER_INVALID:
+      case MapTransferStatus::kMissing:
+      case MapTransferStatus::kInvalid:
         mapIsInvalid = true;
         break;
     }
@@ -818,15 +818,15 @@ void CNet::UpdateMapTransfers()
     }
 
     bool mapIsInvalid = false;
-    const uint8_t sendResult = user->NextSendMap();
+    const MapTransferStatus sendResult = user->NextSendMap();
     switch (sendResult) {
-      case MAP_TRANSFER_IN_PROGRESS:
-      case MAP_TRANSFER_DONE:
-      case MAP_TRANSFER_NONE: // not really needed
-      case MAP_TRANSFER_RATE_LIMITED: // not used
+      case MapTransferStatus::kInProgress:
+      case MapTransferStatus::kDone:
+      case MapTransferStatus::kNone: // not really needed
+      case MapTransferStatus::kRateLimited: // not used
         break;
-      case MAP_TRANSFER_MISSING:
-      case MAP_TRANSFER_INVALID:
+      case MapTransferStatus::kMissing:
+      case MapTransferStatus::kInvalid:
         mapIsInvalid = true;
         break;
     }

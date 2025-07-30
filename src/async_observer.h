@@ -181,7 +181,7 @@ public:
   bool UpdateClientGameState(const uint32_t checkSum);
   bool CheckClientGameState();
   void UpdateDownloadProgression(const uint8_t downloadProgression);
-  [[nodiscard]] uint8_t NextSendMap();
+  [[nodiscard]] MapTransferStatus NextSendMap();
   void EventDesync();
   void EventMapReady();
   bool CheckStartLoading();

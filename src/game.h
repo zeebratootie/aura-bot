@@ -658,7 +658,7 @@ public:
   uint8_t                   GetPassiveVirtualUserTeamSID(const uint8_t team) const;
   inline bool               GetHMCEnabled() const { return m_HMCEnabled; }
   void                      SendIncomingPlayerInfo(GameUser::CGameUser* user) const;
-  uint8_t                   NextSendMap(CConnection* connection, const uint8_t UID, MapTransfer& mapTransfer);
+  MapTransferStatus         NextSendMap(CConnection* connection, const uint8_t UID, MapTransfer& mapTransfer);
   GameUser::CGameUser*                JoinPlayer(CConnection* connection, const CIncomingJoinRequest& joinRequest, const uint8_t SID, const uint8_t UID, const uint8_t HostCounterID, const std::string JoinedRealm, const bool IsReserved, const bool IsUnverifiedAdmin);  
   bool                      CreateVirtualHost();
   bool                      DeleteVirtualHost();
@@ -678,7 +678,7 @@ public:
 
 
   // Map transfer
-  uint8_t                   CheckCanTransferMap(const CConnection* connection, std::shared_ptr<const CRealm> realm, const Version& version, const bool gotPermission);
+  MapTransferCheckResult    CheckCanTransferMap(const CConnection* connection, std::shared_ptr<const CRealm> realm, const Version& version, const bool gotPermission);
   inline SharedByteArray    GetLoadedMapChunk() { return m_LoadedMapChunk; }
   void                      SetLoadedMapChunk(SharedByteArray nLoadedMapChunk) { m_LoadedMapChunk = nLoadedMapChunk; }
   void                      ClearLoadedMapChunk() { m_LoadedMapChunk.reset(); }

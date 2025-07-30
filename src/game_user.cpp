@@ -836,7 +836,7 @@ bool CGameUser::Update(fd_set* fd, int64_t timeout)
   return false;
 }
 
-uint8_t CGameUser::NextSendMap()
+MapTransferStatus CGameUser::NextSendMap()
 {
   return m_Game.get().NextSendMap(this, GetUID(), GetMapTransfer());
 }

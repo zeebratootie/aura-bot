@@ -3476,10 +3476,10 @@ void CGame::SendIncomingPlayerInfo(GameUser::CGameUser* user) const
   }
 }
 
-uint8_t CGame::NextSendMap(CConnection* user, const uint8_t UID, MapTransfer& mapTransfer)
+MapTransferStatus CGame::NextSendMap(CConnection* user, const uint8_t UID, MapTransfer& mapTransfer)
 {
   if (!mapTransfer.GetIsInProgress()) {
-    return MAP_TRANSFER_NONE;
+    return MapTransferStatus::kNone;
   }
 
   // send up to 100 pieces of the map at once so that the download goes faster
@@ -3521,7 +3521,7 @@ uint8_t CGame::NextSendMap(CConnection* user, const uint8_t UID, MapTransfer& ma
     uint32_t lastOffsetEnd = mapTransfer.GetLastSentOffsetEnd();
     const FileChunkTransient cachedChunk = GetMapChunk(lastOffsetEnd);
     if (!cachedChunk.bytes) {
-      return MAP_TRANSFER_MISSING;
+      return MapTransferStatus::kMissing;
     }
 
     const vector<uint8_t> packet = GameProtocol::SEND_W3GS_MAPPART(GetHostUID(), UID, lastOffsetEnd, cachedChunk);
@@ -3542,17 +3542,17 @@ uint8_t CGame::NextSendMap(CConnection* user, const uint8_t UID, MapTransfer& ma
     if (fullySent) {
       mapTransfer.SetFinished();
       if (mapTransfer.GetLastCRC32() == ByteArrayToUInt32LE(m_Map->GetMapCRC32())) {
-        return MAP_TRANSFER_DONE;
+        return MapTransferStatus::kDone;
       } else {
-        return MAP_TRANSFER_INVALID;
+        return MapTransferStatus::kInvalid;
       }
     }
   }
 
-  return MAP_TRANSFER_IN_PROGRESS;
+  return MapTransferStatus::kInProgress;
 }
 
-void CGame::SendWelcomeMessage(GameUser::CGameUser *user) const
+void CGame::SendWelcomeMessage(GameUser::CGameUser* user) const
 {
   for (size_t i = 0; i < m_Aura->m_Config.m_Greeting.size(); i++) {
     string::size_type matchIndex;
@@ -5471,8 +5471,8 @@ void CGame::EventObserverMapSize(CAsyncObserver* user, const CIncomingMapFileSiz
 
   if (clientMap.GetFlag() != 1 || clientMap.GetFileSize() != expectedMapSize) {
     // observer doesn't have the map
-    const uint8_t checkResult = CheckCanTransferMap(user, user->GetRealm(), user->GetGameVersion(), false /* cannot start manual download for observers */);
-    if (checkResult == MAP_TRANSFER_CHECK_ALLOWED) {
+    const MapTransferCheckResult checkResult = CheckCanTransferMap(user, user->GetRealm(), user->GetGameVersion(), false /* cannot start manual download for observers */);
+    if (checkResult == MapTransferCheckResult::kAllowed) {
       MapTransfer& mapTransfer = user->GetMapTransfer();
       if (!mapTransfer.GetStarted() && clientMap.GetFlag() == 1) {
         // inform the client that we are willing to send the map
@@ -5495,22 +5495,22 @@ void CGame::EventObserverMapSize(CAsyncObserver* user, const CIncomingMapFileSiz
       if (!user->HasLeftReason()) {
         string reason;
         switch (checkResult) {
-          case MAP_TRANSFER_CHECK_INVALID:
+          case MapTransferCheckResult::kInvalid:
             reason = "invalid";
             break;
-          case MAP_TRANSFER_CHECK_MISSING:
+          case MapTransferCheckResult::kMissing:
             reason = "missing";
             break;
-          case MAP_TRANSFER_CHECK_DISABLED:
+          case MapTransferCheckResult::kDisabled:
             reason = "disabled";
             break;
-          case MAP_TRANSFER_CHECK_TOO_LARGE_VERSION:
+          case MapTransferCheckResult::kTooLargeVersion:
             LOG_APP_IF(LogLevel::kDebug, Concat("user [", user->GetName(), "] running v", ToVersionString(user->GetGameVersion()), " cannot download ", ToFormattedString(m_Map->GetMapSizeMB()), " MB map in-game"));
             // falls through
-          case MAP_TRANSFER_CHECK_TOO_LARGE_CONFIG:
+          case MapTransferCheckResult::kTooLargeConfig:
             reason = "too large";
             break;
-          case MAP_TRANSFER_CHECK_BUFFERBLOAT:
+          case MapTransferCheckResult::kBufferBloat:
             reason = "bufferbloat";
             break;
         }
@@ -6600,8 +6600,8 @@ void CGame::EventUserMapSize(GameUser::CGameUser* user, const CIncomingMapFileSi
 
   if (clientMap.GetFlag() != 1 || clientMap.GetFileSize() != expectedMapSize) {
     // user doesn't have the map
-    const uint8_t checkResult = CheckCanTransferMap(user, user->GetRealm(false), user->GetGameVersion(), user->GetDownloadAllowed());
-    if (checkResult == MAP_TRANSFER_CHECK_ALLOWED) {
+    const MapTransferCheckResult checkResult = CheckCanTransferMap(user, user->GetRealm(false), user->GetGameVersion(), user->GetDownloadAllowed());
+    if (checkResult == MapTransferCheckResult::kAllowed) {
       MapTransfer& mapTransfer = user->GetMapTransfer();
       if (!mapTransfer.GetStarted() && clientMap.GetFlag() == 1) {
         // inform the client that we are willing to send the map
@@ -6632,22 +6632,22 @@ void CGame::EventUserMapSize(GameUser::CGameUser* user, const CIncomingMapFileSi
         if (!user->HasLeftReason()) {
           string reason;
           switch (checkResult) {
-            case MAP_TRANSFER_CHECK_INVALID:
+            case MapTransferCheckResult::kInvalid:
               reason = "invalid";
               break;
-            case MAP_TRANSFER_CHECK_MISSING:
+            case MapTransferCheckResult::kMissing:
               reason = "missing";
               break;
-            case MAP_TRANSFER_CHECK_DISABLED:
+            case MapTransferCheckResult::kDisabled:
               reason = "disabled";
               break;
-            case MAP_TRANSFER_CHECK_TOO_LARGE_VERSION:
+            case MapTransferCheckResult::kTooLargeVersion:
               LOG_APP_IF(LogLevel::kDebug, Concat("user [", user->GetName(), "] running v", ToVersionString(user->GetGameVersion()), " cannot download ", ToFormattedString(m_Map->GetMapSizeMB()), " MB map in-game"));
               // falls through
-            case MAP_TRANSFER_CHECK_TOO_LARGE_CONFIG:
+            case MapTransferCheckResult::kTooLargeConfig:
               reason = "too large";
               break;
-            case MAP_TRANSFER_CHECK_BUFFERBLOAT:
+            case MapTransferCheckResult::kBufferBloat:
               reason = "bufferbloat";
               break;
           }
@@ -8321,16 +8321,16 @@ uint8_t CGame::GetHostUID() const
   }
 }
 
-uint8_t CGame::CheckCanTransferMap(const CConnection* /*connection*/, shared_ptr<const CRealm> realm, const Version& version, const bool gotPermission)
+MapTransferCheckResult CGame::CheckCanTransferMap(const CConnection* /*connection*/, shared_ptr<const CRealm> realm, const Version& version, const bool gotPermission)
 {
   if (!m_Map->GetMapFileIsValid()) {
-    return m_Map->HasMismatch() ? MAP_TRANSFER_CHECK_INVALID : MAP_TRANSFER_CHECK_MISSING;
+    return m_Map->HasMismatch() ? MapTransferCheckResult::kInvalid : MapTransferCheckResult::kMissing;
   }
   if (m_Aura->m_Net.m_Config.m_AllowTransfers == MAP_TRANSFERS_NEVER) {
-    return MAP_TRANSFER_CHECK_DISABLED;
+    return MapTransferCheckResult::kDisabled;
   }
   if (!m_Map->GetMapSizeIsNativeSupported(version)) {
-    return MAP_TRANSFER_CHECK_TOO_LARGE_VERSION;
+    return MapTransferCheckResult::kTooLargeVersion;
   }
 
   const uint32_t expectedMapSize = m_Map->GetMapSize();
@@ -8341,15 +8341,15 @@ uint8_t CGame::CheckCanTransferMap(const CConnection* /*connection*/, shared_ptr
   bool isTooLarge = expectedMapSize > maxTransferSize * 1024;
 
   if (!(gotPermission || (m_Aura->m_Net.m_Config.m_AllowTransfers == MAP_TRANSFERS_AUTOMATIC && !isTooLarge))) {
-    return m_Aura->m_Net.m_Config.m_AllowTransfers == MAP_TRANSFERS_AUTOMATIC ? MAP_TRANSFER_CHECK_TOO_LARGE_CONFIG : MAP_TRANSFER_CHECK_DISABLED;
+    return m_Aura->m_Net.m_Config.m_AllowTransfers == MAP_TRANSFERS_AUTOMATIC ? MapTransferCheckResult::kTooLargeConfig : MapTransferCheckResult::kDisabled;
   }
   if (m_Aura->m_Config.m_MaxStartedGames <= m_Aura->m_StartedGames.size()) {
-    return MAP_TRANSFER_CHECK_BUFFERBLOAT;
+    return MapTransferCheckResult::kBufferBloat;
   }
   if (!m_Aura->m_StartedGames.empty() && m_Aura->m_Net.m_Config.m_HasBufferBloat) {
-    return MAP_TRANSFER_CHECK_BUFFERBLOAT;
+    return MapTransferCheckResult::kBufferBloat;
   }
-  return MAP_TRANSFER_CHECK_ALLOWED;
+  return MapTransferCheckResult::kAllowed;
 }
 
 FileChunkTransient CGame::GetMapChunk(size_t start)

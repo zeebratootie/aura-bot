@@ -570,9 +570,9 @@ void CAsyncObserver::UpdateDownloadProgression(const uint8_t downloadProgression
   Send(slotInfo);
 }
 
-uint8_t CAsyncObserver::NextSendMap()
+MapTransferStatus CAsyncObserver::NextSendMap()
 {
-  if (m_Game.expired()) return MAP_TRANSFER_NONE;
+  if (m_Game.expired()) return MapTransferStatus::kNone;
   return m_Game.lock()->NextSendMap(this, GetUID(), GetMapTransfer()); 
 }
 
