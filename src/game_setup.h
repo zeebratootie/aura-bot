@@ -109,7 +109,7 @@ struct GameMirrorSetup
   bool SetRegistrySource(const std::string& gameName, const std::string& registryName);
   bool SetRegistrySource(const StringPair& registry);
   void SetSourceRealm(std::shared_ptr<CRealm> sourceRealm) { m_SourceRealm = sourceRealm; }
-  [[nodiscard]] std::optional<GameHost> GetRawSource() const;
+  [[nodiscard]] const GameHost* GetRawSource() const;
 
   [[nodiscard]] inline bool GetIsEnabled() const { return m_IsMirror; }
   [[nodiscard]] inline bool GetIsProxyEnabled() const { return m_EnableProxy; }

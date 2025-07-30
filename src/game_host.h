@@ -48,7 +48,7 @@ struct GameHost
   inline void SetIdentifier(uint32_t identifier) { m_Identifier = identifier; }
   inline void SetEntryKey(uint32_t entryKey) { m_EntryKey = entryKey; }
 
-  [[nodiscard]] inline const sockaddr_storage&           GetAddress() const { return m_Address; }
+  [[nodiscard]] inline const sockaddr_storage*           GetAddress() const { return &m_Address; }
   [[nodiscard]] inline uint32_t                          GetIdentifier() const { return m_Identifier; }
   [[nodiscard]] inline uint32_t                          GetEntryKey() const { return m_EntryKey; }
 
@@ -116,7 +116,7 @@ struct NetworkGameInfo
 
   [[nodiscard]] inline bool GetIsValid() const { return m_IsValid; }
   [[nodiscard]] std::string GetIPString() const;
-  [[nodiscard]] inline const sockaddr_storage& GetAddress() const { return m_Host.m_Address; }
+  [[nodiscard]] inline const sockaddr_storage* GetAddress() const { return m_Host.GetAddress(); }
   [[nodiscard]] inline uint32_t GetIdentifier() const { return m_Host.m_Identifier; }
   [[nodiscard]] inline uint32_t GetEntryKey() const { return m_Host.m_EntryKey; }
   [[nodiscard]] inline uint32_t GetGameFlags() const { return m_Info.m_GameFlags; }

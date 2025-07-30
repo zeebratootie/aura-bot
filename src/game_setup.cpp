@@ -167,14 +167,12 @@ bool GameMirrorSetup::SetRegistrySource(const string& gameName, const string& re
   return SetRegistrySource(StringPair(gameName, registryName));
 }
 
-optional<GameHost> GameMirrorSetup::GetRawSource() const
+const GameHost* GameMirrorSetup::GetRawSource() const
 {
-  optional<GameHost> maybeSource;
   if (!GetIsEnabled() || m_Source.index() != 2) {
-    return maybeSource;
+    return nullptr;
   }
-  maybeSource = get<GameHost>(m_Source);
-  return maybeSource;
+  return get_if<GameHost>(&m_Source);
 }
 
 //
@@ -1418,8 +1416,8 @@ bool CGameSetup::RunHost()
 
 uint32_t CGameSetup::GetGameIdentifier() const
 {
-  optional<GameHost> rawSource = m_Mirror.GetRawSource();
-  if (!rawSource.has_value()) {
+  const GameHost* rawSource = m_Mirror.GetRawSource();
+  if (!rawSource) {
     return m_Aura->NextHostCounter();
   }
   return rawSource->GetIdentifier();
@@ -1427,8 +1425,8 @@ uint32_t CGameSetup::GetGameIdentifier() const
 
 uint32_t CGameSetup::GetEntryKey() const
 {
-  optional<GameHost> rawSource = m_Mirror.GetRawSource();
-  if (!rawSource.has_value()) {
+  const GameHost* rawSource = m_Mirror.GetRawSource();
+  if (!rawSource) {
     return GetRandomUInt32();
   }
   return rawSource->GetEntryKey();
@@ -1436,11 +1434,11 @@ uint32_t CGameSetup::GetEntryKey() const
 
 const sockaddr_storage* CGameSetup::GetGameAddress() const
 {
-  optional<GameHost> rawSource = m_Mirror.GetRawSource();
-  if (!rawSource.has_value()) {
+  const GameHost* rawSource = m_Mirror.GetRawSource();
+  if (!rawSource) {
     return nullptr;
   }
-  return &(rawSource->GetAddress());
+  return rawSource->GetAddress();
 }
 
 void CGameSetup::AddIgnoredRealm(shared_ptr<const CRealm> nRealm)

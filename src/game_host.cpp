@@ -118,7 +118,7 @@ optional<GameHost> GameHost::Parse(const string& hexInput)
 {
   optional<GameHost> maybeGameHost;
   maybeGameHost.emplace(hexInput);
-  if (maybeGameHost->GetAddress().ss_family == 0) {
+  if (maybeGameHost->GetAddress()->ss_family == 0) {
     maybeGameHost.reset();
   }
   return maybeGameHost;
@@ -225,12 +225,12 @@ bool NetworkGameInfo::SetBNETGameInfo(string_view gameStat, const Version& war3V
 
 string NetworkGameInfo::GetIPString() const
 {
-  return AddressToStringStrict(GetAddress());
+  return AddressToStringStrict(*GetAddress());
 }
 
 string NetworkGameInfo::GetHostDetails() const
 {
-  const string gameLocation = "[" + GetIPString() + "]:" + to_string(GetAddressPort(&(GetAddress()))) + "#" + ToHexString(GetIdentifier());
+  const string gameLocation = "[" + GetIPString() + "]:" + to_string(GetAddressPort(GetAddress())) + "#" + ToHexString(GetIdentifier());
   const uint32_t entryKey = GetEntryKey();
   if (entryKey == 0) {
     return gameLocation;
