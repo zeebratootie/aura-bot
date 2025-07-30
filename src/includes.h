@@ -48,6 +48,7 @@
 
 // STL
 
+#include <cassert>
 #include <cmath>
 #include <cstddef>
 #include <cstring>

@@ -515,7 +515,7 @@ public:
   void                                                   ResetInGameReadyUsers() const;
 
   void                                                   SendGProxyEmptyActions();
-  void                                                   EventOutgoingAtomicAction(const uint8_t UID, const uint8_t* actionStart, const uint8_t* actionEnd);
+  void                                                   EventOutgoingAtomicAction(const uint8_t UID, std::string_view action);
   void                                                   SendAllActionsCallback();
   void                                                   SendAllActions();
   void                                                   SendAllAutoStart() const;
@@ -881,7 +881,7 @@ public:
 
   bool InitStats();
   bool InitHMC();
-  bool EventGameCacheInteger(const uint8_t UID, const uint8_t* actionStart, const uint8_t* actionEnd);
+  bool EventGameCacheInteger(const uint8_t UID, std::string_view action);
   bool UpdateStatsQueue() const;
   void FlushStatsQueue() const;
   void TrySaveStats() const;

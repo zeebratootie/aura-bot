@@ -275,7 +275,7 @@ template <OOBPolicy oobPolicy, NullTerminatorPolicy nullPolicy, StringEncoding e
 [[nodiscard]] std::vector<uint8_t> ExtractHexNumbers(const std::string& s);
 [[nodiscard]] std::vector<uint8_t> ExtractIPv4(const std::string& s);
 [[nodiscard]] std::string ToUpperCase(const std::string& input);
-[[nodiscard]] std::vector<uint8_t> SplitNumeral(const std::string& input);
+[[nodiscard]] std::vector<uint8_t> SplitNumeral(std::string_view input);
 [[nodiscard]] std::vector<std::string> SplitArgs(const std::string& s, const uint8_t expectedCount);
 [[nodiscard]] std::vector<std::string> SplitArgs(const std::string& s, const uint8_t minCount, const uint8_t maxCount);
 [[nodiscard]] std::vector<uint32_t> SplitNumericArgs(const std::string& s, const uint8_t expectedCount);
@@ -336,6 +336,7 @@ template<typename Container>
 [[nodiscard]] std::string GetNormalizedAlias(std::string_view alias);
 void NormalizeDirectory(std::filesystem::path& filePath);
 [[nodiscard]] bool FindNextMissingElementBack(uint8_t& element, std::vector<uint8_t> counters);
+[[nodiscard]] std::optional<uint32_t> ToUint32(std::string_view input);
 [[nodiscard]] std::optional<uint32_t> ToUint32(const std::string& input);
 [[nodiscard]] std::optional<int32_t> ToInt32(const std::string& input);
 [[nodiscard]] std::optional<double> ToDouble(const std::string& input);

@@ -51,7 +51,7 @@ struct GameInteraction
   inline void SetDone() { status = GAME_INTERACTION_STATUS_DONE; }
 
   inline const std::string& GetArgs() const { return args; }
-  inline void SetArgs(const std::string& nArgs) { args = nArgs; }
+  inline void SetArgs(std::string_view nArgs) { args = std::string(nArgs); }
 };
 
 class CGameInteractiveHost
@@ -67,13 +67,13 @@ public:
 
   [[nodiscard]] inline bool GetIsGameExpired() const { return m_Game.expired(); }
   [[nodiscard]] inline std::shared_ptr<CGame> GetGame() const { return m_Game.lock(); }
-  [[nodiscard]] std::string GetProcedureDescription(const uint32_t interactionId, const uint32_t procedureType, const std::string& key);
-  [[nodiscard]] bool CheckInitInstance(const uint32_t interactionId, const uint32_t procedureType, const std::string& key);
+  [[nodiscard]] std::string GetProcedureDescription(const uint32_t interactionId, const uint32_t procedureType, std::string_view key);
+  [[nodiscard]] bool CheckInitInstance(const uint32_t interactionId, const uint32_t procedureType, std::string_view key);
   [[nodiscard]] bool InitInstance(const uint32_t interactionId);
   void Send(const std::string& message);
   void SendResult(const uint32_t interactionId, const std::string& result);
   void ResolveInteraction(std::pair<const uint32_t, GameInteraction>&, const std::string& result);
-  bool EventGameCacheInteger(const uint8_t UID, const std::string& fileName, const std::string& missionKey, const std::string& key, const uint32_t value);
+  bool EventGameCacheInteger(const uint8_t UID, const std::string_view fileName, const std::string_view missionKey, const std::string_view key, const uint32_t value);
   std::string GetLogPrefix() const;
   [[nodiscard]] static long GetMapTime();
 };

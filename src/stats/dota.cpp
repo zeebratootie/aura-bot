@@ -94,6 +94,16 @@ optional<uint8_t> Dota::ParseActorColor(const string& input)
   return result;
 }
 
+optional<uint8_t> Dota::ParseHeroColor(string_view input)
+{
+  return ParseHeroColor(string(input));
+}
+
+optional<uint8_t> Dota::ParseActorColor(string_view input)
+{
+  return ParseActorColor(string(input));
+}
+
 string Dota::GetLaneName(const uint8_t code)
 {
   switch (code) {
@@ -6371,7 +6381,7 @@ CDotaStats::~CDotaStats()
   }
 }
 
-bool CDotaStats::EventGameCacheInteger(const uint8_t fromUID, const std::string& fileName, const std::string& missionKey, const std::string& key, const uint32_t cacheValue)
+bool CDotaStats::EventGameCacheInteger(const uint8_t fromUID, const std::string_view fileName, const std::string_view missionKey, const std::string_view key, const uint32_t cacheValue)
 {
   if (fileName != "dr.x") {
     return true;
@@ -6382,8 +6392,8 @@ bool CDotaStats::EventGameCacheInteger(const uint8_t fromUID, const std::string&
     // you could use these to calculate killing sprees and double or triple kills (you'd have to make up your own time restrictions though)
     // you could also build a table of "who killed who" data
 
-    string eventName = key;
-    string eventStringData;
+    string eventName;
+    string_view eventStringData;
 
     if (key.size() >= 4 && key.compare(0, 4, "Mode") == 0) {
       eventStringData = key.substr(4);
@@ -6393,6 +6403,8 @@ bool CDotaStats::EventGameCacheInteger(const uint8_t fromUID, const std::string&
       if (keyNumIndex != string::npos) {
         eventStringData = key.substr(keyNumIndex);
         eventName = key.substr(0, keyNumIndex);
+      } else {
+        eventName = string(key);
       }
     }
 
@@ -6575,14 +6587,14 @@ bool CDotaStats::EventGameCacheInteger(const uint8_t fromUID, const std::string&
         // a player disconnected - the map sends a final creep performance stats update
         if (eventStringData.size() < 5) break; 
         optional<uint8_t> heroColor = EnsureHeroColor(cacheValue);
-        string::size_type denyIndex = eventStringData.find('D');
+        string_view::size_type denyIndex = eventStringData.find('D');
         if (denyIndex == string::npos) return true;
-        string::size_type neutralIndex = eventStringData.find('N', denyIndex + 1);
+        string_view::size_type neutralIndex = eventStringData.find('N', denyIndex + 1);
         if (neutralIndex == string::npos) return true;
 
-        string creepKillsString = eventStringData.substr(0, denyIndex);
-        string creepDeniesString = eventStringData.substr(denyIndex + 1, neutralIndex - (denyIndex + 1));
-        string neutralKillsString = eventStringData.substr(neutralIndex + 1);
+        string_view creepKillsString = eventStringData.substr(0, denyIndex);
+        string_view creepDeniesString = eventStringData.substr(denyIndex + 1, neutralIndex - (denyIndex + 1));
+        string_view neutralKillsString = eventStringData.substr(neutralIndex + 1);
 
         optional<uint32_t> creepKills = ToUint32(creepKillsString);
         optional<uint32_t> creepDenies = ToUint32(creepDeniesString);
@@ -6649,7 +6661,7 @@ bool CDotaStats::EventGameCacheInteger(const uint8_t fromUID, const std::string&
         optional<uint8_t> heroColor = EnsureHeroColor(cacheValue);
         if (heroColor.has_value()) {
           string playerName = GetUserNameFromColor(*heroColor);
-          LogMetaData(m_Game.get().GetEffectiveTicks(), "[" + playerName + "] advanced to Lv. " + eventStringData);
+          LogMetaData(m_Game.get().GetEffectiveTicks(), Concat("[", playerName, "] advanced to Lv. ", eventStringData));
         }
         break;
       }
@@ -6857,12 +6869,12 @@ bool CDotaStats::EventGameCacheInteger(const uint8_t fromUID, const std::string&
         // DotA v6.83d-rb4
         // DotA v6.85k Allstars
         // DotA_Allstars_7.04f9
-        string::size_type firstUnderscore = eventStringData.find('_');
+        string_view::size_type firstUnderscore = eventStringData.find('_');
         if (firstUnderscore == string::npos) break;
-        string::size_type secondUnderscore = eventStringData.find('_', firstUnderscore + 1);
+        string_view::size_type secondUnderscore = eventStringData.find('_', firstUnderscore + 1);
         if (secondUnderscore == string::npos) break;
-        string fromString = eventStringData.substr(firstUnderscore + 1, secondUnderscore - (firstUnderscore + 1));
-        string toString = eventStringData.substr(secondUnderscore + 1);
+        string_view fromString = eventStringData.substr(firstUnderscore + 1, secondUnderscore - (firstUnderscore + 1));
+        string_view toString = eventStringData.substr(secondUnderscore + 1);
         optional<uint32_t> fromColor = ToUint32(fromString);
         optional<uint32_t> toColor = ToUint32(toString);
         if (!fromColor.has_value() || !toColor.has_value()) break;
@@ -6938,7 +6950,7 @@ bool CDotaStats::EventGameCacheInteger(const uint8_t fromUID, const std::string&
           }
         }
 
-        string::size_type KeyStringSize = eventStringData.size();
+        string_view::size_type KeyStringSize = eventStringData.size();
         if (KeyStringSize % 2 != 0) KeyStringSize--;
         for (string::size_type i = 0; i < KeyStringSize; i += 2) {
           if (eventStringData[i] == 's' && eventStringData[i + 1] == 'o') {
@@ -6947,7 +6959,7 @@ bool CDotaStats::EventGameCacheInteger(const uint8_t fromUID, const std::string&
           }
         }
 
-        LogMetaData(m_Game.get().GetEffectiveTicks(), "mode -" + eventStringData + byWhom);
+        LogMetaData(m_Game.get().GetEffectiveTicks(), Concat("mode -", eventStringData, byWhom));
         break;
       }
 
@@ -7056,7 +7068,7 @@ bool CDotaStats::EventGameCacheInteger(const uint8_t fromUID, const std::string&
   )
   {
   }*/
-  else if (missionKey.size() <= 2 && missionKey.find_first_not_of("1234567890") == string::npos)
+  else if (missionKey.size() <= 2 && missionKey.find_first_not_of("1234567890") == string_view::npos)
   {
     // most of these are only received at the end of the game
 

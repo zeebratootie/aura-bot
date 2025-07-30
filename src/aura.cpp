@@ -78,7 +78,6 @@
 #include <csignal>
 #include <cstdlib>
 #include <thread>
-#include <cassert>
 #include <fstream>
 #include <string>
 #include <bitset>

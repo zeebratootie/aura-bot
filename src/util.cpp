@@ -1117,6 +1117,7 @@ size_t FindNullDelimiterOrStart(const vector<uint8_t>& b, const size_t start)
   if constexpr (oobPolicy == OOBPolicy::kCheck) {
     if (start >= end) return start;
   }
+  assert((end > start) && "Out of bounds access searching for null delimiter.");
   for (size_t i = start; i < end; ++i) {
     if (b[i] == 0) {
       return i;
@@ -1149,6 +1150,7 @@ size_t FindNullDelimiterOrEnd(const vector<uint8_t>& b, const size_t start)
   if constexpr (oobPolicy == OOBPolicy::kCheck) {
     if (start >= end) return end;
   }
+  assert((end > start) && "Out of bounds access searching for null delimiter.");
   for (size_t i = start; i < end; ++i) {
     if (b[i] == 0) {
       return i;
@@ -1170,6 +1172,7 @@ size_t FindNullDelimiterOrEnd(const string_view b, const size_t start)
   if constexpr (oobPolicy == OOBPolicy::kCheck) {
     if (start >= end) return end;
   }
+  assert((end > start) && "Out of bounds access searching for null delimiter.");
   for (size_t i = start; i < end; ++i) {
     if (b[i] == '\x00') {
       return i;
@@ -1233,6 +1236,7 @@ string_view ExtractStringView(const vector<uint8_t>& b, const size_t start, cons
   if constexpr (oobPolicy == OOBPolicy::kCheck) {
     if (start >= b.size()) return string_view();
   }
+  assert((end > start) && "Out of bounds access searching for null delimiter.");
 
   size_t nullPos = FindNullDelimiterOrEnd<OOBPolicy::kUnsafe>(b, start);
   string_view sv;
@@ -1262,6 +1266,7 @@ string_view ExtractStringView(const string_view b, const size_t start, const siz
   if constexpr (oobPolicy == OOBPolicy::kCheck) {
     if (start >= b.size()) return string_view();
   }
+  assert((end > start) && "Out of bounds access searching for null delimiter.");
 
   size_t nullPos = FindNullDelimiterOrEnd<OOBPolicy::kUnsafe>(b, start);
   string_view sv;
@@ -1382,7 +1387,7 @@ string ToUpperCase(const string& input)
   return output;
 }
 
-vector<uint8_t> SplitNumeral(const string& input)
+vector<uint8_t> SplitNumeral(string_view input)
 {
   vector<uint8_t> result;
   result.reserve(input.size());
@@ -1390,7 +1395,7 @@ vector<uint8_t> SplitNumeral(const string& input)
     if (isdigit(c)) {
       result.push_back(c - 0x30);
     } else {
-      return vector<uint8_t>();
+      return {};
     }
   }
   return result;
@@ -2350,20 +2355,13 @@ bool FindNextMissingElementBack(uint8_t& element, vector<uint8_t> counters)
   return counters[element] == 0;
 }
 
+optional<uint32_t> ToUint32(string_view input) {
+  return ToUint32(string(input));
+}
+
 optional<uint32_t> ToUint32(const string& input)
 {
-  optional<uint32_t> container = nullopt;
-  if (input.empty()) return container;
-
-  try {
-    int64_t Value = stol(input);
-    if (Value < 0 || 0xFFFFFFFF < Value) {
-      return container;
-    }
-    container = static_cast<uint32_t>(Value);
-  } catch (...) {}
-
-  return container;
+  return ParseUInt32(input, true);
 }
 
 optional<int32_t> ToInt32(const string& input)

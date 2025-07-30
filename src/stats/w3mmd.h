@@ -156,12 +156,12 @@ public:
   [[nodiscard]] inline bool GetIsGameOver() { return m_GameOver; }
 
   bool HandleTokens(uint8_t fromUID, uint32_t valueID, std::vector<std::string> tokens);
-  bool EventGameCacheInteger(const uint8_t UID, const std::string& fileName, const std::string& missionKey, const std::string& key, const uint32_t value);
+  bool EventGameCacheInteger(const uint8_t UID, const std::string_view fileName, const std::string_view missionKey, const std::string_view key, const uint32_t value);
   bool ProcessDefinition(CW3MMDDefinition* nDef);
   bool ProcessAction(CW3MMDAction* nAction);
   bool UpdateQueue();
   bool FlushQueue();
-  [[nodiscard]] std::vector<std::string> TokenizeKey(std::string key) const;
+  [[nodiscard]] std::vector<std::string> TokenizeKey(std::string_view key) const;
   [[nodiscard]] std::string GetStoredPlayerName(uint8_t SID) const;
   [[nodiscard]] std::string GetTrustedPlayerNameFromColor(uint8_t color) const;
   [[nodiscard]] std::string GetSenderName(CW3MMDAction* action) const;

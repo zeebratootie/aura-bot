@@ -728,32 +728,30 @@ bool CGame::InitHMC()
   return true;
 }
 
-bool CGame::EventGameCacheInteger(const uint8_t UID, const uint8_t* actionStart, const uint8_t* actionEnd)
+bool CGame::EventGameCacheInteger(const uint8_t UID, string_view actionDetails)
 {
+  // ACTION_GAME_CACHE_INT
   if (!m_CustomStats && !m_DotaStats && !m_GameInteractiveHost) return false;
 
-  const uint8_t* stringStart;
-  const uint8_t* stringEnd;
-  string cacheFileName, missionKey, key;
-  uint32_t value;
-
-  stringStart = actionStart + 1u;
-  stringEnd = FindNullDelimiterInRangeOrStart(stringStart, actionEnd);
-  if (stringEnd == stringStart) return false;
-  cacheFileName = string(reinterpret_cast<const char*>(stringStart), reinterpret_cast<const char*>(stringEnd));
-
-  stringStart = stringEnd + 1u;
-  stringEnd = FindNullDelimiterInRangeOrStart(stringStart, actionEnd);
-  if (stringEnd == stringStart) return false;
-  missionKey = string(reinterpret_cast<const char*>(stringStart), reinterpret_cast<const char*>(stringEnd));
-
-  stringStart = stringEnd + 1u;
-  stringEnd = FindNullDelimiterInRangeOrStart(stringStart, actionEnd);
-  if (stringEnd == stringStart) return false;
-  key = string(reinterpret_cast<const char*>(stringStart), reinterpret_cast<const char*>(stringEnd));
-
-  if (actionEnd != stringEnd + 5u) return false;
-  value = ByteArrayToUInt32LE(stringEnd + 1);
+  string_view cacheFileName = ExtractStringView<OOBPolicy::kCheck, NullTerminatorPolicy::kRequired, StringEncoding::kNone>(actionDetails, 0, 0);
+  if (cacheFileName.empty()) {
+    return false;
+  }
+  actionDetails.remove_prefix(cacheFileName.size() + 1);
+  string_view missionKey = ExtractStringView<OOBPolicy::kCheck, NullTerminatorPolicy::kRequired, StringEncoding::kNone>(actionDetails, 0, 0);
+  if (missionKey.empty()) {
+    return false;
+  }
+  actionDetails.remove_prefix(missionKey.size() + 1);
+  string_view key = ExtractStringView<OOBPolicy::kCheck, NullTerminatorPolicy::kRequired, StringEncoding::kNone>(actionDetails, 0, 0);
+  if (key.empty()) {
+    return false;
+  }
+  actionDetails.remove_prefix(key.size() + 1);
+  if (actionDetails.size() != 4) {
+    return false;
+  }
+  uint32_t value = ByteArrayToUInt32LE(actionDetails, 0);
 
   if (m_CustomStats) {
     if (!m_CustomStats->EventGameCacheInteger(UID, cacheFileName, missionKey, key, value)) {
@@ -3762,29 +3760,25 @@ void CGame::SendCommandsHelp(string_view cmdToken, GameUser::CGameUser* user, co
   user->GetCommandHistory()->SetSentAutoCommandsHelp(true);
 }
 
-void CGame::EventOutgoingAtomicAction(const uint8_t UID, const uint8_t* actionStart, const uint8_t* actionEnd)
+void CGame::EventOutgoingAtomicAction(const uint8_t UID, string_view action)
 {
-  const uint8_t actionType = actionStart[0];
+  const uint8_t actionType = GetByteAt(action, 0);
 
-  if (actionType == ACTION_CHAT_TRIGGER) {
-    if (actionEnd >= actionStart + 10u) {
-      const uint8_t* chatMessageStart = actionStart + 9u;
-      const uint8_t* chatMessageEnd = FindNullDelimiterInRangeOrStart(chatMessageStart, actionEnd);
-      if (chatMessageStart < chatMessageEnd) {
-        GameUser::CGameUser* user = GetUserFromUID(UID);
-        if (user) {
-          string_view chatMessage = string_view(reinterpret_cast<const char*>(chatMessageStart), chatMessageEnd - chatMessageStart);
-          EventChatTrigger(user, chatMessage, ByteArrayToUInt32LE(actionStart + 1u), ByteArrayToUInt32LE(actionStart + 5u));
-        }
+  if (actionType == ACTION_CHAT_TRIGGER && action.size() >= 10) {
+    string_view chatMessage = ExtractStringView<OOBPolicy::kUnsafe, NullTerminatorPolicy::kRequired, StringEncoding::kNone>(action, 9, 0);
+    if (!chatMessage.empty()) {
+      GameUser::CGameUser* user = GetUserFromUID(UID);
+      if (user) {
+        EventChatTrigger(user, chatMessage, ByteArrayToUInt32LE(action, 1), ByteArrayToUInt32LE(action, 5));
       }
     }
   }
 
-  if (actionType == ACTION_ALLIANCE_SETTINGS && (actionEnd >= actionStart + 6u) && actionStart[1] < MAX_SLOTS_MODERN) {
+  if (actionType == ACTION_ALLIANCE_SETTINGS && action.size() >= 6 && GetByteAt(action, 1) < MAX_SLOTS_MODERN) {
     GameUser::CGameUser* user = GetUserFromUID(UID);
     if (user) {
-      const bool wantsShare = (ByteArrayToUInt32LE(actionStart + 2u) & ALLIANCE_SETTINGS_SHARED_CONTROL_FAMILY) == ALLIANCE_SETTINGS_SHARED_CONTROL_FAMILY;
-      const uint8_t targetSID = actionStart[1];
+      const bool wantsShare = (ByteArrayToUInt32LE(action, 2) & ALLIANCE_SETTINGS_SHARED_CONTROL_FAMILY) == ALLIANCE_SETTINGS_SHARED_CONTROL_FAMILY;
+      const uint8_t targetSID = GetByteAt(action, 1);
       if (user->GetIsSharingUnitsWithSlot(targetSID) != wantsShare) {
         if (wantsShare) {
           LOG_APP_IF(LogLevel::kDebug, Concat("Player [", user->GetName(), "] granted shared unit control to [", GetUserNameFromSID(targetSID), "]"));
@@ -3832,8 +3826,8 @@ void CGame::EventOutgoingAtomicAction(const uint8_t UID, const uint8_t* actionSt
     }
   }
 
-  if (actionType == ACTION_GAME_CACHE_INT && actionEnd >= actionStart + 6u) {
-    EventGameCacheInteger(UID, actionStart, actionEnd);
+  if (actionType == ACTION_GAME_CACHE_INT && action.size() >= 6) {
+    EventGameCacheInteger(UID, action.substr(1));
   }
 }
 
@@ -3858,7 +3852,12 @@ void CGame::SendAllActionsCallback()
     for (const CIncomingAction& action : actionQueue) {
       vector<const uint8_t*> delimiters = action.SplitAtomic();
       for (size_t i = 0, j = 1, l = delimiters.size(); j < l; i++, j++) {
-        EventOutgoingAtomicAction(action.GetUID(), delimiters[i], delimiters[j]);
+        EventOutgoingAtomicAction(
+          action.GetUID(), string_view(
+            reinterpret_cast<const char*>(delimiters[i]),
+            static_cast<size_t>(delimiters[j] - delimiters[i])
+          )
+        );
       }
     }
   }
@@ -6185,7 +6184,7 @@ void CGame::EventChatTrigger(GameUser::CGameUser* user, string_view chatMessage,
 {
   bool canLogChatTriggers = m_Aura->m_Config.m_LogGameChat != LOG_GAME_CHAT_NEVER && (((m_Config.m_LogChatTypes & LOG_CHAT_TYPE_COMMANDS) > 0) || m_Aura->MatchLogLevel(LogLevel::kDebug));
   if (canLogChatTriggers && (m_Config.m_LogChatTypes & LOG_CHAT_TYPE_COMMANDS) > 0) {
-    m_Aura->LogPersistent(Concat(GetLogPrefix(), SanitizeWrapUTF8(m_Map->GetServerFileName()), " [CMD] ["+ user->GetExtendedName(), "] ", chatMessage));
+    m_Aura->LogPersistent(Concat(GetLogPrefix(), SanitizeWrapUTF8(m_Map->GetServerFileName()), " [CMD] ["+ user->GetExtendedName(), "] ", SanitizeWrapUTF8(chatMessage)));
   }
 
   // Enable --log-level debug to figure out HMC map-specific constants
@@ -6215,11 +6214,7 @@ void CGame::EventChatTrigger(GameUser::CGameUser* user, string_view chatMessage,
   //
 
   if (canLogChatTriggers) {
-    if (IsArbitraryStringUTF8Safe(chatMessage)) {
-      LOG_APP_IF(LogLevel::kDebug, Concat(SanitizeWrapUTF8(m_Map->GetServerFileName()), " Message by [", user->GetName(), "]: <<", chatMessage, ">> triggered : [0x", ToHexString(first), " | 0x", ToHexString(second), "]"));
-    } else {
-      LOG_APP_IF(LogLevel::kDebug, Concat(SanitizeWrapUTF8(m_Map->GetServerFileName()), " Message by [", user->GetName(), "]: REDACTED triggered : [0x", ToHexString(first), " | 0x", ToHexString(second), "]"));
-    }
+    LOG_APP_IF(LogLevel::kDebug, Concat(SanitizeWrapUTF8(m_Map->GetServerFileName()), " Message by [", user->GetName(), "]: ", SanitizeWrapUTF8(chatMessage), " triggered : [0x", ToHexString(first), " | 0x", ToHexString(second), "]"));
   }
 
   if (m_Map->GetMapType() == "microtraining") {

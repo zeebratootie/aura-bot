@@ -64,6 +64,8 @@ namespace Dota
   [[nodiscard]] std::optional<uint8_t> EnsureActorColor(uint32_t input);
   [[nodiscard]] std::optional<uint8_t> ParseHeroColor(const std::string& input);
   [[nodiscard]] std::optional<uint8_t> ParseActorColor(const std::string& input);
+  [[nodiscard]] std::optional<uint8_t> ParseHeroColor(std::string_view input);
+  [[nodiscard]] std::optional<uint8_t> ParseActorColor(std::string_view input);
   [[nodiscard]] std::string GetLaneName(const uint8_t code);
   [[nodiscard]] std::string GetTeamNameBaseZero(const uint8_t code);
   [[nodiscard]] std::string GetTeamNameBaseOne(const uint8_t code);
@@ -95,7 +97,7 @@ namespace Dota
     ~CDotaStats();
     CDotaStats(CDotaStats&) = delete;
 
-    bool EventGameCacheInteger(const uint8_t UID, const std::string& fileName, const std::string& missionKey, const std::string& key, const uint32_t value);
+    bool EventGameCacheInteger(const uint8_t UID, const std::string_view fileName, const std::string_view missionKey, const std::string_view key, const uint32_t value);
     bool UpdateQueue();
     void FlushQueue();
     void Save(CAura* nAura, CAuraDB* nDB);

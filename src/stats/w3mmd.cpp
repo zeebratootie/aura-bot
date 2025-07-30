@@ -275,7 +275,7 @@ bool CW3MMD::HandleTokens(uint8_t fromUID, uint32_t valueID, vector<string> Toke
   return true;
 }
 
-bool CW3MMD::EventGameCacheInteger(const uint8_t fromUID, const std::string& fileName, const std::string& missionKey, const std::string& key, const uint32_t /*cacheValue*/)
+bool CW3MMD::EventGameCacheInteger(const uint8_t fromUID, const std::string_view fileName, const std::string_view missionKey, const std::string_view key, const uint32_t /*cacheValue*/)
 {
   if (m_Error) {
     return !m_Error;
@@ -286,30 +286,28 @@ bool CW3MMD::EventGameCacheInteger(const uint8_t fromUID, const std::string& fil
   }
 
   if (missionKey.size() < 4) {
-    Print(GetLogPrefix() + "unknown mission key [" + SanitizeWrapUTF8(missionKey) + "] found, ignoring");
+    Print(Concat(GetLogPrefix(), "unknown mission key [", SanitizeWrapUTF8(missionKey), "] found, ignoring"));
     return !m_Error;
   }
 
-  // Print("[W3MMD] DEBUG: mkey [" + missionKey + "], key [" + KeyString + "], value [" + to_string(value) + "]");
+  // Print(Concat("[W3MMD] DEBUG: mkey ", SanitizeWrapUTF8(missionKey), ", key " + SanitizeWrapUTF8(key), ", value [", to_string(value), "]"));
 
   if (missionKey.compare(0, 4, "val:") == 0) {
-    string ValueIDString = missionKey.substr(4);
-    optional<uint32_t> ValueID = ToUint32(ValueIDString);
+    optional<uint32_t> ValueID = ToUint32(missionKey.substr(4));
     vector<string> Tokens = TokenizeKey(key);
     if (!ValueID.has_value() || !HandleTokens(fromUID, ValueID.value(), Tokens)) {
-      Print(GetLogPrefix() + "error parsing " + SanitizeWrapUTF8(key));
+      Print(Concat(GetLogPrefix(), "error parsing ", SanitizeWrapUTF8(key)));
     }
   } else if (missionKey.compare(0, 4, "chk:") == 0) {
     /*
-    string CheckIDString = missionKey.substr(4);
-    optional<uint32_t> CheckID = ToUint32(CheckIDString);
+    optional<uint32_t> CheckID = ToUint32(missionKey.substr(4));
 
     // todotodo: cheat detection
 
      ++m_NextCheckID;
      */
   } else {
-    Print(GetLogPrefix() + "unknown mission key " + SanitizeWrapUTF8(missionKey) + " found, ignoring");
+    Print(Concat(GetLogPrefix(), "unknown mission key ", SanitizeWrapUTF8(missionKey), " found, ignoring"));
   }
 
   return !m_Error;
@@ -585,41 +583,41 @@ bool CW3MMD::FlushQueue()
   return !m_GameOver;
 }
 
-vector<string> CW3MMD::TokenizeKey(string key) const
+vector<string> CW3MMD::TokenizeKey(string_view key) const
 {
   vector<string> tokens;
   string token;
   bool escaping = false;
 
-  for (string::iterator i = key.begin(); i != key.end(); ++i) {
+  for (auto c : key) {
     if (escaping) {
-      if (*i == ' ') {
+      if (c == ' ') {
         token += ' ';
-      } else if (*i == '\\') {
+      } else if (c == '\\') {
         token += '\\';
       } else {
-        Print(GetLogPrefix() + "error tokenizing key " + SanitizeWrapUTF8(key) + ", invalid escape sequence found, ignoring");
+        Print(Concat(GetLogPrefix(), "error tokenizing key ", SanitizeWrapUTF8(key), ", invalid escape sequence found, ignoring"));
         return vector<string>();
       }
       escaping = false;
     } else {
-      if (*i == ' ') {
+      if (c == ' ') {
         if (token.empty()) {
-          Print(GetLogPrefix() + "error tokenizing key " + SanitizeWrapUTF8(key) + ", empty token found, ignoring");
+          Print(Concat(GetLogPrefix(), "error tokenizing key ", SanitizeWrapUTF8(key), ", empty token found, ignoring"));
           return vector<string>();
         }
         tokens.push_back(token);
         token.clear();
-      } else if (*i == '\\') {
+      } else if (c == '\\') {
         escaping = true;
       } else {
-        token += *i;
+        token += c;
       }
     }
   }
 
   if (token.empty()) {
-    Print(GetLogPrefix() + "error tokenizing key " + SanitizeWrapUTF8(key) + ", empty token found, ignoring");
+    Print(Concat(GetLogPrefix(), "error tokenizing key ", SanitizeWrapUTF8(key), ", empty token found, ignoring"));
     return vector<string>();
   }
 

@@ -46,14 +46,14 @@ CGameInteractiveHost::~CGameInteractiveHost()
 {
 }
 
-string CGameInteractiveHost::GetProcedureDescription(const uint32_t interactionId, const uint32_t procedureType, const string& key)
+string CGameInteractiveHost::GetProcedureDescription(const uint32_t interactionId, const uint32_t procedureType, string_view key)
 {
-  string description = "procedure " + to_string(procedureType);
+  string description = Concat("procedure ", to_string(procedureType));
   if (procedureType == W3HMC_PROCEDURE_EXEC) {
     optional<uint32_t> maybeRequestType = ToUint32(key);
-    description.append(" request type " + to_string(*maybeRequestType));
+    description.append(Concat(" request type ", to_string(*maybeRequestType)));
   } else {
-    description.append(" value " + key);
+    description.append(Concat(" value ", SanitizeWrapUTF8(key)));
   }
 
   auto instanceMatch = m_Interactions.find(interactionId);
@@ -70,13 +70,13 @@ string CGameInteractiveHost::GetProcedureDescription(const uint32_t interactionI
   return description;
 }
 
-bool CGameInteractiveHost::CheckInitInstance(const uint32_t interactionId, const uint32_t procedureType, const string& key)
+bool CGameInteractiveHost::CheckInitInstance(const uint32_t interactionId, const uint32_t procedureType, string_view key)
 {
   bool isInit = false;
   if (procedureType == W3HMC_PROCEDURE_EXEC) {
     optional<uint32_t> maybeRequestType = ToUint32(key);
     if (!maybeRequestType.has_value()) {
-      Print(GetLogPrefix() + "error - key cannot be parsed as an integer");
+      Print(Concat(GetLogPrefix(), "error - key cannot be parsed as an integer"));
       m_Error = true;
       return true;
     }
@@ -86,7 +86,7 @@ bool CGameInteractiveHost::CheckInitInstance(const uint32_t interactionId, const
   auto instanceMatch = m_Interactions.find(interactionId);
   if (instanceMatch == m_Interactions.end()) {
     if (!isInit) {
-      Print(GetLogPrefix() + "error - got " + GetProcedureDescription(interactionId, procedureType, key));
+      Print(Concat(GetLogPrefix(), "error - got ", GetProcedureDescription(interactionId, procedureType, key)));
     }
   } else if (isInit) {
     if (!InitInstance(interactionId)) {
@@ -112,7 +112,7 @@ void CGameInteractiveHost::Send(const string& message)
 
 void CGameInteractiveHost::SendResult(const uint32_t instance, const string& result)
 {
-  Send(to_string(instance) + " " + result);
+  Send(Concat(to_string(instance), " ", result));
 }
 
 void CGameInteractiveHost::ResolveInteraction(pair<const uint32_t, GameInteraction>& entry, const string& result)
@@ -121,7 +121,7 @@ void CGameInteractiveHost::ResolveInteraction(pair<const uint32_t, GameInteracti
   entry.second.SetDone();
 }
 
-bool CGameInteractiveHost::EventGameCacheInteger(const uint8_t fromUID, const std::string& fileName, const std::string& missionKey, const std::string& key, const uint32_t cacheValue)
+bool CGameInteractiveHost::EventGameCacheInteger(const uint8_t fromUID, const string_view fileName, const string_view missionKey, const string_view key, const uint32_t cacheValue)
 {
   if (m_Error) {
     return !m_Error;
@@ -133,7 +133,7 @@ bool CGameInteractiveHost::EventGameCacheInteger(const uint8_t fromUID, const st
 
   optional<uint32_t> maybeInteractionId = ToUint32(missionKey);
   if (!maybeInteractionId.has_value()) {
-    Print(GetLogPrefix() + "error - mission key cannot be parsed as an integer");
+    Print(Concat(GetLogPrefix() + "error - mission key cannot be parsed as an integer"));
     m_Error = true;
     return !m_Error;
   }
@@ -153,7 +153,7 @@ bool CGameInteractiveHost::EventGameCacheInteger(const uint8_t fromUID, const st
   if (!instanceMatch->second.GetIsPending()) {
     // If the interactionId is already running we ignore duplicate requests.
     // This lets the player with the lowest latency start requests.
-    Print(GetLogPrefix() + "error - got " + GetProcedureDescription(interactionId, cacheValue, key));
+    Print(Concat(GetLogPrefix(), "error - got ", GetProcedureDescription(interactionId, cacheValue, key)));
     // recoverable
     return !m_Error;
   }
@@ -161,11 +161,11 @@ bool CGameInteractiveHost::EventGameCacheInteger(const uint8_t fromUID, const st
   switch (cacheValue) {
     case W3HMC_PROCEDURE_SET_ARGS:
       instanceMatch->second.SetArgs(key);
-      Print(GetLogPrefix() + "interaction #" + to_string(interactionId) + " arguments set to <<" + key + ">>");
+      Print(Concat(GetLogPrefix(), "interaction #", to_string(interactionId), " arguments set to <<", key, ">>"));
       break;
     case W3HMC_PROCEDURE_EXEC: {
       optional<uint32_t> maybeRequestType = ToUint32(key);
-      Print(GetLogPrefix() + "info - got " + GetProcedureDescription(interactionId, cacheValue, key));
+      Print(Concat(GetLogPrefix(), "info - got ", GetProcedureDescription(interactionId, cacheValue, key)));
       switch (*maybeRequestType) {
         case W3HMC_REQUEST_PLAYERREALM: {
           const GameUser::CGameUser* user = GetGame()->GetUserFromUID(fromUID);
@@ -186,13 +186,13 @@ bool CGameInteractiveHost::EventGameCacheInteger(const uint8_t fromUID, const st
           break;
         }
         default:
-          Print(GetLogPrefix() + "error - request type " + to_string(*maybeRequestType) + " is not valid.");
+          Print(Concat(GetLogPrefix(), "error - request type ", to_string(*maybeRequestType), " is not valid."));
           break;
       }
       break;
     }
     default:
-      Print(GetLogPrefix() + "unknown procedure [" + to_string(cacheValue) + "] found, ignoring");
+      Print(Concat(GetLogPrefix(), "unknown procedure [", to_string(cacheValue), "] found, ignoring"));
   }
 
   return !m_Error;
@@ -201,7 +201,7 @@ bool CGameInteractiveHost::EventGameCacheInteger(const uint8_t fromUID, const st
 string CGameInteractiveHost::GetLogPrefix() const
 {
   if (auto game = GetGame()) {
-    return "[W3HMC: " + game->GetGameName() + "] ";
+    return Concat("[W3HMC: ", game->GetGameName(), "] ");
   } else {
     return "[W3HMC] ";
   }
