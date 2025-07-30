@@ -187,8 +187,8 @@ public:
   bool CheckStartLoading();
   void StartLoading();
   void EventGameLoaded();
-  void EventChatOrPlayerSettings(const CIncomingChatMessage& chatPlayer);
-  void EventChat(const CIncomingChatMessage& chatPlayer);
+  void EventChatOrPlayerSettings(const CIncomingMessageOrSettingsView& chatPlayer);
+  void EventChat(const CIncomingMessageOrSettingsView& chatPlayer);
   void EventLeft(const uint32_t clientReason);
   void EventProtocolError();
 

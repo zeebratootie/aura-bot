@@ -248,7 +248,7 @@ AsyncObserverStatus CAsyncObserver::Update(fd_set* fd, fd_set* send_fd, int64_t 
             }
 
             case GameProtocol::Magic::CHAT_TO_HOST: {
-              CIncomingChatMessage incomingChatMessage = GameProtocol::RECEIVE_W3GS_CHAT_TO_HOST(packet);
+              CIncomingMessageOrSettingsView incomingChatMessage = GameProtocol::RECEIVE_W3GS_CHAT_TO_HOST(packet);
 
               if (incomingChatMessage.GetIsValid()) {
                 EventChatOrPlayerSettings(incomingChatMessage);
@@ -639,7 +639,7 @@ void CAsyncObserver::EventGameLoaded()
   Send(m_GameHistory->m_LoadingVirtualBuffer);
 }
 
-void CAsyncObserver::EventChat(const CIncomingChatMessage& incomingChatMessage)
+void CAsyncObserver::EventChat(const CIncomingMessageOrSettingsView& incomingChatMessage)
 {
   const bool isLobbyChat = incomingChatMessage.GetType() == GameProtocol::ChatToHostType::CTH_MESSAGE_LOBBY;
   if (isLobbyChat == m_StartedLoading) {
@@ -761,7 +761,7 @@ void CAsyncObserver::EventChat(const CIncomingChatMessage& incomingChatMessage)
   }
 }
 
-void CAsyncObserver::EventChatOrPlayerSettings(const CIncomingChatMessage& incomingChatMessage)
+void CAsyncObserver::EventChatOrPlayerSettings(const CIncomingMessageOrSettingsView& incomingChatMessage)
 {
   if (incomingChatMessage.GetFromUID() != GetUID()) {
     return;

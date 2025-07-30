@@ -112,7 +112,7 @@ struct NetworkGameInfo
   void SetStatus(uint32_t status);
   void SetGameName(std::string_view gameName);
   void SetPassword(std::string_view passWord);
-  bool SetBNETGameInfo(const std::string& gameInfo, const Version& war3Version);
+  bool SetBNETGameInfo(std::string_view gameInfo, const Version& war3Version);
 
   [[nodiscard]] inline bool GetIsValid() const { return m_IsValid; }
   [[nodiscard]] std::string GetIPString() const;

@@ -232,7 +232,7 @@ CIncomingVLanGameInfo::CIncomingVLanGameInfo( bool nTFT, uint32_t nVersion, uint
   m_TFT = nTFT;
   m_Version = nVersion;
   m_MapGameType = nMapGameType;
-  m_StatString = string(nStatString);
+  //m_StatString = string(nStatString);
   m_GameName = nGameName;
   m_ElapsedTime = nElapsedTime;
   m_SlotsTotal = nSlotsTotal;
@@ -245,7 +245,7 @@ CIncomingVLanGameInfo::CIncomingVLanGameInfo( bool nTFT, uint32_t nVersion, uint
 
   // decode stat string
 
-  GameStat statData = GameStat::Parse(m_StatString);
+  GameStat statData = GameStat::Parse(nStatString);
   if (statData.GetIsValid()) {
     m_GameFlags = statData.GetGameFlags();
     m_MapWidth = statData.GetMapWidth();

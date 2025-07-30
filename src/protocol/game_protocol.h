@@ -183,7 +183,7 @@ namespace GameProtocol
   [[nodiscard]] bool RECEIVE_W3GS_GAMELOADED_SELF(std::string_view data);
   [[nodiscard]] CIncomingAction RECEIVE_W3GS_OUTGOING_ACTION(std::string_view, uint8_t UID);
   [[nodiscard]] uint32_t RECEIVE_W3GS_OUTGOING_KEEPALIVE(std::string_view data);
-  [[nodiscard]] CIncomingChatMessage RECEIVE_W3GS_CHAT_TO_HOST(std::string_view data);
+  [[nodiscard]] CIncomingMessageOrSettingsView RECEIVE_W3GS_CHAT_TO_HOST(std::string_view data);
   [[nodiscard]] CIncomingMapFileSize RECEIVE_W3GS_MAPSIZE(std::string_view data);
   [[nodiscard]] uint32_t RECEIVE_W3GS_PONG_TO_HOST(std::string_view data);
 
@@ -374,10 +374,10 @@ public:
 };
 
 //
-// CIncomingChatMessage
+// CIncomingMessageOrSettingsView
 //
 
-class CIncomingChatMessage
+class CIncomingMessageOrSettingsView
 {
 public:
 private:
@@ -391,11 +391,11 @@ private:
   std::vector<uint8_t>                m_ToUIDs;
 
 public:
-  CIncomingChatMessage();
-  CIncomingChatMessage(uint8_t nFromUID, std::vector<uint8_t> nToUIDs, uint8_t nFlag, std::string_view nMessage);
-  CIncomingChatMessage(uint8_t nFromUID, std::vector<uint8_t> nToUIDs, uint8_t nFlag, std::string_view nMessage, uint32_t nInGameChannel);
-  CIncomingChatMessage(uint8_t nFromUID, std::vector<uint8_t> nToUIDs, uint8_t nFlag, uint8_t nByte);
-  ~CIncomingChatMessage();
+  CIncomingMessageOrSettingsView();
+  CIncomingMessageOrSettingsView(uint8_t nFromUID, std::vector<uint8_t> nToUIDs, uint8_t nFlag, std::string_view nMessage);
+  CIncomingMessageOrSettingsView(uint8_t nFromUID, std::vector<uint8_t> nToUIDs, uint8_t nFlag, std::string_view nMessage, uint32_t nInGameChannel);
+  CIncomingMessageOrSettingsView(uint8_t nFromUID, std::vector<uint8_t> nToUIDs, uint8_t nFlag, uint8_t nByte);
+  ~CIncomingMessageOrSettingsView();
 
   [[nodiscard]] inline bool                               GetIsValid() const { return m_Valid; }
   [[nodiscard]] inline GameProtocol::ChatToHostType       GetType() const { return m_Type; }

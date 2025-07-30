@@ -212,84 +212,84 @@ namespace BNETProtocol
     {}
   };
 
-  struct AuthCheckResult
+  struct AuthCheckResultView
   {
     const uint32_t state;
     std::string_view description;
 
-    AuthCheckResult()
+    AuthCheckResultView()
      : state(BNETProtocol::KeyResult::BAD)
     {}
 
-    AuthCheckResult(const uint32_t nState, std::string_view nDescription)
+    AuthCheckResultView(const uint32_t nState, std::string_view nDescription)
      : state(nState),
        description(nDescription)
     {}
 
-    ~AuthCheckResult() = default;
+    ~AuthCheckResultView() = default;
   };
 
-  struct AuthLoginResult
+  struct AuthLoginResultView
   {
     const bool success;
     std::string_view salt;
     std::string_view serverPublicKey;
 
-    AuthLoginResult()
+    AuthLoginResultView()
     : success(false)
     {}
 
-    AuthLoginResult(const bool nSuccess, const std::string_view nSalt, const std::string_view nServerPublicKey)
+    AuthLoginResultView(const bool nSuccess, const std::string_view nSalt, const std::string_view nServerPublicKey)
     : success(nSuccess),
       salt(nSalt),
       serverPublicKey(nServerPublicKey)
     {}
 
-    ~AuthLoginResult()
+    ~AuthLoginResultView()
     {
     }
   };
 
-  struct EnterChatResult
+  struct EnterChatResultView
   {
     const bool success;
     std::string_view uniqueName;
 
-    EnterChatResult()
+    EnterChatResultView()
     : success(false)
     {}
 
-    EnterChatResult(const bool nSuccess, std::string_view nUniqueName)
+    EnterChatResultView(const bool nSuccess, std::string_view nUniqueName)
     : success(nSuccess),
       uniqueName(nUniqueName)
     {}
 
-    ~EnterChatResult() = default;
+    ~EnterChatResultView() = default;
   };
 
   //
-  // IncomingChatResult
+  // IncomingChatResultView
   //
 
-  struct IncomingChatResult
+  struct IncomingChatResultView
   {
     const bool success;
     const uint32_t type;
     std::string_view userName;
     std::string_view message;
 
-    IncomingChatResult()
+    IncomingChatResultView()
      : success(false),
        type(0)
      {};
 
-    IncomingChatResult(const bool nSuccess, const uint32_t nType, std::string_view nUserName, std::string_view nMessage)
+    IncomingChatResultView(const bool nSuccess, const uint32_t nType, std::string_view nUserName, std::string_view nMessage)
      : success(nSuccess),
        type(nType),
        userName(nUserName),
        message(nMessage)
      {};
-    ~IncomingChatResult() = default;
+    ~IncomingChatResultView() = default;
   };
 
   //
@@ -345,15 +345,15 @@ namespace BNETProtocol
   // receive functions
 
   [[nodiscard]] bool RECEIVE_SID_ZERO(const std::string_view data);
-  [[nodiscard]] std::vector<NetworkGameInfo> RECEIVE_SID_GETADVLISTEX(const Version& war3Version, const std::vector<uint8_t>& data);
-  [[nodiscard]] BNETProtocol::EnterChatResult RECEIVE_SID_ENTERCHAT(const std::string_view data);
-  [[nodiscard]] BNETProtocol::IncomingChatResult RECEIVE_SID_CHATEVENT(const std::string_view data);
+  [[nodiscard]] std::vector<NetworkGameInfo> RECEIVE_SID_GETADVLISTEX(const Version& war3Version, std::string_view data);
+  [[nodiscard]] BNETProtocol::EnterChatResultView RECEIVE_SID_ENTERCHAT(const std::string_view data);
+  [[nodiscard]] BNETProtocol::IncomingChatResultView RECEIVE_SID_CHATEVENT(const std::string_view data);
   [[nodiscard]] bool RECEIVE_SID_CHECKAD(const std::string_view data);
   [[nodiscard]] bool RECEIVE_SID_STARTADVEX3(const std::string_view data);
   [[nodiscard]] uint32_t RECEIVE_SID_PING(const std::string_view data);
   [[nodiscard]] BNETProtocol::AuthInfoResult RECEIVE_SID_AUTH_INFO(const std::string_view data);
-  [[nodiscard]] BNETProtocol::AuthCheckResult RECEIVE_SID_AUTH_CHECK(const std::string_view data);
-  [[nodiscard]] BNETProtocol::AuthLoginResult RECEIVE_SID_AUTH_ACCOUNTLOGON(const std::string_view data);
+  [[nodiscard]] BNETProtocol::AuthCheckResultView RECEIVE_SID_AUTH_CHECK(const std::string_view data);
+  [[nodiscard]] BNETProtocol::AuthLoginResultView RECEIVE_SID_AUTH_ACCOUNTLOGON(const std::string_view data);
   [[nodiscard]] bool RECEIVE_SID_AUTH_ACCOUNTLOGONPROOF(const std::string_view data);
   [[nodiscard]] bool RECEIVE_SID_AUTH_ACCOUNTSIGNUP(const std::string_view data);
   [[nodiscard]] std::vector<std::string> RECEIVE_SID_FRIENDLIST(const std::string_view data);

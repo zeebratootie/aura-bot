@@ -5066,7 +5066,7 @@ void CGame::EventUserKickHandleQueued(GameUser::CGameUser* user)
   // left reason, left code already assigned when queued
 }
 
-void CGame::SendChatMessage(const GameUser::CGameUser* user, const CIncomingChatMessage& chatMessage) const
+void CGame::SendChatMessage(const GameUser::CGameUser* user, const CIncomingMessageOrSettingsView& chatMessage) const
 {
   if (m_GameLoading && !m_Config.m_LoadInGame) {
     return;
@@ -6237,7 +6237,7 @@ void CGame::EventChatTrigger(GameUser::CGameUser* user, string_view chatMessage,
   }
 }
 
-void CGame::EventUserChat(GameUser::CGameUser* user, const CIncomingChatMessage& incomingChatMessage)
+void CGame::EventUserChat(GameUser::CGameUser* user, const CIncomingMessageOrSettingsView& incomingChatMessage)
 {
   const bool isLobbyChat = incomingChatMessage.GetType() == GameProtocol::ChatToHostType::CTH_MESSAGE_LOBBY;
   if (isLobbyChat == (m_GameLoading || m_GameLoaded)) {
@@ -6394,7 +6394,7 @@ void CGame::EventUserChat(GameUser::CGameUser* user, const CIncomingChatMessage&
   }
 }
 
-void CGame::EventUserChatOrPlayerSettings(GameUser::CGameUser* user, const CIncomingChatMessage& incomingChatMessage)
+void CGame::EventUserChatOrPlayerSettings(GameUser::CGameUser* user, const CIncomingMessageOrSettingsView& incomingChatMessage)
 {
   if (incomingChatMessage.GetFromUID() != user->GetUID()) {
     return;

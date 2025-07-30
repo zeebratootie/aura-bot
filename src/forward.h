@@ -56,7 +56,7 @@ class CGameSlot;
 class CGProxyServer;
 class CIncomingAction;
 class CIncomingChatEvent;
-class CIncomingChatMessage;
+class CIncomingMessageOrSettingsView;
 class CIncomingJoinRequest;
 class CIncomingMapFileSize;
 class CIRC;

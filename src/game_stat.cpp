@@ -142,10 +142,16 @@ string GameStat::GetMapClientFileName() const
   return m_MapPath.substr(LastSlash + 1);
 }
 
-template <typename Container>
-GameStat GameStat::Parse(const Container& statString) {
+GameStat GameStat::Parse(string_view statString)
+{
   std::vector<uint8_t> decoded = DecodeStatString(statString);
   return GameStat(decoded.data(), decoded.size());
+}
+
+template <typename Container>
+GameStat GameStat::Parse(const Container& statString) {
+  std::string_view sv = GetContainerView(statString);
+  return GameStat::Parse(sv);
 }
 
 template GameStat GameStat::Parse(const vector<uint8_t>& statString);

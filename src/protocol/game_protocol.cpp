@@ -394,7 +394,7 @@ namespace GameProtocol
     return 0;
   }
 
-  CIncomingChatMessage RECEIVE_W3GS_CHAT_TO_HOST(string_view data)
+  CIncomingMessageOrSettingsView RECEIVE_W3GS_CHAT_TO_HOST(string_view data)
   {
     // DEBUG_Print( "RECEIVED W3GS_CHAT_TO_HOST" );
     // DEBUG_Print( data );
@@ -435,26 +435,26 @@ namespace GameProtocol
 
           string_view message = ExtractUTF8View(data, i, MAX_LOBBY_CHAT_SIZE);
           if (!message.empty() && !HasUnsafeUTF8CodePoints(message)) {
-            return CIncomingChatMessage(fromUID, ToUIDs, discriminator, message);
+            return CIncomingMessageOrSettingsView(fromUID, ToUIDs, discriminator, message);
           }
         } else if ((discriminator >= GameProtocol::Magic::ChatType::REQUEST_TEAM && discriminator <= GameProtocol::Magic::ChatType::REQUEST_HANDICAP) && data.size() >= i + 1) { // 17-20
           // team/colour/race/handicap change request 
 
           const uint8_t requestTarget = GetByteAt(data, i);
-          return CIncomingChatMessage(fromUID, ToUIDs, discriminator, requestTarget);
+          return CIncomingMessageOrSettingsView(fromUID, ToUIDs, discriminator, requestTarget);
         } else if (discriminator == GameProtocol::Magic::ChatType::CHAT_IN_GAME && data.size() >= i + 5) { // 32
           // chat message with in-game channel
 
           const uint32_t inGameChannel = ByteArrayToUInt32LE(data, i);
           string_view message = ExtractUTF8View(data, i + 4, MAX_IN_GAME_CHAT_SIZE);
           if (!message.empty() && !HasUnsafeUTF8CodePoints(message)) {
-            return CIncomingChatMessage(fromUID, ToUIDs, discriminator, message, inGameChannel);
+            return CIncomingMessageOrSettingsView(fromUID, ToUIDs, discriminator, message, inGameChannel);
           }
         }
       }
     }
 
-    return CIncomingChatMessage();
+    return CIncomingMessageOrSettingsView();
   }
 
   CIncomingMapFileSize RECEIVE_W3GS_MAPSIZE(string_view data)
@@ -1542,10 +1542,10 @@ vector<const uint8_t*> CIncomingAction::SplitAtomic() const
 }
 
 //
-// CIncomingChatMessage
+// CIncomingMessageOrSettingsView
 //
 
-CIncomingChatMessage::CIncomingChatMessage()
+CIncomingMessageOrSettingsView::CIncomingMessageOrSettingsView()
   : m_Valid(false),
     m_Type(GameProtocol::ChatToHostType::CTH_MESSAGE_LOBBY),
     m_Byte(255),
@@ -1555,7 +1555,7 @@ CIncomingChatMessage::CIncomingChatMessage()
 {
 }
 
-CIncomingChatMessage::CIncomingChatMessage(uint8_t nFromUID, std::vector<uint8_t> nToUIDs, uint8_t nDiscriminator, string_view nMessage)
+CIncomingMessageOrSettingsView::CIncomingMessageOrSettingsView(uint8_t nFromUID, std::vector<uint8_t> nToUIDs, uint8_t nDiscriminator, string_view nMessage)
   : m_Valid(true),
     m_Message(nMessage),
     m_Type(GameProtocol::ChatToHostType::CTH_MESSAGE_LOBBY),
@@ -1567,7 +1567,7 @@ CIncomingChatMessage::CIncomingChatMessage(uint8_t nFromUID, std::vector<uint8_t
 {
 }
 
-CIncomingChatMessage::CIncomingChatMessage(uint8_t nFromUID, std::vector<uint8_t> nToUIDs, uint8_t nDiscriminator, string_view nMessage, uint32_t nInGameChannel)
+CIncomingMessageOrSettingsView::CIncomingMessageOrSettingsView(uint8_t nFromUID, std::vector<uint8_t> nToUIDs, uint8_t nDiscriminator, string_view nMessage, uint32_t nInGameChannel)
   : m_Valid(true),
     m_Message(nMessage),
     m_Type(GameProtocol::ChatToHostType::CTH_MESSAGE_INGAME),
@@ -1579,7 +1579,7 @@ CIncomingChatMessage::CIncomingChatMessage(uint8_t nFromUID, std::vector<uint8_t
 {
 }
 
-CIncomingChatMessage::CIncomingChatMessage(uint8_t nFromUID, std::vector<uint8_t> nToUIDs, uint8_t nDiscriminator, uint8_t nByte)
+CIncomingMessageOrSettingsView::CIncomingMessageOrSettingsView(uint8_t nFromUID, std::vector<uint8_t> nToUIDs, uint8_t nDiscriminator, uint8_t nByte)
   : m_Valid(true),
     m_Type(GameProtocol::ChatToHostType::CTH_TEAMCHANGE),
     m_Byte(nByte),
@@ -1604,7 +1604,7 @@ CIncomingChatMessage::CIncomingChatMessage(uint8_t nFromUID, std::vector<uint8_t
   }
 }
 
-CIncomingChatMessage::~CIncomingChatMessage() = default;
+CIncomingMessageOrSettingsView::~CIncomingMessageOrSettingsView() = default;
 
 //
 // CIncomingMapFileSize

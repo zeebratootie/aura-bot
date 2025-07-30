@@ -71,7 +71,7 @@ private:
   uint32_t m_Version;
   uint32_t m_MapGameType;
   std::string m_GameName;
-  std::string m_StatString;
+  //std::string m_StatString;
   int64_t m_ReceivedTime;
   uint32_t m_ElapsedTime;
   uint32_t m_SlotsTotal;
@@ -101,7 +101,7 @@ public:
   [[nodiscard]] uint16_t GetMapWidth( )                               { return m_MapWidth; }
   [[nodiscard]] uint16_t GetMapHeight( )                              { return m_MapHeight; }
   [[nodiscard]] std::string_view GetGameName( )                            { return m_GameName; }
-  [[nodiscard]] std::string_view GetStatString( )                 { return m_StatString; }
+  //[[nodiscard]] std::string_view GetStatString( )                 { return m_StatString; }
   [[nodiscard]] std::string_view GetHostName( )                            { return m_HostName; }
   [[nodiscard]] int64_t GetReceivedTime( )                           { return m_ReceivedTime; }
   [[nodiscard]] uint32_t GetElapsedTime( )                            { return m_ElapsedTime; }

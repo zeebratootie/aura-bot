@@ -95,6 +95,12 @@ void TrimStringView(std::string_view& str);
 [[nodiscard]] std::string RemoveDuplicateWhiteSpace(const std::string& str);
 void EllideEmptyElementsInPlace(std::vector<std::string>& list);
 
+template <typename Container>
+[[nodiscard]] std::string_view GetContainerView(const Container& container);
+
+template <size_t N>
+[[nodiscard]] std::string_view GetContainerView(const std::array<uint8_t, N>& container);
+
 [[nodiscard]] inline std::string U8ToString(const std::string &s) {
   return s;
 }
@@ -106,7 +112,6 @@ void EllideEmptyElementsInPlace(std::vector<std::string>& list);
   return std::string(s.begin(), s.end());
 }
 #endif
-
 
 [[nodiscard]] inline std::string_view ToStringView(const char* s) {
   return s ? std::string_view{s} : std::string_view{};
@@ -280,6 +285,7 @@ void AssignLength(std::vector<uint8_t>& content);
 [[nodiscard]] bool ValidateLength(const std::string_view content);
 [[nodiscard]] std::string AddPathSeparator(const std::string& path);
 [[nodiscard]] std::vector<uint8_t> EncodeStatString(const std::vector<uint8_t>& data);
+[[nodiscard]] std::vector<uint8_t> DecodeStatString(std::string_view data);
 template <typename T>
 [[nodiscard]] std::vector<uint8_t> DecodeStatString(const T& data);
 [[nodiscard]] std::vector<std::string_view> SplitTokens(std::string_view s, const char delim);

@@ -154,7 +154,7 @@ void NetworkGameInfo::SetPassword(string_view passWord)
   m_GamePassWord = passWord;
 }
 
-bool NetworkGameInfo::SetBNETGameInfo(const string& gameStat, const Version& war3Version)
+bool NetworkGameInfo::SetBNETGameInfo(string_view gameStat, const Version& war3Version)
 {
   size_t size = gameStat.size();
   if (size < 10) {
@@ -162,19 +162,23 @@ bool NetworkGameInfo::SetBNETGameInfo(const string& gameStat, const Version& war
     m_IsValid = false;
     return false;
   }
-  const uint8_t* infoEnd = reinterpret_cast<const uint8_t*>(gameStat.c_str()) + size;
 
   array<uint8_t, 8> hostCounterRaw;
   hostCounterRaw.fill(0);
-  copy_n(gameStat.begin() + 1, 8, hostCounterRaw.begin());
+  copy_n(gameStat.data() + 1, 8, hostCounterRaw.begin());
   m_Host.SetIdentifier(ASCIIHexToNum(hostCounterRaw, true));
-  
-  const uint8_t* encStatStringStart = reinterpret_cast<const uint8_t*>(gameStat.c_str()) + 9;
-  const uint8_t* encStatStringEnd = FindNullDelimiterInRangeOrEnd(encStatStringStart, infoEnd);
-  string encStatString = GetStringAddressRange(encStatStringStart, encStatStringEnd);
+
+  string_view encStatString = gameStat.substr(9);
+  /*
+  string_view::size_type encStatStringEnd = encStatString.find('\x00');
+  assert((encStatStringEnd != string_view::npos) && "gameStat should not contain null bytes/terminator");
+  if (encStatStringEnd != string_view::npos) {
+    encStatString.remove_suffix(encStatString.size() - encStatStringEnd);
+  }
+  */
   GameStat statData = GameStat::Parse(encStatString);
   if (!statData.GetIsValid()) {
-    //Print("[BNETPROTO] Stat string cannot be parsed. Encoded: <" + encStatString + ">");
+    //Print(Concat("[BNETPROTO] Stat string cannot be parsed. Encoded: <", encStatString, ">"));
     m_IsValid = false;
     return false;
   }
@@ -189,7 +193,7 @@ bool NetworkGameInfo::SetBNETGameInfo(const string& gameStat, const Version& war
   const bool mayHaveSHA1 = war3Version >= GAMEVER(1u, 23u);
   const bool hasSHA1 = statData.m_MapScriptsSHA1.has_value();
   if (!mayHaveSHA1 && hasSHA1) {
-    //Print("[BNETPROTO] SHA1 may only be included in stat strings for bnet games since v1.23");
+    Print("[BNETPROTO] SHA1 may only be included in stat strings for bnet games since v1.23");
     m_IsValid = false;
     return false;
   }
@@ -209,11 +213,11 @@ bool NetworkGameInfo::SetBNETGameInfo(const string& gameStat, const Version& war
   }
 
   /*
-  Print("[BNETPROTO] Host: <" + m_HostName + ">");
-  Print("[BNETPROTO] Dimensions: " + to_string(m_Info.m_MapWidth) + "x" + to_string(m_Info.m_MapHeight));
-  Print("[BNETPROTO] Blizz Hash: <" + ByteArrayToDecString(m_Info.m_MapScriptsBlizzHash) + ">");
+  Print(Concat("[BNETPROTO] Host: ", SanitizeWrapUTF8(m_HostName)));
+  Print(Concat("[BNETPROTO] Dimensions: ", to_string(m_Info.m_MapWidth), "x", to_string(m_Info.m_MapHeight)));
+  Print(Concat("[BNETPROTO] Blizz Hash: <", ByteArrayToDecString(m_Info.m_MapScriptsBlizzHash), ">"));
   if (m_Info.m_MapScriptsSHA1.has_value()) {
-    Print("[BNETPROTO] SHA1 Hash: <" + ByteArrayToDecString(m_Info.m_MapScriptsSHA1.value()) + ">");
+    Print(Concat("[BNETPROTO] SHA1 Hash: <", ByteArrayToDecString(m_Info.m_MapScriptsSHA1.value()), ">"));
   }
   //*/
   return true;

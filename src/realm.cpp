@@ -222,8 +222,7 @@ void CRealm::UpdateConnected(fd_set* fd, fd_set* send_fd)
             break;
 
           case BNETProtocol::Magic::GETADVLISTEX: {
-            vector<uint8_t> sanityBuffer = vector<uint8_t>(packet.begin(), packet.end()); // TODO: Convert RECEIVE_SID_GETADVLISTEX to std::string_view
-            vector<NetworkGameInfo> thirdPartyHostedGames = BNETProtocol::RECEIVE_SID_GETADVLISTEX(GetGameVersion(), sanityBuffer);
+            vector<NetworkGameInfo> thirdPartyHostedGames = BNETProtocol::RECEIVE_SID_GETADVLISTEX(GetGameVersion(), packet);
             if (!thirdPartyHostedGames.empty() && m_Aura->m_Net.m_Config.m_UDPForwardGameLists) {
               std::vector<uint8_t> relayPacket = {GameProtocol::Magic::W3FW_HEADER, 0, 0, 0};
               std::string ipString = m_Socket->GetIPString();
@@ -262,7 +261,7 @@ void CRealm::UpdateConnected(fd_set* fd, fd_set* send_fd)
           }
 
           case BNETProtocol::Magic::ENTERCHAT: {
-            BNETProtocol::EnterChatResult enterChatResult = BNETProtocol::RECEIVE_SID_ENTERCHAT(packet);
+            BNETProtocol::EnterChatResultView enterChatResult = BNETProtocol::RECEIVE_SID_ENTERCHAT(packet);
             if (enterChatResult.success) {
               PRINT_IF(LogLevel::kDebug, GetLogPrefix() + "entered chat");
               m_ChatNickName = string(enterChatResult.uniqueName);
@@ -274,7 +273,7 @@ void CRealm::UpdateConnected(fd_set* fd, fd_set* send_fd)
           }
 
           case BNETProtocol::Magic::CHATEVENT: {
-            BNETProtocol::IncomingChatResult chatEventResult = BNETProtocol::RECEIVE_SID_CHATEVENT(packet);
+            BNETProtocol::IncomingChatResultView chatEventResult = BNETProtocol::RECEIVE_SID_CHATEVENT(packet);
             if (chatEventResult.success) {
               ProcessChatEvent(chatEventResult.type, chatEventResult.userName, chatEventResult.message);
             }
@@ -354,7 +353,7 @@ void CRealm::UpdateConnected(fd_set* fd, fd_set* send_fd)
           }
 
           case BNETProtocol::Magic::AUTH_CHECK: {
-            BNETProtocol::AuthCheckResult checkResult = BNETProtocol::RECEIVE_SID_AUTH_CHECK(packet);
+            BNETProtocol::AuthCheckResultView checkResult = BNETProtocol::RECEIVE_SID_AUTH_CHECK(packet);
             if (m_Config.m_ExeAuthIgnoreVersionError || checkResult.state == BNETProtocol::KeyResult::GOOD)
             {
               // cd keys accepted
@@ -395,7 +394,7 @@ void CRealm::UpdateConnected(fd_set* fd, fd_set* send_fd)
           }
 
           case BNETProtocol::Magic::AUTH_ACCOUNTLOGON: {
-            BNETProtocol::AuthLoginResult loginResult = BNETProtocol::RECEIVE_SID_AUTH_ACCOUNTLOGON(packet);
+            BNETProtocol::AuthLoginResultView loginResult = BNETProtocol::RECEIVE_SID_AUTH_ACCOUNTLOGON(packet);
             if (loginResult.success) {
               copy_n(loginResult.salt.data(), 32, m_LoginSalt.begin());
               copy_n(loginResult.serverPublicKey.data(), 32, m_LoginServerPublicKey.begin());

@@ -48,6 +48,7 @@ struct GameStat
   std::vector<uint8_t> Encode() const;
   std::string GetMapClientFileName() const;
 
+  [[nodiscard]] static GameStat Parse(std::string_view statString);
   template <typename Container>
   [[nodiscard]] static GameStat Parse(const Container& statString);
 

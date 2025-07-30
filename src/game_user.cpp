@@ -607,7 +607,7 @@ bool CGameUser::Update(fd_set* fd, int64_t timeout)
           }
 
           case GameProtocol::Magic::CHAT_TO_HOST: {
-            CIncomingChatMessage incomingChatMessage = GameProtocol::RECEIVE_W3GS_CHAT_TO_HOST(packet);
+            CIncomingMessageOrSettingsView incomingChatMessage = GameProtocol::RECEIVE_W3GS_CHAT_TO_HOST(packet);
 
             if (incomingChatMessage.GetIsValid()) {
               m_Game.get().EventUserChatOrPlayerSettings(this, incomingChatMessage);

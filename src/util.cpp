@@ -189,6 +189,23 @@ void EllideEmptyElementsInPlace(vector<string>& list)
   }
 }
 
+template <typename Container>
+string_view GetContainerView(const Container& container) {
+  return string_view(reinterpret_cast<const char*>(container.data()), container.size());
+}
+template string_view GetContainerView(const std::string& container);
+template string_view GetContainerView(const std::vector<uint8_t>& container);
+
+template <size_t N>
+string_view GetContainerView(const std::array<uint8_t, N>& container) {
+  return string_view(reinterpret_cast<const char*>(container.data()), N);
+}
+template string_view GetContainerView(const std::array<uint8_t, 2>& container);
+template string_view GetContainerView(const std::array<uint8_t, 4>& container);
+template string_view GetContainerView(const std::array<uint8_t, 8>& container);
+template string_view GetContainerView(const std::array<uint8_t, 20>& container);
+template string_view GetContainerView(const std::array<uint8_t, 32>& container);
+
 string ToFormattedString(const double d, const uint8_t precision)
 {
   ostringstream out;
@@ -1579,8 +1596,7 @@ vector<uint8_t> EncodeStatString(const vector<uint8_t>& data)
   return result;
 }
 
-template <typename T>
-vector<uint8_t> DecodeStatString(const T& data)
+vector<uint8_t> DecodeStatString(string_view data)
 {
   uint8_t mask = 1u;
   uint8_t bitOrder = 0u;
@@ -1596,30 +1612,37 @@ vector<uint8_t> DecodeStatString(const T& data)
   result.reserve(outSize);
 
   for (i = 0; i < fullBlockLen; i += 8) {
-    mask = (uint8_t)data[i];
+    mask = GetByteAt(data, i);
     for (j = 1; j < 8; j++) {
       bitOrder = (uint8_t)j;
       if (((mask >> bitOrder) & 0x1) == 0) {
-        result.push_back((uint8_t)data[i + j] - 1);
+        result.push_back(GetByteAt(data, i + j) - 1);
       } else {
-        result.push_back((uint8_t)data[i + j]);
+        result.push_back(GetByteAt(data, i + j));
       }
     }
   }
 
   if (fullBlockLen < len) {
-    mask = (uint8_t)data[fullBlockLen];
+    mask = GetByteAt(data, fullBlockLen);
     for (i = fullBlockLen + 1; i < len; i++) {
       bitOrder = (uint8_t)i % 8;
       if (((mask >> bitOrder) & 0x1) == 0) {
-        result.push_back((uint8_t)data[i] - 1);
+        result.push_back(GetByteAt(data, i) - 1);
       } else {
-        result.push_back((uint8_t)data[i]);
+        result.push_back(GetByteAt(data, i));
       }
     }
   }
 
   return result;
+}
+
+template <typename T>
+vector<uint8_t> DecodeStatString(const T& data)
+{
+  string_view sv = GetContainerView(data);
+  return DecodeStatString(sv);
 }
 
 template vector<uint8_t> DecodeStatString(const vector<uint8_t>& data);

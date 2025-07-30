@@ -504,7 +504,7 @@ public:
   void                                                   SendCommandsHelp(std::string_view cmdToken, GameUser::CGameUser* user, const bool isIntro) const;
   void                                                   QueueLeftMessage(GameUser::CGameUser* user) const;
   void                                                   SendLeftMessage(GameUser::CGameUser* user, const bool sendChat) const;
-  void                                                   SendChatMessage(const GameUser::CGameUser* user, const CIncomingChatMessage& chatMessage) const;
+  void                                                   SendChatMessage(const GameUser::CGameUser* user, const CIncomingMessageOrSettingsView& chatMessage) const;
 
   void                                                   CheckActions();
   void                                                   PauseAPMTrainer();
@@ -576,8 +576,8 @@ public:
   bool                      EventUserIncomingAction(GameUser::CGameUser* user, CIncomingAction& action);
   void                      EventUserKeepAlive(GameUser::CGameUser* user);
   void                      EventChatTrigger(GameUser::CGameUser* user, std::string_view message, const uint32_t first, const uint32_t second);
-  void                      EventUserChatOrPlayerSettings(GameUser::CGameUser* user, const CIncomingChatMessage& incomingChatMessage);
-  void                      EventUserChat(GameUser::CGameUser* user, const CIncomingChatMessage& incomingChatMessage);
+  void                      EventUserChatOrPlayerSettings(GameUser::CGameUser* user, const CIncomingMessageOrSettingsView& incomingChatMessage);
+  void                      EventUserChat(GameUser::CGameUser* user, const CIncomingMessageOrSettingsView& incomingChatMessage);
   void                      EventUserRequestTeam(GameUser::CGameUser* user, uint8_t team);
   void                      EventUserRequestColor(GameUser::CGameUser* user, uint8_t colour);
   void                      EventUserRequestRace(GameUser::CGameUser* user, uint8_t race);

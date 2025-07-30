@@ -70,7 +70,7 @@ namespace BNETProtocol
     return ValidateLength(packet);
   }
 
-  vector<NetworkGameInfo> RECEIVE_SID_GETADVLISTEX(const Version& war3Version, const vector<uint8_t>& data)
+  vector<NetworkGameInfo> RECEIVE_SID_GETADVLISTEX(const Version& war3Version, string_view data)
   {
     vector<NetworkGameInfo> games;
     size_t byteCount = data.size();
@@ -81,7 +81,7 @@ namespace BNETProtocol
 
     const uint32_t totalGames = ByteArrayToUInt32LE(data, 4);
     if (totalGames == 0 || totalGames > 100) {
-      //Print("[BNETPROTO] Got list of " + to_string(totalGames) + " games");
+      //Print(Concat("[BNETPROTO] Got list of ", to_string(totalGames), " games"));
       return games;
     }
 
@@ -103,7 +103,7 @@ namespace BNETProtocol
 
       uint16_t port = ByteArrayToUInt16BE(data, cursor);
       cursor += 2;
-      sockaddr_storage address = IPv4BytesToAddress(data.data() + cursor);
+      sockaddr_storage address = IPv4BytesToAddress(reinterpret_cast<const uint8_t*>(data.data() + cursor));
       cursor += 4;
       SetAddressPort(&address, port);
       gameInfo.SetAddress(address);
@@ -116,23 +116,20 @@ namespace BNETProtocol
 
       cursor += 4; // <0x2b 0x00 0x00 0x00>
 
-      cursorEnd = FindNullDelimiterOrStart<OOBPolicy::kUnsafe>(data, cursor);
-      string gameName = GetStringAddressRange(data, cursor, cursorEnd);
+      string_view gameName = ExtractStringView<OOBPolicy::kUnsafe, NullTerminatorPolicy::kRequired, StringEncoding::kNone>(data, cursor, 255);
       if (gameName.empty()) {
-        //Print("[BNETPROTO] Game name was empty #" + to_string(gameIndex + 1) + " at " + gameInfo.GetHostDetails());
+        //Print(Concat("[BNETPROTO] Game name was empty #", to_string(gameIndex + 1), " at " + gameInfo.GetHostDetails()));
         return games;
       }
-      //Print("[BNETPROTO] Got game #" + to_string(gameIndex + 1) + " name <" + gameName + "> at " + gameInfo.GetHostDetails());
+      //Print(Concat("[BNETPROTO] Got game #", to_string(gameIndex + 1), " name ", SanitizeWrapUTF8(gameName), " at ", gameInfo.GetHostDetails()));
       gameInfo.SetGameName(gameName);
       cursor += gameName.size() + 1;
 
-      cursorEnd = FindNullDelimiterOrStart<OOBPolicy::kCheck>(data, cursor);
-      string passWord = GetStringAddressRange(data, cursor, cursorEnd);
+      string_view passWord = ExtractStringView<OOBPolicy::kCheck, NullTerminatorPolicy::kRequired, StringEncoding::kNone>(data, cursor, 255);
       gameInfo.SetPassword(passWord);
       cursor += passWord.size() + 1;
 
-      cursorEnd = FindNullDelimiterOrEnd<OOBPolicy::kCheck>(data, cursor);
-      string gameStat = GetStringAddressRange(data, cursor, cursorEnd);
+      string_view gameStat = ExtractStringView<OOBPolicy::kCheck, NullTerminatorPolicy::kRequired, StringEncoding::kNone>(data, cursor, 255);
       if (gameStat.empty()) {
         //Print("[BNETPROTO] Game info was empty");
         return games;
@@ -146,7 +143,7 @@ namespace BNETProtocol
     return games;
   }
 
-  EnterChatResult RECEIVE_SID_ENTERCHAT(const string_view packet)
+  EnterChatResultView RECEIVE_SID_ENTERCHAT(const string_view packet)
   {
     // DEBUG_Print( "RECEIVED SID_ENTERCHAT" );
     // DEBUG_Print( packet );
@@ -156,16 +153,16 @@ namespace BNETProtocol
     // null terminated string	-> UniqueName
 
     if (!ValidateLength(packet) || packet.size() < 5) {
-      return EnterChatResult();
+      return EnterChatResultView();
     }
     string_view uniqueName = ExtractUTF8View(packet, 4, 0);
     if (uniqueName.empty() || HasUnsafeUTF8CodePoints(uniqueName)) {
-      return EnterChatResult();
+      return EnterChatResultView();
     }
-    return EnterChatResult(true, uniqueName);
+    return EnterChatResultView(true, uniqueName);
   }
 
-  IncomingChatResult RECEIVE_SID_CHATEVENT(const string_view packet)
+  IncomingChatResultView RECEIVE_SID_CHATEVENT(const string_view packet)
   {
     // DEBUG_Print( "RECEIVED SID_CHATEVENT" );
     // DEBUG_Print( packet );
@@ -180,21 +177,21 @@ namespace BNETProtocol
     // null terminated string	-> Message
 
     if (!ValidateLength(packet) || packet.size() < 29) {
-      return IncomingChatResult();
+      return IncomingChatResultView();
     }
     const uint32_t eventID = ByteArrayToUInt32LE(packet, 4);
     string_view userName = ExtractUTF8View(packet, 28, MAX_PLAYER_NAME_SIZE);
     if (userName.empty() || HasUnsafeUTF8CodePoints(userName)) {
-      return IncomingChatResult();
+      return IncomingChatResultView();
     }
     if (packet.size() <= 29 + userName.size()) {
-      return IncomingChatResult();
+      return IncomingChatResultView();
     }
     string_view message = ExtractUTF8View(packet, 29 + userName.size(), 256);
     if (message.empty() || HasUnsafeUTF8CodePoints(message)) {
-      return IncomingChatResult();
+      return IncomingChatResultView();
     }
-    return IncomingChatResult(true, eventID, userName, message);
+    return IncomingChatResultView(true, eventID, userName, message);
   }
 
   bool RECEIVE_SID_CHECKAD(const string_view packet)
@@ -280,7 +277,7 @@ namespace BNETProtocol
     );
   }
 
-  AuthCheckResult RECEIVE_SID_AUTH_CHECK(const string_view packet)
+  AuthCheckResultView RECEIVE_SID_AUTH_CHECK(const string_view packet)
   {
     // DEBUG_Print( "RECEIVED SID_AUTH_CHECK" );
     // DEBUG_Print( packet );
@@ -291,16 +288,16 @@ namespace BNETProtocol
     // null terminated string	    -> KeyStateDescription
 
     if (!ValidateLength(packet) || packet.size() < 9) {
-      return AuthCheckResult();
+      return AuthCheckResultView();
     }
     string_view description = ExtractUTF8View(packet, 8, 0);
     if (HasUnsafeUTF8CodePoints(description)) {
       description.remove_prefix(description.size());
     }
-    return AuthCheckResult(ByteArrayToUInt32LE(packet, 4), description);
+    return AuthCheckResultView(ByteArrayToUInt32LE(packet, 4), description);
   }
 
-  AuthLoginResult RECEIVE_SID_AUTH_ACCOUNTLOGON(const string_view packet)
+  AuthLoginResultView RECEIVE_SID_AUTH_ACCOUNTLOGON(const string_view packet)
   {
     // DEBUG_Print( "RECEIVED SID_AUTH_ACCOUNTLOGON" );
     // DEBUG_Print( packet );
@@ -314,11 +311,11 @@ namespace BNETProtocol
 
     if (ValidateLength(packet) && packet.size() >= 8) {
       if (ByteArrayToUInt32LE(packet, 4) == 0 && packet.size() >= 72) {
-        return AuthLoginResult(true, packet.substr(8, 32), packet.substr(40, 32));
+        return AuthLoginResultView(true, packet.substr(8, 32), packet.substr(40, 32));
       }
     }
 
-    return AuthLoginResult();
+    return AuthLoginResultView();
   }
 
   bool RECEIVE_SID_AUTH_ACCOUNTLOGONPROOF(const string_view packet)
