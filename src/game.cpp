@@ -5513,6 +5513,8 @@ void CGame::EventObserverMapSize(CAsyncObserver* user, const CIncomingMapFileSiz
           case MapTransferCheckResult::kBufferBloat:
             reason = "bufferbloat";
             break;
+          // kAllowed checked above
+          IGNORE_CASE(MapTransferCheckResult::kAllowed)
         }
         user->SetLeftReason(Concat("autokicked - they don't have the map, and it cannot be transferred (", reason, ")"));
       }
@@ -6650,6 +6652,8 @@ void CGame::EventUserMapSize(GameUser::CGameUser* user, const CIncomingMapFileSi
             case MapTransferCheckResult::kBufferBloat:
               reason = "bufferbloat";
               break;
+            // kAllowed checked above
+            IGNORE_CASE(MapTransferCheckResult::kAllowed)
           }
           user->SetLeftReason(Concat("autokicked - they don't have the map, and it cannot be transferred (", reason, ")"));
         }

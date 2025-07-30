@@ -88,7 +88,6 @@ namespace BNETProtocol
     games.resize(totalGames);
     uint32_t gameIndex = 0;
     size_t cursor = 8;
-    size_t cursorEnd = cursor;
 
     while (gameIndex < totalGames) {
       if (byteCount < cursor + 33) {
