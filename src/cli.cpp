@@ -52,8 +52,12 @@ CCLI::CCLI()
    m_Verbose(false),
    m_ExecAuth(CommandAuth::kAuto),
    m_ExecBroadcast(false),
+#ifndef DISABLE_TESTS
    m_ExecOnline(true),
    m_RunTests(false)
+#else
+  m_ExecOnline(true)
+#endif
 {
 }
 
@@ -807,9 +811,11 @@ CLIResult CCLI::Parse(const int argc, char** argv)
 #endif
   );
 
+#ifndef DISABLE_TESTS
   app.add_flag(  "--test", m_RunTests,
     "Run tests to ensure Aura is working correctly."
   );
+#endif
 
   try {
     app.parse(argc, argv);
@@ -823,13 +829,21 @@ CLIResult CCLI::Parse(const int argc, char** argv)
     return CLIResult::kError;
   }
 
-  if (about || examples || m_RunTests) {
+  if (
+    about
+    || examples
+#ifndef DISABLE_TESTS
+    || m_RunTests
+#endif
+  ) {
     if (about) {
       m_InfoAction = CLIAction::kAbout;
     } else if (examples) {
       m_InfoAction = CLIAction::kExamples;
+#ifndef DISABLE_TESTS
     } else if (m_RunTests) {
       return CLIResult::kTest;
+#endif
     }
     return CLIResult::kInfoAndQuit;
   }

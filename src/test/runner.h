@@ -23,6 +23,7 @@
 
  */
 
+#ifndef DISABLE_TESTS
 #ifndef AURA_TEST_RUNNER_H
 #define AURA_TEST_RUNNER_H
 
@@ -38,3 +39,4 @@ namespace TestRunner
 };
 
 #endif // AURA_TEST_RUNNER_H
+#endif

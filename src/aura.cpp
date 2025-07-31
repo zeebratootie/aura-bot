@@ -599,6 +599,7 @@ CAura::CAura(CConfig& CFG, const CCLI& nCLI)
     UpdateCFGCacheEntries();
   }
 
+#ifndef DISABLE_TESTS
   if (nCLI.m_RunTests) {
     uint16_t result = TestRunner::Run();
     if (result == 0) {
@@ -609,6 +610,7 @@ CAura::CAura(CConfig& CFG, const CCLI& nCLI)
     }
     return;
   }
+#endif
 
   if (!nCLI.QueueActions(this)) {
     m_Ready = false;

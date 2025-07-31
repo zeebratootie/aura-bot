@@ -214,7 +214,9 @@ public:
   bool                                        m_ExecBroadcast;
   bool                                        m_ExecOnline;
 
+#ifndef DISABLE_TESTS
   bool                                        m_RunTests;
+#endif
 
   CCLI();
   ~CCLI();

@@ -23,6 +23,7 @@
 
  */
 
+#ifndef DISABLE_TESTS
 #include "runner.h"
 #include "../util.h"
 
@@ -81,3 +82,4 @@ uint16_t TestRunner::Run()
   if (!CheckStatStrings()) return 1;
   return 0;
 }
+#endif
