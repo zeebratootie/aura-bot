@@ -1458,7 +1458,7 @@ uint32_t CIncomingAction::GetUint32BE(const size_t offset) const
 pair<bool, uint16_t> CIncomingAction::CountAPMAtomic(const vector<uint8_t>& action)
 {
   const size_t size = action.size();
-  pair<bool, uint16_t> result = make_pair<bool, uint16_t>(false, SHORT_ZERO); // <errored, count>
+  pair<bool, uint16_t> result = make_pair<bool, uint16_t>(false, 0u); // <errored, count>
   size_t pos = 0u, next = 0u;
   uint8_t actionType = 0xFF;
   bool lastWasDeselect = false;
