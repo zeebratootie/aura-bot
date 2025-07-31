@@ -85,7 +85,8 @@ string ToDecStringPadded(const int64_t num, const string::size_type padding)
   string numeral = to_string(num);
   if (numeral.size() >= padding) return numeral;
   string padded = string(padding, '0');
-  padded.replace(padded.end() - numeral.size(), padded.end(), numeral);
+  string::size_type replacePos = static_cast<string::size_type>(padding - numeral.size());
+  padded.replace(padded.begin() + replacePos, padded.end(), numeral);
   return padded;
 }
 
@@ -280,19 +281,19 @@ string ToVersionString(const Version& version)
 
 uint32_t ToVersionFlattened(const Version& version) // MDNS protocol
 {
-  return 10000u + 100u * (uint32_t)(version.first - 1) + (uint32_t)(version.second);
+  return (uint32_t)10000u + (uint32_t)100u * (uint32_t)(version.first - 1) + (uint32_t)(version.second);
 }
 
 uint8_t ToVersionOrdinal(const Version& version) // Aura internal
 {
-  return (version.first - 1) * 37 + version.second;
+  return (uint8_t)(version.first - TINY_ONE) * TINY_37 + version.second;
 }
 
 bool GetIsValidVersion(const Version& version)
 {
   switch (version.first) {
     case 2: return true;
-    case 1: return version.second <= 36;
+    case 1: return version.second <= TINY_36;
     default: return false;
   }
 }
@@ -1393,7 +1394,7 @@ vector<uint8_t> SplitNumeral(string_view input)
   result.reserve(input.size());
   for (const auto& c : input) {
     if (isdigit(c)) {
-      result.push_back(c - 0x30);
+      result.push_back((uint8_t)(c - 0x30));
     } else {
       return {};
     }
@@ -1574,7 +1575,7 @@ vector<uint8_t> EncodeStatString(const vector<uint8_t>& data)
     for (j = 0; j < 7; j++, w++) {
       b = data[i + j];
       if (b % 2 == 0) {
-        result[w] = b + 1;
+        result[w] = b + TINY_ONE;
       } else {
         result[w] = b;
         mask |= (1u << (j + 1u));
@@ -1588,7 +1589,7 @@ vector<uint8_t> EncodeStatString(const vector<uint8_t>& data)
     for (i = fullBlockLen; i < len; i++, w++) {
       b = data[i];
       if (b % 2 == 0) {
-        result[w] = b + 1;
+        result[w] = b + TINY_ONE;
       } else {
         result[w] = b;
         mask |= (1u << ((i % 7u) + 1u));
@@ -1621,7 +1622,7 @@ vector<uint8_t> DecodeStatString(string_view data)
     for (j = 1; j < 8; j++) {
       bitOrder = (uint8_t)j;
       if (((mask >> bitOrder) & 0x1) == 0) {
-        result.push_back(GetByteAt(data, i + j) - 1);
+        result.push_back(GetByteAt(data, i + j) - TINY_ONE);
       } else {
         result.push_back(GetByteAt(data, i + j));
       }
@@ -1633,7 +1634,7 @@ vector<uint8_t> DecodeStatString(string_view data)
     for (i = fullBlockLen + 1; i < len; i++) {
       bitOrder = (uint8_t)i % 8;
       if (((mask >> bitOrder) & 0x1) == 0) {
-        result.push_back(GetByteAt(data, i) - 1);
+        result.push_back(GetByteAt(data, i) - TINY_ONE);
       } else {
         result.push_back(GetByteAt(data, i));
       }

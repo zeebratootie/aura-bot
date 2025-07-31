@@ -1266,7 +1266,7 @@ uint8_t CNet::RequestUPnP(const NetProtocol protocolCode, const uint16_t externa
 
     int result = UPNP_AddPortMapping(urls.controlURL, data.first.servicetype, extPort.c_str(), intPort.c_str(), lanaddr, "Warcraft 3 game hosting", protocol.c_str(), nullptr, "86400");
     if (result == UPNPCOMMAND_SUCCESS) {
-      success = success | (1 << (type - 1));
+      success |= (uint8_t)(1 << (type - 1));
     } else if (logLevel >= LogLevel::kInfo) {
       switch (result) {
         case UPNPCOMMAND_UNKNOWN_ERROR:

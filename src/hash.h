@@ -9,9 +9,11 @@
 
 // compile time functions for char*
 
-static constexpr uint64_t HashCode(const char* str, const uint64_t pos, const uint64_t hash)
+static constexpr uint64_t HASH_FACTOR = 31u;
+
+static constexpr uint64_t HashCode(const char* str, const size_t pos, const uint64_t hash)
 {
-  return str[pos] ? (HashCode(str, pos + 1, 31 * hash + str[pos])) : hash;
+  return str[pos] ? (HashCode(str, pos + 1u, HASH_FACTOR * hash + static_cast<uint64_t>(str[pos]))) : hash;
 }
 
 static constexpr uint64_t HashCode(const char* str)

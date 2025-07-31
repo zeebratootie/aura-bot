@@ -65,7 +65,7 @@ string CGameVirtualUser::GetDisplayName(optional<bool> overrideLoaded) const
     return m_Name;
   } else {
     // This information is important for letting hosts know which !open, !close, commands to execute.
-    return "User[" + ToDecString(m_SID + 1) + "]";
+    return "User[" + ToDecString(m_SID + TINY_ONE) + "]";
   }
 }
 

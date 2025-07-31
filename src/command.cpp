@@ -1051,7 +1051,7 @@ GameControllerSearchResult CCommandContext::RunParseController(const std::string
       uint8_t testSID = ParseSID(target.substr(1));
       const CGameSlot* slot = targetGame->InspectSlot(testSID);
       if (!slot) {
-        ErrorReply("Slot " + ToDecString(testSID + 1) + " not found.");
+        ErrorReply("Slot " + ToDecString(testSID + TINY_ONE) + " not found.");
         return {};
       }
       return GameControllerSearchResult(testSID, targetGame->GetUserFromUID(slot->GetUID()));
@@ -1456,9 +1456,9 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
 
       const CGameSlot* slot = targetGame->InspectSlot(SID);
       if (targetPlayer) {
-        SendReply("Player " + targetPlayer->GetName() + " (slot #" + ToDecString(SID + 1) + ") = " + ByteArrayToDecString(slot->GetByteArray()));
+        SendReply("Player " + targetPlayer->GetName() + " (slot #" + ToDecString(SID + TINY_ONE) + ") = " + ByteArrayToDecString(slot->GetByteArray()));
       } else {
-        SendReply("Slot #" + ToDecString(SID + 1) + " = " + ByteArrayToDecString(slot->GetByteArray()));
+        SendReply("Slot #" + ToDecString(SID + TINY_ONE) + " = " + ByteArrayToDecString(slot->GetByteArray()));
       }
       break;
     }
@@ -1984,7 +1984,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
       GameUser::CGameUser* targetPlayer = searchResult.user;
 
       if (!targetPlayer) {
-        ErrorReply("Slot #" + to_string(SID + 1) + " is not occupied by a user.");
+        ErrorReply("Slot #" + to_string(SID + TINY_ONE) + " is not occupied by a user.");
         break;
       }
       if (targetPlayer->GetIsReserved()) {
@@ -2988,7 +2988,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
       GameUser::CGameUser* targetPlayer = searchResult.user;
 
       if (!targetPlayer) {
-        ErrorReply("Slot #" + to_string(SID + 1) + " is not occupied by a user.");
+        ErrorReply("Slot #" + to_string(SID + TINY_ONE) + " is not occupied by a user.");
         break;
       }
 
@@ -5412,7 +5412,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
       }
 
       if (!targetGame->SetSlotColor(SID, color, true)) {
-        ErrorReply("Cannot recolor slot #" + to_string(SID + 1) + " to " + GetColorName(color) + ".");
+        ErrorReply("Cannot recolor slot #" + to_string(SID + TINY_ONE) + " to " + GetColorName(color) + ".");
         break;
       }
 
@@ -5579,11 +5579,11 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
 
       CGameSlot* slot = targetGame->GetSlot(SID);
       if (!slot || slot->GetSlotStatus() != SLOTSTATUS_OCCUPIED || slot->GetTeam() == targetGame->GetMap()->GetVersionMaxSlots()) {
-        ErrorReply("Slot " + ToDecString(SID + 1) + " is not playable.");
+        ErrorReply("Slot " + ToDecString(SID + TINY_ONE) + " is not playable.");
         break;
       }
       if (Race == (slot->GetRace() & Race)) {
-        ErrorReply("Slot " + ToDecString(SID + 1) + " is already [" + GetRaceName(Race) + "] race.");
+        ErrorReply("Slot " + ToDecString(SID + TINY_ONE) + " is already [" + GetRaceName(Race) + "] race.");
         break;
       }
       slot->SetRace(Race | SLOTRACE_SELECTABLE);
@@ -5763,7 +5763,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
         if (targetPlayer) {
           ErrorReply("Cannot turn [" + targetPlayer->GetName() + "] into an observer.");
         } else {
-          ErrorReply("Cannot turn slot #" + to_string(SID + 1) + " into an observer slot.");
+          ErrorReply("Cannot turn slot #" + to_string(SID + TINY_ONE) + " into an observer slot.");
         }
       } else {
         targetGame->ResetLayoutIfNotMatching();

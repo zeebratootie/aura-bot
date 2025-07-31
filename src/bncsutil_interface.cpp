@@ -233,7 +233,7 @@ bool CBNCSUtilInterface::ExtractEXEFeatures(const Version& war3DataVersion, cons
   if (!FileWar3EXE.empty() && (war3DataVersion >= GAMEVER(1u, 29u) || (!FileStormDLL.empty() && !FileGameDLL.empty())))
   {
     int bufferSize = 512;
-    int requiredSize = 0;
+    size_t requiredSize = 0;
     vector<char> buffer(bufferSize);
 
     uint32_t EXEVersion = 0;
@@ -242,7 +242,7 @@ bool CBNCSUtilInterface::ExtractEXEFeatures(const Version& war3DataVersion, cons
     do {
       bufferSize *= 2;
       buffer.resize(bufferSize);
-      requiredSize = getExeInfo(PathToString(FileWar3EXE).c_str(), buffer.data(), bufferSize, &EXEVersion, BNCSUTIL_PLATFORM_X86);
+      requiredSize = (size_t)getExeInfo(PathToString(FileWar3EXE).c_str(), buffer.data(), bufferSize, &EXEVersion, BNCSUTIL_PLATFORM_X86);
     } while (0 < requiredSize && bufferSize < requiredSize);
 
     if (requiredSize == 0) {

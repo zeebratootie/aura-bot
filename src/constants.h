@@ -64,6 +64,10 @@ enum class NullTerminatorPolicy : bool
 constexpr uint8_t BYTE_ZERO = 0u;
 constexpr uint8_t BYTE_ONE = 1u;
 constexpr uint8_t TINY_ONE = 1u;
+constexpr uint8_t TINY_TWO = 2u;
+constexpr uint8_t TINY_THREE = 3u;
+constexpr uint8_t TINY_36 = 36u;
+constexpr uint8_t TINY_37 = 37u;
 constexpr uint16_t SHORT_ONE = 1u;
 
 template <Endianness endianness>
@@ -1003,6 +1007,7 @@ constexpr size_t MAX_PLAYER_NAME_SIZE = 15;
 constexpr uint8_t CHAT_RECV_ALL = 0;
 constexpr uint8_t CHAT_RECV_ALLY = 1;
 constexpr uint8_t CHAT_RECV_OBS = 2;
+constexpr uint8_t CHAT_RECV_PRIVATE_OFFSET = 3;
 
 enum class ChatRecv : uint8_t {
   kAll = 0,
