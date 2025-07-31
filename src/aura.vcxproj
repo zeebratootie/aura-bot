@@ -309,7 +309,7 @@
       <Optimization>MaxSpeed</Optimization>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <AdditionalIncludeDirectories>..\lib;..\deps\bncsutil\src;..\deps\StormLib\src;..\deps\StormLib\src\zlib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;UTF_CPP_CPLUSPLUS=201703L;SQLITE_CUSTOM_INCLUDE=sqlite3opt.h;DISABLE_MDNS;DISABLE_PJASS;DISABLE_CPR;DISABLE_MINIUPNP;DISABLE_DPP;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;UTF_CPP_CPLUSPLUS=201703L;SQLITE_CUSTOM_INCLUDE=sqlite3opt.h;DISABLE_MDNS;DISABLE_PJASS;DISABLE_CPR;DISABLE_MINIUPNP;DISABLE_DPP;DISABLE_TESTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <PrecompiledHeader>
@@ -478,7 +478,7 @@
       <Optimization>MinSpace</Optimization>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <AdditionalIncludeDirectories>..\lib;..\deps\bncsutil\src;..\deps\StormLib\src;..\deps\StormLib\src\zlib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;UTF_CPP_CPLUSPLUS=201703L;SQLITE_CUSTOM_INCLUDE=sqlite3opt.h;DISABLE_MDNS;DISABLE_PJASS;DISABLE_CPR;DISABLE_MINIUPNP;DISABLE_DPP;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;UTF_CPP_CPLUSPLUS=201703L;SQLITE_CUSTOM_INCLUDE=sqlite3opt.h;DISABLE_MDNS;DISABLE_PJASS;DISABLE_CPR;DISABLE_MINIUPNP;DISABLE_DPP;DISABLE_TESTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <PrecompiledHeader>
