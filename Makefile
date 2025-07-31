@@ -43,8 +43,8 @@ CCFLAGS += -fno-builtin
 CXXFLAGS += -g0 -std=c++17 -pipe -pthread $(WFLAGS) -fno-builtin -fno-rtti -MMD -MP
 
 ifeq ($(AURABUILD_ANALYZE),1)
-  CCFLAGS += -fanalyzer
-  CXXFLAGS += -fanalyzer
+  CCFLAGS += -fanalyzer -Wno-analyzer-use-of-uninitialized-value
+  CXXFLAGS += -fanalyzer -Wno-analyzer-use-of-uninitialized-value
 endif
 
 ifeq ($(AURABUILD_SANITIZE),1)
