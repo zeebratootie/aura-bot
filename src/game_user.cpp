@@ -102,6 +102,13 @@ using namespace GameUser;
 #define DLOG_APP_CUSTOM(T, U, V) do {} while (0)
 #endif
 
+constexpr int USER_METRICS_ACTION_SAMPLE_RATE = 2;
+constexpr int USER_METRICS_CHAT_SAMPLE_RATE = 1;
+constexpr int USER_METRICS_KEEPALIVE_SAMPLE_RATE = 10;
+constexpr size_t USER_METRICS_ACTION_CAPACITY = 100;
+constexpr size_t USER_METRICS_CHAT_CAPACITY = 100;
+constexpr size_t USER_METRICS_KEEPALIVE_CAPACITY = 100;
+
 //
 // CGameUser
 //
@@ -167,7 +174,16 @@ CGameUser::CGameUser(shared_ptr<CGame> nGame, CConnection* connection, uint8_t n
     m_ActionCounter(0),
     m_AntiAbuseCounter(0),
     m_RemainingSaves(GAME_SAVES_PER_PLAYER),
+#ifndef PROFILING
     m_RemainingPauses(GAME_PAUSES_PER_PLAYER)
+#else
+    m_RemainingPauses(GAME_PAUSES_PER_PLAYER),
+    m_PerfMetrics(UserMetrics(
+      USER_METRICS_ACTION_SAMPLE_RATE, USER_METRICS_ACTION_CAPACITY,
+      USER_METRICS_CHAT_SAMPLE_RATE, USER_METRICS_CHAT_CAPACITY,
+      USER_METRICS_KEEPALIVE_SAMPLE_RATE, USER_METRICS_KEEPALIVE_CAPACITY
+    ))
+#endif
 {
   m_GProxy = make_shared<CGProxyServer>(this);
   m_GProxy->AddRecvPacket(); // REQJOIN at (connection.cpp, game_seeker.cpp) is not passthrough
@@ -583,6 +599,9 @@ bool CGameUser::Update(fd_set* fd, int64_t timeout)
             break;
 
           case GameProtocol::Magic::OUTGOING_ACTION: {
+#ifdef PROFILING
+            auto t = m_PerfMetrics.action.TryStart();
+#endif
             if (ValidateLength(packet) && packet.size() >= 8) {
               CIncomingAction action = GameProtocol::RECEIVE_W3GS_OUTGOING_ACTION(packet, m_UID);
               if (!m_Game.get().EventUserIncomingAction(this, action)) {
@@ -590,10 +609,19 @@ bool CGameUser::Update(fd_set* fd, int64_t timeout)
                 Abort = true;
               }
             }
+#ifdef PROFILING
+            int64_t dt = t.TryEndNano();
+            if (dt > 1e6) {
+              LOG_APP_CUSTOM(LogLevel::kWarning, Concat("Action <", GetStringBytesHex(packet), "> took " + to_string(dt / 1e6) + " ms"), LOG_C | LOG_P);
+            }
+#endif
             break;
           }
 
           case GameProtocol::Magic::OUTGOING_KEEPALIVE: {
+#ifdef PROFILING
+            auto t = m_PerfMetrics.keepAlive.TryStart();
+#endif
             if (m_SyncCounter >= m_Game.get().GetSyncCounter()) {
               LOG_APP_CUSTOM(LogLevel::kWarning, Concat("player [", m_Name, "] incorrectly ahead of sync"), LOG_C | LOG_P);
               m_Game.get().EventUserDisconnectGameProtocolError(this, false);
@@ -603,10 +631,16 @@ bool CGameUser::Update(fd_set* fd, int64_t timeout)
               ++m_SyncCounter;
               m_Game.get().EventUserKeepAlive(this);
             }
+#ifdef PROFILING
+            t.TryEndNano();
+#endif
             break;
           }
 
           case GameProtocol::Magic::CHAT_TO_HOST: {
+#ifdef PROFILING
+            auto t = m_PerfMetrics.chatToHost.TryStart();
+#endif
             CIncomingMessageOrSettingsView incomingChatMessage = GameProtocol::RECEIVE_W3GS_CHAT_TO_HOST(packet);
 
             if (incomingChatMessage.GetIsValid()) {
@@ -614,6 +648,12 @@ bool CGameUser::Update(fd_set* fd, int64_t timeout)
             } else {
               // empty chat, not UTF8 or contains control characters: ignore it
             }
+#ifdef PROFILING
+            int64_t dt = t.TryEndNano();
+            if (dt > 1e6) {
+              LOG_APP_CUSTOM(LogLevel::kWarning, Concat("Chat message ", SanitizeWrapUTF8(incomingChatMessage.GetMessage()), " took " + to_string(dt) + " ms"), LOG_C | LOG_P);
+            }
+#endif
             break;
           }
 

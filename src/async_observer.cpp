@@ -35,6 +35,7 @@
 #include "map.h"
 #include "net.h"
 #include "realm.h"
+#include "sampler.h"
 #include "socket.h"
 #include "protocol/game_protocol.h"
 #include "protocol/gps_protocol.h"
@@ -71,7 +72,7 @@ CAsyncObserver::CAsyncObserver(shared_ptr<CGame> nGame, CConnection* nConnection
     m_Latency(nGame->GetGameHistory()->GetDefaultLatency()),
     m_SyncCounter(0),
     m_ActionFrameCounter(0),
-    m_FrameSampler(UniformFrameSampler(TIMESTAMPS_SAMPLE_RATE)),
+    m_CheckSumsTimeStamps(UniformlySampledData<int64_t>(TIMESTAMPS_SAMPLE_RATE, MAXIMUM_TIMESTAMPS_COUNT)),
     m_StartedLoading(false),
     m_StartedLoadingTicks(0),
     m_FinishedLoading(false),
@@ -508,12 +509,7 @@ void CAsyncObserver::EventClientGameState(const uint32_t checkSum)
     m_StateSynchronized = false;
   }
 
-  if (m_FrameSampler.GetBernoulli()) {
-    if (m_CheckSumsTimeStamps.size() >= MAXIMUM_TIMESTAMPS_COUNT) {
-      m_CheckSumsTimeStamps.pop_front();
-    }
-    m_CheckSumsTimeStamps.push_back(m_Aura->GetLoopTicks());
-  }
+  m_CheckSumsTimeStamps.TrySample(m_Aura->GetLoopTicks());
 }
 
 bool CAsyncObserver::UpdateClientGameState(const uint32_t checkSum)
@@ -899,7 +895,7 @@ void CAsyncObserver::SampleMaxSafeFrameRate()
 void CAsyncObserver::ResetClientFrameRate()
 {
   SampleMaxSafeFrameRate();
-  m_CheckSumsTimeStamps.clear();
+  m_CheckSumsTimeStamps.Reset();
 }
 
 size_t CAsyncObserver::GetClientFrameClamped() const
@@ -909,10 +905,11 @@ size_t CAsyncObserver::GetClientFrameClamped() const
 
 optional<double> CAsyncObserver::GetClientFrameRate() const
 {
-  if (m_CheckSumsTimeStamps.size() < 2) return nullopt;
-  int64_t deltaTicks = m_CheckSumsTimeStamps.back() - m_CheckSumsTimeStamps.front();
+  auto timeStamps = m_CheckSumsTimeStamps.GetData();
+  if (timeStamps.size() < 2) return nullopt;
+  int64_t deltaTicks = timeStamps.back() - timeStamps.front();
   if (deltaTicks < 0) return nullopt;
-  return (double)((m_CheckSumsTimeStamps.size() - 1) * m_Latency * (int64_t)(TIMESTAMPS_SAMPLE_RATE)) / (double)(deltaTicks);
+  return (double)((timeStamps.size() - 1) * m_Latency * (int64_t)(m_CheckSumsTimeStamps.GetRate())) / (double)(deltaTicks);
 }
 
 uint8_t CAsyncObserver::GetClientMissingLog() const
@@ -954,7 +951,7 @@ void CAsyncObserver::SendProgressReport()
   }
   SendChat(message);
 
-  if (!m_CheckSumsTimeStamps.empty() || (clientFrameRate - 6.) <= epsilon /* 6x or slower can be trusted */) {
+  if (!m_CheckSumsTimeStamps.GetIsEmpty() || (clientFrameRate - 6.) <= epsilon /* 6x or slower can be trusted */) {
     m_LastProgressReportTime = m_Aura->GetLoopTime();
   }
 }

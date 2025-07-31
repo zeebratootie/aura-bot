@@ -35,6 +35,7 @@
 #include "game_structs.h"
 #include "map.h"
 #include "realm.h"
+#include "sampler.h"
 #include "protocol/game_protocol.h"
 
 enum class AsyncObserverStatus : uint8_t {
@@ -95,8 +96,8 @@ public:
   size_t                                                        m_SyncCounter;                  // the number of keepalive packets received from this player
   size_t                                                        m_ActionFrameCounter;
   std::queue<uint32_t>                                          m_CheckSums;                    // the last few checksums the player has sent (for detecting desyncs)
-  std::deque<int64_t>                                           m_CheckSumsTimeStamps;
-  UniformFrameSampler                                           m_FrameSampler;
+  UniformlySampledData<int64_t>                                 m_CheckSumsTimeStamps;
+                                 
 
   /*
   std::vector<uint32_t>                                         m_RTTValues;                    // store the last few (10) pings received so we can take an average

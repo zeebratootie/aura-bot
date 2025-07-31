@@ -151,7 +151,12 @@ struct NetworkGameInfo;
 struct RealmUserSearchResult;
 struct ServiceUser;
 struct SimpleNestedLocation;
+struct UniformSampler;
+struct UniformlySampledTimedData;
 struct UDPPkt;
+
+template <typename T>
+struct UniformlySampledData;
 
 template <typename T>
 struct DoubleLinkedListNode;

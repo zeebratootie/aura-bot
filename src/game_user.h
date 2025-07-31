@@ -53,10 +53,27 @@
 #include "game_structs.h"
 #include "rate_limiter.h"
 #include "map.h"
+#include "sampler.h"
 
 //
 // GameUser::CGameUser
 //
+
+struct UserMetrics
+{
+  UniformlySampledTimedData action;
+  UniformlySampledTimedData chatToHost;
+  UniformlySampledTimedData keepAlive;
+
+  UserMetrics(int actionRate, size_t actionCapacity, int chatRate, size_t chatCapacity, int keepAliveRate, size_t keepAliveCapacity)
+   : action(UniformlySampledTimedData(actionRate, actionCapacity)),
+     chatToHost(UniformlySampledTimedData(chatRate, chatCapacity)),
+     keepAlive(UniformlySampledTimedData(keepAliveRate, keepAliveCapacity))
+  {
+  }
+
+  ~UserMetrics() = default;
+};
 
 namespace GameUser
 {
@@ -160,6 +177,10 @@ namespace GameUser
     std::optional<uint8_t>                      m_FinalGameResult;
     std::optional<TokenBucketRateLimiter>       m_APMQuota;
     std::optional<double>                       m_APMTrainer;
+
+#ifdef PROFILING
+    UserMetrics                                 m_PerfMetrics;
+#endif
 
     CGameUser(std::shared_ptr<CGame> game, CConnection* connection, uint8_t nUID, const bool gameVersionIsExact, const Version& gameVersion, uint32_t nJoinedRealmInternalId, std::string nJoinedRealm, std::string_view nName, std::array<uint8_t, 4> nInternalIP, bool nReserved);
     ~CGameUser() final;
