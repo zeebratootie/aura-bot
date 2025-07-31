@@ -137,7 +137,7 @@ Assemble:
   - export AURABUILD_MINIUPNP=1
   # Not yet supported in Linux
   - export AURABUILD_PJASS=0
-  - export AURABUILD_ANALYZE=1
+  - export AURABUILD_ANALYZE=0
   # Doubles build time
   - export AURABUILD_SANITIZE=0
   - ccache -z
