@@ -42,7 +42,7 @@ CXX ?= g++
 CCFLAGS += -fno-builtin
 CXXFLAGS += -g0 -std=c++17 -pipe -pthread $(WFLAGS) -fno-builtin -fno-rtti -MMD -MP
 
-ifeq ($(AURABUILD_SANITIZE),1)
+ifeq ($(AURABUILD_ANALYZE),1)
   CCFLAGS += -fanalyzer
   CXXFLAGS += -fanalyzer
 endif
