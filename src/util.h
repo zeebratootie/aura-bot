@@ -77,6 +77,8 @@ template <typename T>
   return minuend - subtrahend;
 }
 
+[[nodiscard]] uint8_t ToBaseZero(const uint8_t slotIndex);
+[[nodiscard]] uint8_t ToBaseOne(const uint8_t slotIndex);
 [[nodiscard]] std::string ToDecString(const uint8_t byte);
 [[nodiscard]] std::string ToHexString(uint32_t i);
 

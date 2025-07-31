@@ -51,6 +51,16 @@
 
 using namespace std;
 
+uint8_t ToBaseZero(const uint8_t num)
+{
+  return static_cast<uint8_t>(num - TINY_ONE);
+}
+
+uint8_t ToBaseOne(const uint8_t num)
+{
+  return static_cast<uint8_t>(num + TINY_ONE);
+}
+
 string ToDecString(const uint8_t byte)
 {
   return to_string(static_cast<uint16_t>(byte));
@@ -1575,7 +1585,7 @@ vector<uint8_t> EncodeStatString(const vector<uint8_t>& data)
     for (j = 0; j < 7; j++, w++) {
       b = data[i + j];
       if (b % 2 == 0) {
-        result[w] = b + TINY_ONE;
+        result[w] = (uint8_t)(b + TINY_ONE);
       } else {
         result[w] = b;
         mask |= (1u << (j + 1u));
@@ -1589,7 +1599,7 @@ vector<uint8_t> EncodeStatString(const vector<uint8_t>& data)
     for (i = fullBlockLen; i < len; i++, w++) {
       b = data[i];
       if (b % 2 == 0) {
-        result[w] = b + TINY_ONE;
+        result[w] = (uint8_t)(b + TINY_ONE);
       } else {
         result[w] = b;
         mask |= (1u << ((i % 7u) + 1u));
@@ -1622,7 +1632,7 @@ vector<uint8_t> DecodeStatString(string_view data)
     for (j = 1; j < 8; j++) {
       bitOrder = (uint8_t)j;
       if (((mask >> bitOrder) & 0x1) == 0) {
-        result.push_back(GetByteAt(data, i + j) - TINY_ONE);
+        result.push_back(ToBaseZero(GetByteAt(data, i + j)));
       } else {
         result.push_back(GetByteAt(data, i + j));
       }
@@ -1634,7 +1644,7 @@ vector<uint8_t> DecodeStatString(string_view data)
     for (i = fullBlockLen + 1; i < len; i++) {
       bitOrder = (uint8_t)i % 8;
       if (((mask >> bitOrder) & 0x1) == 0) {
-        result.push_back(GetByteAt(data, i) - TINY_ONE);
+        result.push_back(ToBaseZero(GetByteAt(data, i)));
       } else {
         result.push_back(GetByteAt(data, i));
       }
@@ -2239,10 +2249,10 @@ array<uint8_t, 8> NumToASCIIHex(uint32_t num, bool reverse)
     }
     string fragment = ToHexString(c);
     if (c > 0xF) {
-      result[7 - (j * 2)] = fragment[0];
-      result[6 - (j * 2)] = fragment[1];
+      result[7 - (j * 2)] = static_cast<uint8_t>(fragment[0]);
+      result[6 - (j * 2)] = static_cast<uint8_t>(fragment[1]);
     } else {
-      result[6 - (j * 2)] = fragment[0];
+      result[6 - (j * 2)] = static_cast<uint8_t>(fragment[0]);
     }
   }
   return result;

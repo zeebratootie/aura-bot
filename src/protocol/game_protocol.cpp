@@ -112,26 +112,26 @@ namespace GameProtocol
     switch (action[pos]) {
       case ACTION_SAVE: {
         // <0x06 cstring>
-        size_t messageStart = pos + 1;
+        size_t messageStart = pos + 1u;
         size_t messageEnd = FindNullDelimiterOrStart<OOBPolicy::kCheck>(action, messageStart);
         if (messageEnd == messageStart) return pos;
-        return messageEnd + 1;
+        return messageEnd + 1u;
       }
       case ACTION_SELECTION: // 0x16
       case ACTION_GROUP_HOTKEY_ASSIGN: // 0x17
         //if (action.size() <= pos + 2) return pos;
-        return pos + 4 + 8 * action[pos + 2];
+        return pos + 4u + 8u * action[pos + 2u];
       case ACTION_CHAT_TRIGGER: {
         // <0x60 dword dword cstring>
-        size_t messageStart = pos + 9;
+        size_t messageStart = pos + 9u;
         size_t messageEnd = FindNullDelimiterOrStart<OOBPolicy::kCheck>(action, messageStart);
         if (messageEnd == messageStart) return pos;
-        return messageEnd + 1;
+        return messageEnd + 1u;
       }
       case ACTION_ALLIANCE_SETTINGS: { // 0x50
         if (action[pos + 1] == JN_ALLIANCE_SETTINGS_SYNC_DATA) return action.size();
-        if (action[pos + 1] == MH_DOTA_SETTINGS_SYNC_DATA) return pos + 6 + ByteArrayToUInt32LE(action, pos + 2);
-        return pos + 6;
+        if (action[pos + 1] == MH_DOTA_SETTINGS_SYNC_DATA) return pos + 6u + ByteArrayToUInt32LE(action, pos + 2u);
+        return pos + 6u;
       }
       case ACTION_GAME_CACHE_INT: // 0x6B
       case ACTION_GAME_CACHE_REAL: // 0x6C
@@ -144,42 +144,42 @@ namespace GameProtocol
       case ACTION_GAME_CACHE_CLEAR_UNIT: // 0x73
       case ACTION_GAME_CACHE_CLEAR_STRING: { // 0x74
         size_t stringStart, stringEnd;
-        stringStart = pos + 1;
+        stringStart = pos + 1u;
         stringEnd = FindNullDelimiterOrStart<OOBPolicy::kCheck>(action, stringStart); // end cache file name
         if (stringEnd == stringStart) return pos;
-        stringStart = stringEnd + 1;
+        stringStart = stringEnd + 1u;
         stringEnd = FindNullDelimiterOrStart<OOBPolicy::kCheck>(action, stringStart); // end mission key
         if (stringEnd == stringStart) return pos;
-        stringStart = stringEnd + 1;
+        stringStart = stringEnd + 1u;
         stringEnd = FindNullDelimiterOrStart<OOBPolicy::kCheck>(action, stringStart); // end key
         if (stringEnd == stringStart) return pos;
         if (action[pos] < ACTION_GAME_CACHE_UNIT) {
-          return stringEnd + 5; // end value (1 byte is null delimiter, 4 bytes are uint32_t)
+          return stringEnd + 5u; // end value (1 byte is null delimiter, 4 bytes are uint32_t)
         } else if (action[pos] == ACTION_GAME_CACHE_UNIT) {
-          return GetNextActionPosCacheUnitInner(action, pos, stringEnd + 1);
+          return GetNextActionPosCacheUnitInner(action, pos, stringEnd + 1u);
         } else if (action[pos] == ACTION_GAME_CACHE_STRING) {
-          stringStart = stringEnd + 1;
+          stringStart = stringEnd + 1u;
           stringEnd = FindNullDelimiterOrStart<OOBPolicy::kCheck>(action, stringStart); // end key
           if (stringEnd == stringStart) return pos;
-          return stringEnd + 1; // end value (1 byte is null delimiter)
+          return stringEnd + 1u; // end value (1 byte is null delimiter)
         } else {
-          return stringEnd + 1; // end value (1 byte is null delimiter)
+          return stringEnd + 1u; // end value (1 byte is null delimiter)
         }
       }
 
       case ACTION_W3API: { // 0x77
-        return pos + 13 + ByteArrayToUInt32LE(action, pos + 9);
+        return pos + 13u + ByteArrayToUInt32LE(action, pos + 9u);
       }
 
       case ACTION_SYNCHRONIZE: { // 0x78
         size_t stringStart, stringEnd;
-        stringStart = pos + 1;
+        stringStart = pos + 1u;
         stringEnd = FindNullDelimiterOrStart<OOBPolicy::kCheck>(action, stringStart); // ??
         if (stringEnd == stringStart) return pos;
-        stringStart = stringEnd + 1;
+        stringStart = stringEnd + 1u;
         stringEnd = FindNullDelimiterOrStart<OOBPolicy::kCheck>(action, stringStart); // ??
         if (stringEnd == stringStart) return pos;
-        return stringEnd + 5; // end value (1 byte is null delimiter, 4 bytes are uint32_t)
+        return stringEnd + 5u; // end value (1 byte is null delimiter, 4 bytes are uint32_t)
       }
       default:
         return pos + ActionSizes[action[pos]];
@@ -189,16 +189,16 @@ namespace GameProtocol
   template <GameProtocol::FragmentPolicy checkFragments>
   size_t GetPacketCount(const std::vector<uint8_t>& data)
   {
-    size_t count = 0;
+    size_t count = 0u;
     size_t size = data.size();
-    size_t cursor = 0;
-    size_t packetSize = 0;
-    while (cursor + 4 <= size) {
+    size_t cursor = 0u;
+    size_t packetSize = 0u;
+    while (cursor + 4u <= size) {
       if (data[cursor] == GameProtocol::Magic::W3GS_HEADER) {
         ++count;
       }
-      packetSize = ByteArrayToUInt16LE(data, cursor + 2);
-      if (packetSize < 4) break; // Protocol error
+      packetSize = ByteArrayToUInt16LE(data, cursor + 2u);
+      if (packetSize < 4u) break; // Protocol error
       cursor += packetSize;
     }
     if constexpr (checkFragments == GameProtocol::FragmentPolicy::kAccept) {
@@ -213,7 +213,7 @@ namespace GameProtocol
   template size_t GetPacketCount<GameProtocol::FragmentPolicy::kAccept>(const std::vector<uint8_t>& data);
 
   PacketWrapper::PacketWrapper()
-  : count(0)
+  : count(0u)
   {
   }
 
@@ -229,12 +229,12 @@ namespace GameProtocol
 
   void PacketWrapper::Remove(size_t removeCount)
   {
-    size_t cursor = 0;
+    size_t cursor = 0u;
     removeCount = min(removeCount, count);
-    while (0 < removeCount && cursor + 4 <= data.size()) {
+    while (0u < removeCount && cursor + 4u <= data.size()) {
       assert((data[cursor] == GameProtocol::Magic::W3GS_HEADER) && "PacketWrapper should only contain W3GS packets.");
-      size_t thisSize = ByteArrayToUInt16LE(data, cursor + 2);
-      assert(thisSize >= 4 && "PacketWrapper should only contain valid-sized W3GS packets.");
+      size_t thisSize = ByteArrayToUInt16LE(data, cursor + 2u);
+      assert(thisSize >= 4u && "PacketWrapper should only contain valid-sized W3GS packets.");
       cursor += thisSize;
       --removeCount;
     }
@@ -302,16 +302,16 @@ namespace GameProtocol
     // 2 bytes                    -> InternalPort (???)
     // 4 bytes                    -> InternalIP
 
-    if (ValidateLength(data) && data.size() >= 20) {
-      const uint32_t hostCounter = ByteArrayToUInt32LE(data, 4);
-      const uint32_t entryKey = ByteArrayToUInt32LE(data, 8);
+    if (ValidateLength(data) && data.size() >= 20u) {
+      const uint32_t hostCounter = ByteArrayToUInt32LE(data, 4u);
+      const uint32_t entryKey = ByteArrayToUInt32LE(data, 8u);
       string_view rawName = (
         ExtractStringView<OOBPolicy::kUnsafe, NullTerminatorPolicy::kRequired, StringEncoding::kNone>(
           data, 19, 4 * MAX_PLAYER_NAME_SIZE
         )
       );
-      if (!rawName.empty() && (data.size() >= rawName.size() + 30)) {
-        uint32_t ipValue = ByteArrayToUInt32BE(data, rawName.size() + 26);
+      if (!rawName.empty() && (data.size() >= rawName.size() + 30u)) {
+        uint32_t ipValue = ByteArrayToUInt32BE(data, rawName.size() + 26u);
         array<uint8_t, 4> internalIP = CreateFixedByteArrayBE(ipValue);
         if (MAX_PLAYER_NAME_SIZE < rawName.size()) {
           // Name is larger than max
@@ -345,10 +345,10 @@ namespace GameProtocol
     // 2 bytes					-> Length
     // 4 bytes					-> Reason
 
-    if (ValidateLength(data) && data.size() >= 8)
-      return ByteArrayToUInt32LE(data, 4);                     
+    if (ValidateLength(data) && data.size() >= 8u)
+      return ByteArrayToUInt32LE(data, 4u);
 
-    return 0;
+    return 0u;
   }
 
   bool RECEIVE_W3GS_GAMELOADED_SELF(string_view data)
@@ -374,7 +374,7 @@ namespace GameProtocol
 
     /*const std::array<uint8_t, 4> CRC;
     copy_n(data.begin() + 4, 4, CRC.begin());*/
-    vector<uint8_t> action = vector<uint8_t>(begin(data) + 8, end(data));
+    vector<uint8_t> action = vector<uint8_t>(begin(data) + 8u, end(data));
     return CIncomingAction(UID, action);
   }
 
@@ -388,10 +388,10 @@ namespace GameProtocol
     // 1 byte           -> ???
     // 4 bytes					-> CheckSum
 
-    if (ValidateLength(data) && data.size() == 9)
-      return ByteArrayToUInt32LE(data, 5);
+    if (ValidateLength(data) && data.size() == 9u)
+      return ByteArrayToUInt32LE(data, 5u);
 
-    return 0;
+    return 0u;
   }
 
   CIncomingMessageOrSettingsView RECEIVE_W3GS_CHAT_TO_HOST(string_view data)
@@ -422,31 +422,31 @@ namespace GameProtocol
 
     if (ValidateLength(data)) {
       uint32_t i = 5;
-      const uint8_t receiverCount = GetByteAt(data, 4);
+      const uint8_t receiverCount = GetByteAt(data, 4u);
       if (0 < receiverCount && receiverCount <= MAX_SLOTS_MODERN && (i + receiverCount <= data.size())) {
         const std::vector<uint8_t> ToUIDs = vector<uint8_t>(begin(data) + i, begin(data) + i + receiverCount);
         i += receiverCount;
         const uint8_t fromUID = GetByteAt(data, i);
-        const uint8_t discriminator = GetByteAt(data, i + 1);
+        const uint8_t discriminator = GetByteAt(data, i + 1u);
         i += 2;
 
-        if (discriminator == GameProtocol::Magic::ChatType::CHAT_LOBBY && data.size() >= i + 1) { // 16
+        if (discriminator == GameProtocol::Magic::ChatType::CHAT_LOBBY && data.size() >= i + 1u) { // 16
           // chat message
 
           string_view message = ExtractUTF8View(data, i, MAX_LOBBY_CHAT_SIZE);
           if (!message.empty() && !HasUnsafeUTF8CodePoints(message)) {
             return CIncomingMessageOrSettingsView(fromUID, ToUIDs, discriminator, message);
           }
-        } else if ((discriminator >= GameProtocol::Magic::ChatType::REQUEST_TEAM && discriminator <= GameProtocol::Magic::ChatType::REQUEST_HANDICAP) && data.size() >= i + 1) { // 17-20
+        } else if ((discriminator >= GameProtocol::Magic::ChatType::REQUEST_TEAM && discriminator <= GameProtocol::Magic::ChatType::REQUEST_HANDICAP) && data.size() >= i + 1u) { // 17-20
           // team/colour/race/handicap change request 
 
           const uint8_t requestTarget = GetByteAt(data, i);
           return CIncomingMessageOrSettingsView(fromUID, ToUIDs, discriminator, requestTarget);
-        } else if (discriminator == GameProtocol::Magic::ChatType::CHAT_IN_GAME && data.size() >= i + 5) { // 32
+        } else if (discriminator == GameProtocol::Magic::ChatType::CHAT_IN_GAME && data.size() >= i + 5u) { // 32
           // chat message with in-game channel
 
           const uint32_t inGameChannel = ByteArrayToUInt32LE(data, i);
-          string_view message = ExtractUTF8View(data, i + 4, MAX_IN_GAME_CHAT_SIZE);
+          string_view message = ExtractUTF8View(data, i + 4u, MAX_IN_GAME_CHAT_SIZE);
           if (!message.empty() && !HasUnsafeUTF8CodePoints(message)) {
             return CIncomingMessageOrSettingsView(fromUID, ToUIDs, discriminator, message, inGameChannel);
           }
@@ -468,8 +468,8 @@ namespace GameProtocol
     // 1 byte           -> SizeFlag (1 = have map, 3 = continue download)
     // 4 bytes					-> MapSize
 
-    if (ValidateLength(data) && data.size() >= 13)
-      return CIncomingMapFileSize(GetByteAt(data, 8), ByteArrayToUInt32LE(data, 9));
+    if (ValidateLength(data) && data.size() >= 13u)
+      return CIncomingMapFileSize(GetByteAt(data, 8), ByteArrayToUInt32LE(data, 9u));
 
     return CIncomingMapFileSize();
   }
@@ -487,10 +487,10 @@ namespace GameProtocol
     // so as long as we trust that the client isn't trying to fake us out and mess with the pong value we can find the round trip time by simple subtraction
     // (the subtraction is done elsewhere because the very first pong value seems to be 1 and we want to discard that one)
 
-    if (ValidateLength(data) && data.size() >= 8)
-      return ByteArrayToUInt32LE(data, 4);
+    if (ValidateLength(data) && data.size() >= 8u)
+      return ByteArrayToUInt32LE(data, 4u);
 
-    return 1;
+    return 1u;
   }
 
   ////////////////////
@@ -698,7 +698,7 @@ namespace GameProtocol
   std::vector<uint8_t> SEND_W3GS_CHAT_FROM_HOST_IN_GAME_ATOMIC(uint8_t fromUID, const std::vector<uint8_t>& toUIDs, uint8_t flag, const uint32_t inGameChannel, string_view prefix, string_view message)
   {
     vector<uint8_t> packet;
-    uint16_t length = static_cast<uint16_t>(12 + toUIDs.size() + prefix.size() + message.size());
+    uint16_t length = static_cast<uint16_t>(12u + toUIDs.size() + prefix.size() + message.size());
     packet.reserve(length);
     packet.push_back(GameProtocol::Magic::W3GS_HEADER);
     packet.push_back(GameProtocol::Magic::CHAT_FROM_HOST);
@@ -717,7 +717,7 @@ namespace GameProtocol
   std::vector<uint8_t> SEND_W3GS_CHAT_FROM_HOST_LOBBY_ATOMIC(uint8_t fromUID, const std::vector<uint8_t>& toUIDs, uint8_t flag, string_view prefix, string_view message)
   {
     vector<uint8_t> packet;
-    uint16_t length = static_cast<uint16_t>(8 + toUIDs.size() + prefix.size() + message.size());
+    uint16_t length = static_cast<uint16_t>(8u + toUIDs.size() + prefix.size() + message.size());
     packet.reserve(length);
     packet.push_back(GameProtocol::Magic::W3GS_HEADER);
     packet.push_back(GameProtocol::Magic::CHAT_FROM_HOST);
@@ -741,10 +741,10 @@ namespace GameProtocol
 
     string_view noPrefix;
     vector<uint8_t> packet;
-    packet.reserve(((message.size() + (MAX_IN_GAME_CHAT_SIZE - 1)) / MAX_IN_GAME_CHAT_SIZE) * (12 + toUIDs.size()) + message.size());
+    packet.reserve(((message.size() + (MAX_IN_GAME_CHAT_SIZE - 1)) / MAX_IN_GAME_CHAT_SIZE) * (12u + toUIDs.size()) + message.size());
 
     while (message.size() > MAX_IN_GAME_CHAT_SIZE) {
-      string_view chunk = message.substr(0, MAX_IN_GAME_CHAT_SIZE);
+      string_view chunk = message.substr(0u, MAX_IN_GAME_CHAT_SIZE);
       AppendContainer(packet, SEND_W3GS_CHAT_FROM_HOST_IN_GAME_ATOMIC(fromUID, toUIDs, flag, inGameChannel, noPrefix, chunk));
       message.remove_prefix(MAX_IN_GAME_CHAT_SIZE);
     }
@@ -763,10 +763,10 @@ namespace GameProtocol
 
     string_view noPrefix;
     vector<uint8_t> packet;
-    packet.reserve(((message.size() + (MAX_LOBBY_CHAT_SIZE - 1)) / MAX_LOBBY_CHAT_SIZE) * (8 + toUIDs.size()) + message.size());
+    packet.reserve(((message.size() + (MAX_LOBBY_CHAT_SIZE - 1u)) / MAX_LOBBY_CHAT_SIZE) * (8u + toUIDs.size()) + message.size());
 
     while (message.size() > MAX_LOBBY_CHAT_SIZE) {
-      string_view chunk = message.substr(0, MAX_LOBBY_CHAT_SIZE);
+      string_view chunk = message.substr(0u, MAX_LOBBY_CHAT_SIZE);
       AppendContainer(packet, SEND_W3GS_CHAT_FROM_HOST_LOBBY_ATOMIC(fromUID, toUIDs, flag, noPrefix, chunk));
       message.remove_prefix(MAX_LOBBY_CHAT_SIZE);
     }
@@ -789,7 +789,7 @@ namespace GameProtocol
     packetWrapper.data.reserve(packetWrapper.count * (12 + toUIDs.size() + prefix.size()) + message.size());
 
     while (message.size() > maxChatSize) {
-      string_view chunk = message.substr(0, maxChatSize);
+      string_view chunk = message.substr(0u, maxChatSize);
       AppendContainer(packetWrapper.data, SEND_W3GS_CHAT_FROM_HOST_IN_GAME_ATOMIC(fromUID, toUIDs, flag, inGameChannel, prefix, chunk));
       message.remove_prefix(maxChatSize);
     }
@@ -808,11 +808,11 @@ namespace GameProtocol
     string::size_type maxChatSize = MAX_LOBBY_CHAT_SIZE - prefix.size();
 
     PacketWrapper packetWrapper;
-    packetWrapper.count = (message.size() + (maxChatSize - 1)) / maxChatSize;
-    packetWrapper.data.reserve(packetWrapper.count * (8 + toUIDs.size() + prefix.size()) + message.size());
+    packetWrapper.count = (message.size() + (maxChatSize - 1u)) / maxChatSize;
+    packetWrapper.data.reserve(packetWrapper.count * (8u + toUIDs.size() + prefix.size()) + message.size());
 
     while (message.size() > maxChatSize) {
-      string_view chunk = message.substr(0, maxChatSize);
+      string_view chunk = message.substr(0u, maxChatSize);
       AppendContainer(packetWrapper.data, SEND_W3GS_CHAT_FROM_HOST_LOBBY_ATOMIC(fromUID, toUIDs, flag, prefix, chunk));
       message.remove_prefix(maxChatSize);
     }
@@ -1018,7 +1018,7 @@ namespace GameProtocol
     }
 
     // calculate end position (don't send more than 1442 map bytes in one packet)
-    size_t end_abs = start_abs + 1442;
+    size_t end_abs = start_abs + 1442u;
     if (max_end_abs < end_abs) {
       end_abs = max_end_abs;
     }
@@ -1060,7 +1060,7 @@ namespace GameProtocol
 
     // calculate end position (don't send more than 1442 map bytes in one packet)
 
-    size_t end = start + 1442;
+    size_t end = start + 1442u;
 
     if (end > mapFileContents->size() || end < start)
       end = mapFileContents->size();
@@ -1318,7 +1318,7 @@ string CIncomingJoinRequest::CensorName(std::string_view originalName, const boo
   // I'd rather blanket ban them, but they may be in use as clan markers
   {
     bool balancedBrackets = true;
-    uint8_t bracketDepth = 0;
+    uint8_t bracketDepth = TINY_ZERO;
     for (char ch : name) {
       if (ch == '[') {
         ++bracketDepth;
@@ -1380,7 +1380,7 @@ string CIncomingJoinRequest::CensorName(std::string_view originalName, const boo
 CIncomingAction::CIncomingAction()
   : m_Error(false),
     m_UID(0xFF),
-    m_Count(1),
+    m_Count(1u),
     m_Action(vector<uint8_t>{0})
 {
 }
@@ -1388,7 +1388,7 @@ CIncomingAction::CIncomingAction()
 CIncomingAction::CIncomingAction(uint8_t nUID, vector<uint8_t>& nAction)
   : m_Error(W3GS_ACTION_MAX_PACKET_SIZE < nAction.size()),
     m_UID(nUID),
-    m_Count(1),
+    m_Count(1u),
     m_Action(move(nAction))
 {
   if (!m_Error) {
@@ -1401,7 +1401,7 @@ CIncomingAction::CIncomingAction(uint8_t nUID, vector<uint8_t>& nAction)
 CIncomingAction::CIncomingAction(uint8_t nUID, uint8_t nActionType)
   : m_Error(false),
     m_UID(nUID),
-    m_Count(1),
+    m_Count(1u),
     m_Action(vector<uint8_t>{nActionType})
 {
 }
@@ -1458,8 +1458,8 @@ uint32_t CIncomingAction::GetUint32BE(const size_t offset) const
 pair<bool, uint16_t> CIncomingAction::CountAPMAtomic(const vector<uint8_t>& action)
 {
   const size_t size = action.size();
-  pair<bool, uint16_t> result = make_pair<bool, uint16_t>(false, 0); // <errored, count>
-  size_t pos = 0, next = 0;
+  pair<bool, uint16_t> result = make_pair<bool, uint16_t>(false, SHORT_ZERO); // <errored, count>
+  size_t pos = 0u, next = 0u;
   uint8_t actionType = 0xFF;
   bool lastWasDeselect = false;
   bool isDeselect = false;
@@ -1511,7 +1511,7 @@ vector<const uint8_t*> CIncomingAction::SplitAtomic() const
   vector<const uint8_t*> delimiters;
   const size_t size = m_Action.size();
   uint8_t actionType = 0xFF;
-  size_t pos = 0;
+  size_t pos = 0u;
 
   while (pos < size) {
     delimiters.push_back(m_Action.data() + pos);
@@ -1548,10 +1548,10 @@ vector<const uint8_t*> CIncomingAction::SplitAtomic() const
 CIncomingMessageOrSettingsView::CIncomingMessageOrSettingsView()
   : m_Valid(false),
     m_Type(GameProtocol::ChatToHostType::CTH_MESSAGE_LOBBY),
-    m_Byte(255),
+    m_Byte(255u),
     m_FromUID(0xFF),
     m_Discriminator(0),
-    m_InGameChannel(0)
+    m_InGameChannel(0u)
 {
 }
 
@@ -1559,10 +1559,10 @@ CIncomingMessageOrSettingsView::CIncomingMessageOrSettingsView(uint8_t nFromUID,
   : m_Valid(true),
     m_Message(nMessage),
     m_Type(GameProtocol::ChatToHostType::CTH_MESSAGE_LOBBY),
-    m_Byte(255),
+    m_Byte(255u),
     m_FromUID(nFromUID),
     m_Discriminator(nDiscriminator),
-    m_InGameChannel(0),
+    m_InGameChannel(0u),
     m_ToUIDs(std::move(nToUIDs))
 {
 }
@@ -1585,7 +1585,7 @@ CIncomingMessageOrSettingsView::CIncomingMessageOrSettingsView(uint8_t nFromUID,
     m_Byte(nByte),
     m_FromUID(nFromUID),
     m_Discriminator(nDiscriminator),
-    m_InGameChannel(0),
+    m_InGameChannel(0u),
     m_ToUIDs(std::move(nToUIDs))
 {
   switch (nDiscriminator) {
@@ -1612,8 +1612,8 @@ CIncomingMessageOrSettingsView::~CIncomingMessageOrSettingsView() = default;
 
 CIncomingMapFileSize::CIncomingMapFileSize()
   : m_Valid(false),
-    m_FileSize(0),
-    m_Flag(0)
+    m_FileSize(0u),
+    m_Flag(BYTE_ZERO)
 {
 }
 

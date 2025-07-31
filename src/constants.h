@@ -63,11 +63,18 @@ enum class NullTerminatorPolicy : bool
 
 constexpr uint8_t BYTE_ZERO = 0u;
 constexpr uint8_t BYTE_ONE = 1u;
+constexpr uint8_t TINY_ZERO = 0u;
 constexpr uint8_t TINY_ONE = 1u;
 constexpr uint8_t TINY_TWO = 2u;
 constexpr uint8_t TINY_THREE = 3u;
+constexpr uint8_t TINY_FOUR = 4u;
+constexpr uint8_t TINY_4 = 4u;
+constexpr uint8_t TINY_6 = 6u;
+constexpr uint8_t TINY_8 = 8u;
 constexpr uint8_t TINY_36 = 36u;
 constexpr uint8_t TINY_37 = 37u;
+constexpr uint8_t TINY_86 = 86u;
+constexpr uint16_t SHORT_ZERO = 0u;
 constexpr uint16_t SHORT_ONE = 1u;
 
 template <Endianness endianness>

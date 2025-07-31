@@ -4646,7 +4646,7 @@ void CGame::EventUserDeleted(GameUser::CGameUser* user, fd_set* /*fd*/, fd_set* 
       // e.g. this allows m_ControllersWithMap to remain unchanged.
       const uint8_t replaceSID = GetEmptyObserverSID();
       const uint8_t replaceUID = GetNewUID();
-      CreateFakeUserInner(replaceSID, replaceUID, Concat("User[", ToDecString(replaceSID + TINY_ONE), "]"), false);
+      CreateFakeUserInner(replaceSID, replaceUID, Concat("User[", ToDecString(ToBaseOne(replaceSID)), "]"), false);
       m_FakeUsers.back().SetIsObserver(true);
       CGameSlot* slot = GetSlot(replaceSID);
       slot->SetTeam(m_Map->GetVersionMaxSlots());
@@ -5418,9 +5418,9 @@ GameUser::CGameUser* CGame::JoinPlayer(CConnection* connection, const CIncomingJ
   }
 
   if (notifyString.empty()) {
-    LOG_APP_IF(LogLevel::kInfo, Concat("user joined (P", ToDecString(SID + TINY_ONE), "): [", joinRequest.GetName(), "@", Player->GetRealmHostName(), "#", ToDecString(Player->GetUID()), "] from [", Player->GetIPString(), "] (", Player->GetSocket()->GetName(), ")", notifyString));
+    LOG_APP_IF(LogLevel::kInfo, Concat("user joined (P", ToDecString(ToBaseOne(SID)), "): [", joinRequest.GetName(), "@", Player->GetRealmHostName(), "#", ToDecString(Player->GetUID()), "] from [", Player->GetIPString(), "] (", Player->GetSocket()->GetName(), ")", notifyString));
   } else {
-    LOG_APP_IF(LogLevel::kNotice, Concat("user joined (P", ToDecString(SID + TINY_ONE), "): [", joinRequest.GetName(), "@", Player->GetRealmHostName(), "#", ToDecString(Player->GetUID()), "] from [", Player->GetIPString(), "] (", Player->GetSocket()->GetName(), ")", notifyString));
+    LOG_APP_IF(LogLevel::kNotice, Concat("user joined (P", ToDecString(ToBaseOne(SID)), "): [", joinRequest.GetName(), "@", Player->GetRealmHostName(), "#", ToDecString(Player->GetUID()), "] from [", Player->GetIPString(), "] (", Player->GetSocket()->GetName(), ")", notifyString));
   }
   if (joinRequest.GetIsCensored()) {
     LOG_APP_IF(LogLevel::kNotice, Concat("user [", joinRequest.GetName(), "] is censored name - was [", joinRequest.GetOriginalName(), "]"));
@@ -6274,7 +6274,7 @@ void CGame::EventUserChat(GameUser::CGameUser* user, const CIncomingMessageOrSet
         if (!muteAll) {
           // also don't relay in-game private messages if we're currently muting all
           uint8_t privateTarget = targetType - CHAT_RECV_PRIVATE_OFFSET;
-          chatTypeFragment = Concat("[Private ", ToDecString(privateTarget + TINY_ONE), "] ");
+          chatTypeFragment = Concat("[Private ", ToDecString(ToBaseOne(privateTarget)), "] ");
         }
     }
 
@@ -7527,7 +7527,7 @@ string CGame::GetUserNameFromSID(uint8_t SID) const
   if (user) {
     return user->GetName();
   }
-  return Concat("Slot ", ToDecString(SID + TINY_ONE));
+  return Concat("Slot ", ToDecString(ToBaseOne(SID)));
 }
 
 GameUser::CGameUser* CGame::GetOwner() const
@@ -7909,7 +7909,7 @@ void CGame::ResolveVirtualUsers()
         if (GetNumControllers() < m_Map->GetMapNumControllers()) {
           const CGameVirtualUser* virtualUser = CreateFakeUserInner(SID, GetNewUID(), m_Map->GetHMCPlayerName(), false);
           m_HMCVirtualUser = CGameVirtualUserReference(*virtualUser);
-          LOG_APP_IF(LogLevel::kInfo, Concat("W3HMC virtual user added at slot ", ToDecString(SID + TINY_ONE)));
+          LOG_APP_IF(LogLevel::kInfo, Concat("W3HMC virtual user added at slot ", ToDecString(ToBaseOne(SID))));
         }
       } else {
         CGameVirtualUser* virtualUser = GetVirtualUserFromSID(SID);
@@ -7921,7 +7921,7 @@ void CGame::ResolveVirtualUsers()
         }
         if (virtualUser && !virtualUser->GetIsObserver()) {
           m_HMCVirtualUser = CGameVirtualUserReference(*virtualUser);
-          LOG_APP_IF(LogLevel::kInfo, Concat("W3HMC virtual user assigned to slot ", ToDecString(SID + TINY_ONE)));
+          LOG_APP_IF(LogLevel::kInfo, Concat("W3HMC virtual user assigned to slot ", ToDecString(ToBaseOne(SID))));
         }
       }
     }
@@ -7936,7 +7936,7 @@ void CGame::ResolveVirtualUsers()
         if (GetNumControllers() < m_Map->GetMapNumControllers()) {
           const CGameVirtualUser* virtualUser = CreateFakeUserInner(SID, GetNewUID(), m_Map->GetAHCLPlayerName(), false);
           m_AHCLVirtualUser = CGameVirtualUserReference(*virtualUser);
-          LOG_APP_IF(LogLevel::kInfo, Concat("AHCL virtual user added at slot ", ToDecString(SID + TINY_ONE)));
+          LOG_APP_IF(LogLevel::kInfo, Concat("AHCL virtual user added at slot ", ToDecString(ToBaseOne(SID))));
         }
       } else {
         CGameVirtualUser* virtualUser = GetVirtualUserFromSID(SID);
@@ -7948,7 +7948,7 @@ void CGame::ResolveVirtualUsers()
         }
         if (virtualUser && !virtualUser->GetIsObserver()) {
           m_AHCLVirtualUser = CGameVirtualUserReference(*virtualUser);
-          LOG_APP_IF(LogLevel::kInfo, Concat("AHCL virtual user assigned to slot ", ToDecString(SID + TINY_ONE)));
+          LOG_APP_IF(LogLevel::kInfo, Concat("AHCL virtual user assigned to slot ", ToDecString(ToBaseOne(SID))));
         }
       }
     }
@@ -8017,9 +8017,9 @@ void CGame::ResolveVirtualUsers()
           m_JoinInProgressVirtualUser = CGameVirtualUserReference(*virtualUser);
           joinInProgressIsNativeObserver = slot->GetTeam() == m_Map->GetVersionMaxSlots();
           if (isEmptyAvailable) {
-            LOG_APP_IF(LogLevel::kInfo, Concat("Join-in-progress observer virtual user added at slot ", ToDecString(SID + TINY_ONE), " [", virtualUser->GetName(), "]"));
+            LOG_APP_IF(LogLevel::kInfo, Concat("Join-in-progress observer virtual user added at slot ", ToDecString(ToBaseOne(SID)), " [", virtualUser->GetName(), "]"));
           } else {
-            LOG_APP_IF(LogLevel::kInfo, Concat("Join-in-progress observer virtual user assigned to slot ", ToDecString(SID + TINY_ONE), " [", virtualUser->GetName(), "]"));
+            LOG_APP_IF(LogLevel::kInfo, Concat("Join-in-progress observer virtual user assigned to slot ", ToDecString(ToBaseOne(SID)), " [", virtualUser->GetName(), "]"));
           }
         }
       }
@@ -8132,7 +8132,7 @@ bool CGame::GetHasAnotherPlayer(const uint8_t ExceptSID) const
 {
   uint8_t SID = ExceptSID;
   do {
-    SID = (SID + TINY_ONE) % m_Slots.size();
+    SID = static_cast<uint8_t>((uint8_t)(SID + TINY_ONE) % m_Slots.size());
   } while (!GetIsRealPlayerSlot(SID) && SID != ExceptSID);
   return SID != ExceptSID;
 }
@@ -8512,7 +8512,7 @@ bool CGame::SwapEmptyAllySlot(const uint8_t SID)
   // Look for the next ally, starting from the current SID, and wrapping over.
   uint8_t allySID = SID;
   do {
-    allySID = (allySID + TINY_ONE) % m_Slots.size();
+    allySID = static_cast<uint8_t>((uint8_t)(allySID + TINY_ONE) % m_Slots.size());
   } while (allySID != SID && !(m_Slots[allySID].GetTeam() == team && m_Slots[allySID].GetSlotStatus() == SLOTSTATUS_OPEN));
 
   if (allySID == SID) {
@@ -8958,7 +8958,7 @@ uint8_t CGame::GetFirstCloseableSlot()
   uint8_t firstSID = 0xFF;
   for (uint8_t SID = 0; SID < m_Slots.size(); ++SID) {
     if (m_Slots[SID].GetSlotStatus() == SLOTSTATUS_OPEN) {
-      if (firstSID == 0xFF) firstSID = SID + TINY_ONE;
+      if (firstSID == 0xFF) firstSID = static_cast<uint8_t>(SID + TINY_ONE);
       if (hasPlayer) break;
     } else if (GetIsRealPlayerSlot(SID)) {
       hasPlayer = true;
@@ -9879,16 +9879,16 @@ void CGame::StartCountDown(bool fromUser, bool force)
     const uint8_t SID = m_Map->GetHMCSlot();
     const CGameSlot* slot = InspectSlot(SID);
     if (!slot || !slot->GetIsPlayerOrFake() || GetUserFromSID(SID)) {
-      SendAllChat(Concat("This game requires a fake player on slot ", ToDecString(SID + TINY_ONE)));
+      SendAllChat(Concat("This game requires a fake player on slot ", ToDecString(ToBaseOne(SID))));
       return;
     }
     const CGameVirtualUser* virtualUserMatch = InspectVirtualUserFromSID(SID);
     if (virtualUserMatch && virtualUserMatch->GetIsObserver()) {
-      SendAllChat(Concat("This game requires a fake player (not observer) on slot ", ToDecString(SID + TINY_ONE)));
+      SendAllChat(Concat("This game requires a fake player (not observer) on slot ", ToDecString(ToBaseOne(SID))));
       return;
     }
     if (!virtualUserMatch && m_Map->GetHMCRequired()) {
-      SendAllChat(Concat("This game requires a fake player on slot ", ToDecString(SID + TINY_ONE)));
+      SendAllChat(Concat("This game requires a fake player on slot ", ToDecString(ToBaseOne(SID))));
       return;
     }
   }
@@ -10611,7 +10611,7 @@ bool CGame::CreateFakeUser(const optional<string> playerName)
   if (GetSlotsOpen() == 1)
     DeleteVirtualHost();
 
-  CreateFakeUserInner(SID, GetNewUID(), playerName.value_or(Concat("User[", ToDecString(SID + TINY_ONE), "]")), false);
+  CreateFakeUserInner(SID, GetNewUID(), playerName.value_or(Concat("User[", ToDecString(ToBaseOne(SID)), "]")), false);
   return true;
 }
 
@@ -10630,7 +10630,7 @@ bool CGame::CreateFakePlayer(const optional<string> playerName)
   if (GetSlotsOpen() == 1)
     DeleteVirtualHost();
 
-  CreateFakeUserInner(SID, GetNewUID(), playerName.value_or(Concat("User[", ToDecString(SID + TINY_ONE), "]")), false);
+  CreateFakeUserInner(SID, GetNewUID(), playerName.value_or(Concat("User[", ToDecString(ToBaseOne(SID)), "]")), false);
   return true;
 }
 
@@ -10653,7 +10653,7 @@ bool CGame::CreateFakeObserver(const optional<string> playerName)
   if (GetSlotsOpen() == 1)
     DeleteVirtualHost();
 
-  CreateFakeUserInner(SID, GetNewUID(), playerName.value_or(Concat("User[", ToDecString(SID + TINY_ONE), "]")), true);
+  CreateFakeUserInner(SID, GetNewUID(), playerName.value_or(Concat("User[", ToDecString(ToBaseOne(SID)), "]")), true);
   return true;
 }
 
@@ -10739,7 +10739,7 @@ uint8_t CGame::FakeAllSlots()
       if (m_Slots[SID].GetSlotStatus() != SLOTSTATUS_OPEN) {
         continue;
       }
-      CreateFakeUserInner(SID, GetNewUID(), Concat("User[", ToDecString(SID + TINY_ONE), "]"), false);
+      CreateFakeUserInner(SID, GetNewUID(), Concat("User[", ToDecString(ToBaseOne(SID)), "]"), false);
       ++addedCounter;
       if (0 == --remainingControllers) {
         break;

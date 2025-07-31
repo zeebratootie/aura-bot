@@ -1129,7 +1129,7 @@ namespace BNETProtocol
     vector<uint8_t> packet;
 
     //Slots Free (ascii 98/110 = char b/n = 11/23 slots free) - note: do not reduce this as this is the # of UID's Warcraft III will allocate
-    uint8_t encodedMaxSlots = (uint8_t)86u + maxSupportedSlots;
+    uint8_t encodedMaxSlots = static_cast<uint8_t>(TINY_86 + maxSupportedSlots);
 
     if (!gameName.empty() && !hostName.empty() && !mapPath.empty())
     {
