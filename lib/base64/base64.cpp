@@ -44,6 +44,13 @@
 
 using namespace std;
 
+constexpr unsigned int UpperCaseA = static_cast<unsigned int>(static_cast<unsigned char>('A'));
+constexpr unsigned int UpperCaseZ = static_cast<unsigned int>(static_cast<unsigned char>('Z'));
+constexpr unsigned int AlphabetSize = UpperCaseZ - UpperCaseA + 1;
+constexpr unsigned int POS_OF_UPPER_CASE_OFFSET = -UpperCaseA;
+constexpr unsigned int POS_OF_LOWER_CASE_OFFSET = AlphabetSize - static_cast<unsigned int>(static_cast<unsigned char>('a'));
+constexpr unsigned int POS_OF_DIGITS_OFFSET = 2 * AlphabetSize - static_cast<unsigned int>(static_cast<unsigned char>('0'));
+
 namespace Base64
 {
    //
@@ -68,9 +75,9 @@ namespace Base64
    // Return the position of chr within Encode()
    //
 
-      if      (chr >= 'A' && chr <= 'Z') return chr - 'A';
-      else if (chr >= 'a' && chr <= 'z') return chr - 'a' + ('Z' - 'A')               + 1;
-      else if (chr >= '0' && chr <= '9') return chr - '0' + ('Z' - 'A') + ('z' - 'a') + 2;
+      if      (chr >= 'A' && chr <= 'Z') return static_cast<unsigned int>(chr) + POS_OF_UPPER_CASE_OFFSET;
+      else if (chr >= 'a' && chr <= 'z') return static_cast<unsigned int>(chr) + POS_OF_LOWER_CASE_OFFSET;
+      else if (chr >= '0' && chr <= '9') return static_cast<unsigned int>(chr) + POS_OF_DIGITS_OFFSET;
       else if (chr == '+' || chr == '-') return 62; // Be liberal with input and accept both url ('-') and non-url ('+') base 64 characters (
       else if (chr == '/' || chr == '_') return 63; // Ditto for '/' and '_'
       else
@@ -154,13 +161,13 @@ namespace Base64
         }
         else {
          ret.push_back(Charset_[(bytes_to_encode[pos + 1] & 0x0f) << 2]);
-         ret.push_back(trailing_char);
+         ret.push_back(static_cast<char>(trailing_char));
         }
       }
       else {
         ret.push_back(Charset_[(bytes_to_encode[pos + 0] & 0x03) << 4]);
-        ret.push_back(trailing_char);
-        ret.push_back(trailing_char);
+        ret.push_back(static_cast<char>(trailing_char));
+        ret.push_back(static_cast<char>(trailing_char));
       }
 
       pos += 3;
@@ -216,12 +223,12 @@ namespace Base64
     // The last chunk produces at least one and up to three bytes.
     //
 
-      size_t pos_of_char_1 = GetPosOfChar(encoded_string.at(pos+1) );
+      size_t pos_of_char_1 = GetPosOfChar((unsigned char)encoded_string.at(pos+1) );
 
       //
       // Emit the first output byte that is produced in each chunk:
       //
-      ret.push_back(static_cast<string::value_type>( ( (GetPosOfChar(encoded_string.at(pos+0)) ) << 2 ) + ( (pos_of_char_1 & 0x30 ) >> 4)));
+      ret.push_back(static_cast<string::value_type>( ( (GetPosOfChar((unsigned char)encoded_string.at(pos+0)) ) << 2 ) + ( (pos_of_char_1 & 0x30 ) >> 4)));
 
       if ( ( pos + 2 < length_of_string  )       &&  // Check for data that is not padded with equal signs (which is allowed by RFC 2045)
             encoded_string.at(pos+2) != '='     &&
@@ -230,7 +237,7 @@ namespace Base64
         //
         // Emit a chunk's second byte (which might not be produced in the last chunk).
         //
-        unsigned int pos_of_char_2 = GetPosOfChar(encoded_string.at(pos+2) );
+        unsigned int pos_of_char_2 = GetPosOfChar((unsigned char)encoded_string.at(pos+2) );
         ret.push_back(static_cast<string::value_type>( (( pos_of_char_1 & 0x0f) << 4) + (( pos_of_char_2 & 0x3c) >> 2)));
 
         if ( ( pos + 3 < length_of_string )     &&
@@ -240,7 +247,7 @@ namespace Base64
           //
           // Emit a chunk's third byte (which might not be produced in the last chunk).
           //
-          ret.push_back(static_cast<string::value_type>( ( (pos_of_char_2 & 0x03 ) << 6 ) + GetPosOfChar(encoded_string.at(pos+3))   ));
+          ret.push_back(static_cast<string::value_type>( ( (pos_of_char_2 & 0x03 ) << 6 ) + GetPosOfChar((unsigned char)encoded_string.at(pos+3))   ));
         }
       }
 
