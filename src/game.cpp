@@ -1495,7 +1495,7 @@ void CGame::UpdateJoinable()
     if (m_SlotInfoChanged & SLOTS_DOWNLOAD_PROGRESS_CHANGED) {
       SendAllSlotInfo();
       UpdateReadyCounters();
-      m_SlotInfoChanged &= ~SLOTS_DOWNLOAD_PROGRESS_CHANGED;
+      m_SlotInfoChanged &= (uint8_t)~SLOTS_DOWNLOAD_PROGRESS_CHANGED;
     }
 
     m_LastDownloadCounterResetTicks = m_Aura->GetLoopTicks();
@@ -1507,7 +1507,7 @@ bool CGame::UpdateLobby()
   if (m_SlotInfoChanged & SLOTS_ALIGNMENT_CHANGED) {
     SendAllSlotInfo();
     UpdateReadyCounters();
-    m_SlotInfoChanged &= ~SLOTS_ALIGNMENT_CHANGED;
+    m_SlotInfoChanged &= (uint8_t)~SLOTS_ALIGNMENT_CHANGED;
   }
 
   if (GetIsAutoStartDue()) {
@@ -1849,7 +1849,7 @@ bool CGame::Update(fd_set* fd, fd_set* send_fd)
 
     if (m_GameDiscoveryInfoChanged & GAME_DISCOVERY_CHANGED_SLOTS) {
       SendGameDiscoveryInfoMDNS();
-      m_GameDiscoveryInfoChanged &= ~GAME_DISCOVERY_CHANGED_SLOTS;
+      m_GameDiscoveryInfoChanged &= (uint8_t)~GAME_DISCOVERY_CHANGED_SLOTS;
     }
 
     m_LastPingTicks = loopTicks;
@@ -4336,7 +4336,7 @@ vector<uint8_t>* CGame::GetGameDiscoveryInfoTemplate()
     return &m_GameDiscoveryInfo;
   }
   m_GameDiscoveryInfo = GetGameDiscoveryInfoTemplateInner(&m_GameDiscoveryInfoVersionOffset, &m_GameDiscoveryInfoDynamicOffset);
-  m_GameDiscoveryInfoChanged &= ~GAME_DISCOVERY_CHANGED_MAJOR;
+  m_GameDiscoveryInfoChanged &= (uint8_t)~GAME_DISCOVERY_CHANGED_MAJOR;
   return &m_GameDiscoveryInfo;
 }
 
@@ -10176,7 +10176,7 @@ string CGame::GetSaveFileName(const uint8_t UID) const
 
 bool CGame::Save(GameUser::CGameUser* user, CQueuedActionsFrame& actionFrame, const bool isDisconnect)
 {
-  const uint8_t UID = SimulateActionUID(ACTION_SAVE, user, isDisconnect, ACTION_SOURCE_ANY &~ ACTION_SOURCE_OBSERVER);
+  const uint8_t UID = SimulateActionUID(ACTION_SAVE, user, isDisconnect, ACTION_SOURCE_ANY & NOT_ACTION_SOURCE_OBSERVER);
   if (UID == 0xFF) return false;
 
   string fileName = GetSaveFileName(UID);
@@ -10214,7 +10214,7 @@ void CGame::SaveEnded(const uint8_t exceptUID, CQueuedActionsFrame& actionFrame)
 
 bool CGame::Pause(GameUser::CGameUser* user, CQueuedActionsFrame& actionFrame, const bool isDisconnect)
 {
-  const uint8_t UID = SimulateActionUID(ACTION_PAUSE, user, isDisconnect, ACTION_SOURCE_ANY &~ ACTION_SOURCE_OBSERVER);
+  const uint8_t UID = SimulateActionUID(ACTION_PAUSE, user, isDisconnect, ACTION_SOURCE_ANY & NOT_ACTION_SOURCE_OBSERVER);
   if (UID == 0xFF) return false;
 
   actionFrame.AddAction(std::move(CIncomingAction(UID, ACTION_PAUSE)));
@@ -10227,7 +10227,7 @@ bool CGame::Pause(GameUser::CGameUser* user, CQueuedActionsFrame& actionFrame, c
 
 bool CGame::Resume(GameUser::CGameUser* user, CQueuedActionsFrame& actionFrame, const bool isDisconnect)
 {
-  const uint8_t UID = SimulateActionUID(ACTION_RESUME, user, isDisconnect, ACTION_SOURCE_ANY &~ ACTION_SOURCE_OBSERVER);
+  const uint8_t UID = SimulateActionUID(ACTION_RESUME, user, isDisconnect, ACTION_SOURCE_ANY & NOT_ACTION_SOURCE_OBSERVER);
   if (UID == 0xFF) return false;
 
   actionFrame.AddAction(std::move(CIncomingAction(UID, ACTION_RESUME)));

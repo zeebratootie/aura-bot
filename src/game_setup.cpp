@@ -44,6 +44,9 @@
 
 using namespace std;
 
+constexpr uint8_t MAP_MATCH_TYPE_MAP = 0x80;
+constexpr uint8_t NOT_MAP_MATCH_TYPE_MAP = static_cast<uint8_t>(~MAP_MATCH_TYPE_MAP);
+
 // CGameExtraOptions
 
 CGameExtraOptions::CGameExtraOptions()
@@ -486,7 +489,7 @@ pair<uint8_t, filesystem::path> CGameSetup::SearchInputLocalFuzzy(vector<string>
     vector<pair<string, int>> mapResults = FuzzySearchFiles(m_Aura->m_Config.m_MapPath, FILE_EXTENSIONS_MAP, m_SearchTarget.second);
     for (const auto& result : mapResults) {
       // Whether 0x80 is set flags the type of result: If it is there, it's a map
-      allResults.push_back(make_pair(result.first, result.second | 0x80));
+      allResults.push_back(make_pair(result.first, result.second | MAP_MATCH_TYPE_MAP));
     }
   }
   if (m_SearchType == SEARCH_TYPE_ONLY_CONFIG || m_SearchType == SEARCH_TYPE_ONLY_FILE || m_SearchType == SEARCH_TYPE_ANY) {
@@ -503,12 +506,12 @@ pair<uint8_t, filesystem::path> CGameSetup::SearchInputLocalFuzzy(vector<string>
     allResults.begin() + resultCount,
     allResults.end(),
     [](const pair<string, int>& a, const pair<string, int>& b) {
-        return (a.second &~ 0x80) < (b.second &~ 0x80);
+        return (a.second & NOT_MAP_MATCH_TYPE_MAP) < (b.second & NOT_MAP_MATCH_TYPE_MAP);
     }
   );
 
   if (m_LuckyMode || allResults.size() == 1) {
-    if (allResults[0].second & 0x80) {
+    if (allResults[0].second & MAP_MATCH_TYPE_MAP) {
       return SEARCH_RESULT(MATCH_TYPE_MAP, m_Aura->m_Config.m_MapPath / filesystem::path(allResults[0].first));
     } else {
       return SEARCH_RESULT(MATCH_TYPE_CONFIG, m_Aura->m_Config.m_MapCFGPath / filesystem::path(allResults[0].first));

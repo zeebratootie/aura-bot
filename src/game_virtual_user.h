@@ -121,7 +121,7 @@ struct CGameVirtualUser
   inline void SetCannotSave() { m_RemainingSaves = 0; }
   inline void DropRemainingPauses() { --m_RemainingPauses; }
   inline void SetCannotPause() { m_RemainingPauses = 0; }
-  inline void SetCannotShareUnits() { m_AllowedActions &= ~VIRTUAL_USER_ALLOW_ACTIONS_SHARE_UNITS; }
+  inline void SetCannotShareUnits() { m_AllowedActions &= (uint8_t)~VIRTUAL_USER_ALLOW_ACTIONS_SHARE_UNITS; }
 
   void RefreshUID();
 };

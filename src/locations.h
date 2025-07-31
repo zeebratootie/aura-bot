@@ -134,13 +134,13 @@ struct SimpleNestedLocation
 
   SimpleNestedLocation* AddNested(std::string_view locationName)
   {
-    subLocation = new SimpleNestedLocation(order + 1, locationName);
+    subLocation = new SimpleNestedLocation((uint8_t)(order + TINY_ONE), locationName);
     return subLocation;
   }
 
   SimpleNestedLocation* AddNested(std::string_view locationName, const uint64_t locationIdentifier)
   {
-    subLocation = new SimpleNestedLocation(order + 1, locationName, locationIdentifier);
+    subLocation = new SimpleNestedLocation((uint8_t)(order + TINY_ONE), locationName, locationIdentifier);
     return subLocation;
   }
 };

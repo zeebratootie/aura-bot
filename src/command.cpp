@@ -516,7 +516,7 @@ void CCommandContext::UpdatePermissions()
   if (GetServiceSourceType() == ServiceType::kDiscord) {
 #ifndef DISABLE_DPP
     if (m_Aura->m_Discord.GetIsSudoer(GetServiceSource().GetUserIdentifier())) {
-      m_Permissions = SET_USER_PERMISSIONS_ALL &~ (USER_PERMISSIONS_BOT_SUDO_OK);
+      m_Permissions = SET_USER_PERMISSIONS_ALL & NOT_USER_PERMISSIONS_BOT_SUDO_OK;
     } else if (GetDiscordInteraction()->command.get_issuing_user().is_verified()) { // FIXME: Discord user verification
       m_Permissions |= USER_PERMISSIONS_CHANNEL_VERIFIED;
     }
@@ -4132,8 +4132,8 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
       }
       uint8_t checkMode = HEALTH_CHECK_ALL | HEALTH_CHECK_VERBOSE;
       if (!m_Aura->m_Net.m_SupportTCPOverIPv6) {
-        checkMode &= ~HEALTH_CHECK_PUBLIC_IPV6;
-        checkMode &= ~HEALTH_CHECK_LOOPBACK_IPV6;
+        checkMode &= NOT_HEALTH_CHECK_PUBLIC_IPV6;
+        checkMode &= NOT_HEALTH_CHECK_LOOPBACK_IPV6;
       }
 
       if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_POTENTIAL_OWNER)) {

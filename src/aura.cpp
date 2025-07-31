@@ -2154,7 +2154,7 @@ bool CAura::CheckDependencies()
       m_FoundDeps |= APP_FOUND_DEPS_MDNS;
     } else {
       success = false;
-      m_FoundDeps &= ~APP_FOUND_DEPS_MDNS;
+      m_FoundDeps &= (uint8_t)~APP_FOUND_DEPS_MDNS;
 #ifdef _WIN32
       Print("[AURA] warning - MDNS not found. Install MDNS to enable LAN support for v1.30 onwards: https://support.apple.com/en-us/106380");
 #else
@@ -2171,7 +2171,7 @@ bool CAura::CheckDependencies()
       m_FoundDeps |= APP_FOUND_DEPS_DPP;
     } else {
       success = false;
-      m_FoundDeps &= ~APP_FOUND_DEPS_DPP;
+      m_FoundDeps &= (uint8_t)~APP_FOUND_DEPS_DPP;
       m_Discord.m_Config.m_Enabled = false;
       Print("[AURA] error - Discord service disabled because some required files are missing.");
     }
@@ -2332,8 +2332,8 @@ bool CAura::CreateGame(shared_ptr<CGameSetup> gameSetup)
   if (createdLobby->GetIsCheckJoinable() && !m_Net.GetIsFetchingIPAddresses()) {
     uint8_t checkMode = HEALTH_CHECK_ALL;
     if (!m_Net.m_SupportTCPOverIPv6) {
-      checkMode &= ~HEALTH_CHECK_PUBLIC_IPV6;
-      checkMode &= ~HEALTH_CHECK_LOOPBACK_IPV6;
+      checkMode &= NOT_HEALTH_CHECK_PUBLIC_IPV6;
+      checkMode &= NOT_HEALTH_CHECK_LOOPBACK_IPV6;
     }
     if (createdLobby->GetIsVerbose()) {
       checkMode |= HEALTH_CHECK_VERBOSE;

@@ -1464,7 +1464,7 @@ void CNet::ReportHealthCheck()
     if (!m_HealthCheckContext->GetWritesToStdout()) {
       Print("[AURA] Game at " + testConnection->m_Name + " - " + ResultText);
     }
-    if (0 == (testConnection->m_Type & ~(CONNECTION_TYPE_CUSTOM_PORT))) {
+    if (0 == (testConnection->m_Type & NOT_CONNECTION_TYPE_CUSTOM_PORT)) {
       hasDirectAttempts = true;
       if (success) anyDirectSuccess = true;
     }
@@ -1634,8 +1634,8 @@ void CNet::CheckJoinableLobbies()
     if (lobby->GetIsCheckJoinable()) {
       uint8_t checkMode = HEALTH_CHECK_ALL;
       if (!m_SupportTCPOverIPv6) {
-        checkMode &= ~HEALTH_CHECK_PUBLIC_IPV6;
-        checkMode &= ~HEALTH_CHECK_LOOPBACK_IPV6;
+        checkMode &= NOT_HEALTH_CHECK_PUBLIC_IPV6;
+        checkMode &= NOT_HEALTH_CHECK_LOOPBACK_IPV6;
       }
       if (lobby->GetIsVerbose()) {
         checkMode |= HEALTH_CHECK_VERBOSE;

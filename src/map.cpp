@@ -566,7 +566,7 @@ bool CMap::SetGameTeamsLocked(const bool nEnable)
   if (nEnable) {
     m_GameFlags |= GAMEFLAG_FIXEDTEAMS;
   } else {
-    m_GameFlags &= ~GAMEFLAG_FIXEDTEAMS;
+    m_GameFlags &= (uint8_t)~GAMEFLAG_FIXEDTEAMS;
   }
   return true;
 }
@@ -576,7 +576,7 @@ bool CMap::SetGameTeamsTogether(const bool nEnable)
   if (nEnable) {
     m_GameFlags |= GAMEFLAG_TEAMSTOGETHER;
   } else {
-    m_GameFlags &= ~GAMEFLAG_TEAMSTOGETHER;
+    m_GameFlags &= (uint8_t)~GAMEFLAG_TEAMSTOGETHER;
   }
   return true;
 }
@@ -586,7 +586,7 @@ bool CMap::SetGameAdvancedSharedUnitControl(const bool nEnable)
   if (nEnable) {
     m_GameFlags |= GAMEFLAG_UNITSHARE;
   } else {
-    m_GameFlags &= ~GAMEFLAG_UNITSHARE;
+    m_GameFlags &= (uint8_t)~GAMEFLAG_UNITSHARE;
   }
   return true;
 }
@@ -596,7 +596,7 @@ bool CMap::SetGameRandomHeroes(const bool nEnable)
   if (nEnable) {
     m_GameFlags |= GAMEFLAG_RANDOMHERO;
   } else {
-    m_GameFlags &= ~GAMEFLAG_RANDOMHERO;
+    m_GameFlags &= (uint8_t)~GAMEFLAG_RANDOMHERO;
   }
   return true;
 }
@@ -609,7 +609,7 @@ bool CMap::SetGameRandomRaces(const bool nEnable)
   if (nEnable) {
     m_GameFlags |= GAMEFLAG_RANDOMRACES;
   } else {
-    m_GameFlags &= ~GAMEFLAG_RANDOMRACES;
+    m_GameFlags &= (uint8_t)~GAMEFLAG_RANDOMRACES;
   }
   return true;
 }

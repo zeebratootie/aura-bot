@@ -77,8 +77,8 @@
     return result;
   }
 
-  uint32_t majorVersion = stol(majorVersionString);
-  uint32_t minorVersion = stol(minorVersionString);
+  uint32_t majorVersion = static_cast<uint32_t>(stol(majorVersionString));
+  uint32_t minorVersion = static_cast<uint32_t>(stol(minorVersionString));
   result = Version((uint8_t)majorVersion, (uint8_t)minorVersion);
   return result;
 }
@@ -270,7 +270,7 @@
   try {
     size_t parseEnd;
     int base = (!decimalOnly && input.size() > 2 && (input[0] == '0' && (input[1] == 'x' || input[1] == 'X'))) ? 16 : 10;
-    int64_t userValue = stoull(input, &parseEnd, base);
+    uint64_t userValue = stoull(input, &parseEnd, base);
     if (parseEnd != input.size()) {
       return result;
     }

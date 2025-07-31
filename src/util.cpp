@@ -610,12 +610,12 @@ template <Endianness endianness>
 uint16_t ByteArrayToUInt16(const uint8_t* b)
 {
   if constexpr (endianness == Endianness::kLittle) {
-    return (
+    return static_cast<uint16_t>(
       ((const uint16_t)(b[1]) << 8) |
       ((const uint16_t)(b[0]))
     );
   } else {
-    return (
+    return static_cast<uint16_t>(
       ((const uint16_t)(b[2]) << 8) |
       ((const uint16_t)(b[3]))
     );
@@ -628,14 +628,14 @@ template <Endianness endianness>
 uint32_t ByteArrayToUInt32(const uint8_t* b)
 {
   if constexpr (endianness == Endianness::kLittle) {
-    return (
+    return static_cast<uint32_t>(
       ((const uint32_t)(b[3]) << 24) |
       ((const uint32_t)(b[2]) << 16) |
       ((const uint32_t)(b[1]) << 8) |
       ((const uint32_t)(b[0]))
     );
   } else {
-    return (
+    return static_cast<uint32_t>(
       ((const uint32_t)(b[0]) << 24) |
       ((const uint32_t)(b[1]) << 16) |
       ((const uint32_t)(b[2]) << 8) |
@@ -663,12 +663,12 @@ uint16_t ByteArrayToUInt16(const string_view b, const size_t start)
     return 0;
 
   if constexpr (endianness == Endianness::kLittle) {
-    return (
+    return static_cast<uint16_t>(
       ((uint16_t)(static_cast<unsigned char>(b[start + 1])) << 8) |
       ((uint16_t)(static_cast<unsigned char>(b[start])))
     );
   } else {
-    return (
+    return static_cast<uint16_t>(
       ((uint16_t)(static_cast<unsigned char>(b[start])) << 8) |
       ((uint16_t)(static_cast<unsigned char>(b[start + 1])))
     );
@@ -685,14 +685,14 @@ uint32_t ByteArrayToUInt32(const string_view b, const size_t start)
     return 0;
 
   if constexpr (endianness == Endianness::kLittle) {
-    return (
+    return static_cast<uint32_t>(
       ((uint32_t)(static_cast<unsigned char>(b[start + 3])) << 24) |
       ((uint32_t)(static_cast<unsigned char>(b[start + 2])) << 16) |
       ((uint32_t)(static_cast<unsigned char>(b[start + 1])) << 8) |
       ((uint32_t)(static_cast<unsigned char>(b[start])))
     );
   } else {
-    return (
+    return static_cast<uint32_t>(
       ((uint32_t)(static_cast<unsigned char>(b[start])) << 24) |
       ((uint32_t)(static_cast<unsigned char>(b[start + 1])) << 16) |
       ((uint32_t)(static_cast<unsigned char>(b[start + 2])) << 8) |
@@ -711,7 +711,7 @@ uint64_t ByteArrayToUInt64(const string_view b, const size_t start)
     return 0;
 
   if constexpr (endianness == Endianness::kLittle) {
-    return (
+    return static_cast<uint64_t>(
       ((uint64_t)(static_cast<unsigned char>(b[start + 7])) << 56) |
       ((uint64_t)(static_cast<unsigned char>(b[start + 6])) << 48) |
       ((uint64_t)(static_cast<unsigned char>(b[start + 5])) << 40) |
@@ -722,7 +722,7 @@ uint64_t ByteArrayToUInt64(const string_view b, const size_t start)
       ((uint64_t)(static_cast<unsigned char>(b[start])))
     );
   } else {
-    return (
+    return static_cast<uint64_t>(
       ((uint64_t)(static_cast<unsigned char>(b[start])) << 56) |
       ((uint64_t)(static_cast<unsigned char>(b[start + 1])) << 48) |
       ((uint64_t)(static_cast<unsigned char>(b[start + 2])) << 40) |

@@ -386,7 +386,7 @@ namespace GameUser
     inline void SetKickByTicks(int64_t nKickByTicks) { m_KickByTicks = nKickByTicks; }
     inline void ClearKickByTicks() { m_KickByTicks = std::nullopt; }
     inline void AddKickReason(const uint8_t nKickReason) { m_KickReason |= nKickReason; }
-    inline void RemoveKickReason(const uint8_t nKickReason) { m_KickReason &= ~nKickReason; }
+    inline void RemoveKickReason(const uint8_t nKickReason) { m_KickReason &= (uint8_t)~nKickReason; }
     inline void ResetKickReason() { m_KickReason = GameUser::KickReason::NONE; }
     inline void KickAtLatest(int64_t nKickByTicks) {
       if (!m_KickByTicks.has_value() || nKickByTicks < m_KickByTicks.value()) {

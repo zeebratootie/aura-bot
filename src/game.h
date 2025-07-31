@@ -852,7 +852,7 @@ public:
     if (nIsDraftMode) {
       m_CustomLayout |= CUSTOM_LAYOUT_DRAFT;
     } else {
-      m_CustomLayout &= ~CUSTOM_LAYOUT_DRAFT;
+      m_CustomLayout &= (uint8_t)~CUSTOM_LAYOUT_DRAFT;
     }
   }
 

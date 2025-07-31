@@ -82,7 +82,7 @@ public:
   inline uint8_t              GetTeam() const { return m_Team; }
   inline uint8_t              GetColor() const { return m_Color; }
   inline uint8_t              GetRace() const { return m_Race; }
-  inline uint8_t              GetRaceFixed() const { return m_Race &~ SLOTRACE_SELECTABLE; }
+  inline uint8_t              GetRaceFixed() const { return m_Race & NOT_SLOTRACE_SELECTABLE; }
   inline uint8_t              GetRaceSelectable() const { return (m_Race & SLOTRACE_SELECTABLE) ? SLOTRACE_RANDOM | SLOTRACE_SELECTABLE : m_Race; }
   inline uint8_t              GetComputerType() const { return m_ComputerType; }
   inline uint8_t              GetHandicap() const { return m_Handicap; }

@@ -507,7 +507,7 @@ namespace BNETProtocol
     copy_n(packet.data() + 24, 20, mapSHA1.begin());
     gameConfig->SetUint8Vector("map.scripts_hash.sha1", mapSHA1);
 
-    uint16_t cursor = 44u;
+    size_t cursor = 44u;
 
     // skip 3 bytes - slot info size, max slots
     cursor += 3u;
@@ -544,7 +544,7 @@ namespace BNETProtocol
 
     gameConfig->SetString("map.path", mapClientPath);
 
-    cursor += static_cast<uint16_t>(mapClientPath.size()) + 1u;
+    cursor += mapClientPath.size() + 1u;
     if (cursor >= packet.size()) {
       Print("[BNETPROTO] Missing hosted game name, etc.");
       return gameConfig;
@@ -1128,6 +1128,9 @@ namespace BNETProtocol
     vector<uint8_t> statString = gameStat.Encode();
     vector<uint8_t> packet;
 
+    //Slots Free (ascii 98/110 = char b/n = 11/23 slots free) - note: do not reduce this as this is the # of UID's Warcraft III will allocate
+    uint8_t encodedMaxSlots = (uint8_t)86u + maxSupportedSlots;
+
     if (!gameName.empty() && !hostName.empty() && !mapPath.empty())
     {
       // make the rest of the packet
@@ -1149,7 +1152,7 @@ namespace BNETProtocol
       AppendBytes(packet, CustomGame, 4);                // Custom Game
       AppendByteArrayString(packet, gameName, true);         // Game Name
       packet.push_back(0);                                   // Game Password is empty
-      packet.push_back(86 + maxSupportedSlots);              // Slots Free (ascii 98/110 = char b/n = 11/23 slots free) - note: do not reduce this as this is the # of UID's Warcraft III will allocate
+      packet.push_back(encodedMaxSlots);                     // Slots Free
       AppendByteArrayString(packet, hostCounterString, false); // Host Counter - exclude null terminator
       AppendContainer(packet, statString);               // Stat String
       packet.push_back(0);                                   // Stat String null terminator (the stat string is encoded to remove all even numbers i.e. zeros)
