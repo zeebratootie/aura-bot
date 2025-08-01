@@ -79,6 +79,8 @@ constexpr uint16_t SHORT_ZERO = 0u;
 constexpr uint16_t SHORT_ONE = 1u;
 constexpr uint32_t LONG_ZERO = 0u;
 constexpr uint32_t LONG_ONE = 1u;
+constexpr uint32_t LONG_TWO = 2u;
+constexpr uint32_t LONG_THREE = 3u;
 
 template <Endianness endianness>
 [[nodiscard]] constexpr uint16_t ByteArrayToUInt16(const std::array<uint8_t, 2>& b)

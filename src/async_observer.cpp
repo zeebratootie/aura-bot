@@ -387,7 +387,9 @@ AsyncObserverStatus CAsyncObserver::Update(fd_set* fd, fd_set* send_fd, int64_t 
 uint8_t CAsyncObserver::GetChatChannel(bool forcePrivate) const
 {
   if (!m_StartedLoading) return 0;
-  return m_IsObserver && !forcePrivate ? CHAT_RECV_OBS : (3u + m_Color);
+  if (m_IsObserver && !forcePrivate) return CHAT_RECV_OBS;
+  uint32_t channel = static_cast<uint32_t>(CHAT_RECV_PRIVATE_OFFSET);
+  return static_cast<uint8_t>(channel + static_cast<uint32_t>(m_Color));
 }
 
 bool CAsyncObserver::GetIsGameOver() const
@@ -747,7 +749,7 @@ void CAsyncObserver::EventChat(const CIncomingMessageOrSettingsView& incomingCha
     if (shouldRelay && m_IsObserver) {
       if (relaySuccess && targetType != CHAT_RECV_OBS) {
         SendChat("[All] Chat is DISABLED. You are in spectator mode, and may only chat with other spectators.");
-      } else (!relaySuccess) {
+      } else if (!relaySuccess) {
         SendChat("You are in spectator mode, and may only chat with other spectators. No other spectators found.");
       }
     }
@@ -913,7 +915,7 @@ optional<double> CAsyncObserver::GetClientFrameRate() const
   if (timeStamps.size() < 2) return nullopt;
   int64_t deltaTicks = timeStamps.back() - timeStamps.front();
   if (deltaTicks < 0) return nullopt;
-  return (double)((timeStamps.size() - 1) * m_Latency * (int64_t)(m_CheckSumsTimeStamps.GetRate())) / (double)(deltaTicks);
+  return (double)((int64_t)(timeStamps.size() - 1) * m_Latency * (int64_t)(m_CheckSumsTimeStamps.GetRate())) / (double)(deltaTicks);
 }
 
 uint8_t CAsyncObserver::GetClientMissingLog() const
