@@ -1464,11 +1464,11 @@ void CNet::ReportHealthCheck()
     if (!m_HealthCheckContext->GetWritesToStdout()) {
       Print("[AURA] Game at " + testConnection->m_Name + " - " + ResultText);
     }
-    if (TINY_ZERO == TINY_AND(testConnection->m_Type, NOT_CONNECTION_TYPE_CUSTOM_PORT)) {
+    if (TINY_ZERO == AND_TINY(testConnection->m_Type, NOT_CONNECTION_TYPE_CUSTOM_PORT)) {
       hasDirectAttempts = true;
       if (success) anyDirectSuccess = true;
     }
-    if (TINY_ZERO != TINY_AND(testConnection->m_Type, (CONNECTION_TYPE_IPV6))) {
+    if (TINY_ZERO != AND_TINY(testConnection->m_Type, (CONNECTION_TYPE_IPV6))) {
       if (success) isIPv6Reachable = true;
     }
     if (m_HealthCheckVerbose && !success) {
@@ -1759,7 +1759,7 @@ optional<tuple<string, string, uint16_t, string>> CNet::ParseURL(const string& a
 optional<sockaddr_storage> CNet::ParseAddress(const string& address, const uint8_t inputMode)
 {
   std::optional<sockaddr_storage> result;
-  if (TINY_ZERO != TINY_AND(inputMode, ACCEPT_IPV4)) {
+  if (TINY_ZERO != AND_TINY(inputMode, ACCEPT_IPV4)) {
     sockaddr_in addr4;
     memset(&addr4, 0, sizeof(addr4));
     addr4.sin_family = AF_INET;
@@ -1773,7 +1773,7 @@ optional<sockaddr_storage> CNet::ParseAddress(const string& address, const uint8
     }
   }
 
-  if (TINY_ZERO != TINY_AND(inputMode, ACCEPT_IPV6)) {
+  if (TINY_ZERO != AND_TINY(inputMode, ACCEPT_IPV6)) {
     sockaddr_in6 addr6;
     memset(&addr6, 0, sizeof(addr6));
     addr6.sin6_family = AF_INET6;
@@ -1843,12 +1843,12 @@ bool CNet::ResolveHostName(sockaddr_storage& address, const uint8_t acceptFamily
     SetAddressPort(&address, port);
     return true;
   }
-  if (TINY_ZERO != TINY_AND(acceptFamily, ACCEPT_IPV4)) {
+  if (TINY_ZERO != AND_TINY(acceptFamily, ACCEPT_IPV4)) {
     if (ResolveHostNameInner(address, hostName, port, AF_INET, m_IPv4DNSCache)) {
       return true;
     }
   }
-  if (TINY_ZERO != TINY_AND(acceptFamily, ACCEPT_IPV6)) {
+  if (TINY_ZERO != AND_TINY(acceptFamily, ACCEPT_IPV6)) {
     if (ResolveHostNameInner(address, hostName, port, AF_INET6, m_IPv6DNSCache)) {
       return true;
     }
