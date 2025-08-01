@@ -156,12 +156,21 @@ void CSHA1::Update(const uint8_t* data, size_t len)
 {
   size_t i = 0, j = 0;
 
+#if defined(__GNUC__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wconversion"
+#endif
+
   j = (m_count[0] >> 3) & 63;
 
   if ((m_count[0] += len << 3) < (len << 3))
     m_count[1]++;
 
   m_count[1] += (len >> 29);
+
+#if defined(__GNUC__)
+#pragma GCC diagnostic pop
+#endif
 
   if ((j + len) > 63)
   {

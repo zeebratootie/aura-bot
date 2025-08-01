@@ -66,6 +66,10 @@
 
 namespace
 {
+#if defined(__GNUC__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wsign-conversion"
+#endif
   /// zlib's CRC32 polynomial
   const uint32_t Polynomial = 0xEDB88320;
 
@@ -1252,4 +1256,7 @@ namespace CRC32
     };
 #endif // NO_LUT
   };
+#if defined(__GNUC__)
+#pragma GCC diagnostic pop
+#endif
 };
