@@ -98,7 +98,7 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CNetConfig* NetConfig)
     m_Win32LocaleID = 10250;
   } else {
     try {
-      m_Win32LocaleID  = stoul(m_Win32Locale);
+      m_Win32LocaleID  = static_cast<uint32_t>(stoul(m_Win32Locale));
     } catch (...) {
       m_Win32Locale = "system";
       m_Win32LocaleID = 10250;
@@ -191,7 +191,8 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CNetConfig* NetConfig)
   m_WatchableDisplayPriority   = CFG.GetEnum<RealmBroadcastDisplayPriority>(m_CFGKeyPrefix + "game_list.watchable.display.priority", TO_ARRAY("none", "low", "high"), m_WatchableDisplayPriority);
 
   m_ConsoleLogChat         = CFG.GetBool(m_CFGKeyPrefix + "logs.console.chat", true);
-  m_FloodQuotaLines        = CFG.GetUint8(m_CFGKeyPrefix + "flood.lines", 5) - 1;
+  m_FloodQuotaLines        = CFG.GetUint8(m_CFGKeyPrefix + "flood.lines", 5);
+  m_FloodQuotaLines        = static_cast<uint8_t>(static_cast<uint32_t>(m_FloodQuotaLines) - LONG_ONE);
   m_FloodQuotaTime         = CFG.GetUint8(m_CFGKeyPrefix + "flood.time", 5);
   m_VirtualLineLength      = CFG.GetUint16(m_CFGKeyPrefix + "flood.wrap", 40);
   m_MaxLineLength          = CFG.GetUint16(m_CFGKeyPrefix + "flood.max_size", 160);
@@ -525,7 +526,8 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CRealmConfig* nRootConfig, uint8_t nSer
   m_MaxUploadSize          = CFG.GetUint32(m_CFGKeyPrefix + "map_transfers.max_size", m_MaxUploadSize);
 
   m_ConsoleLogChat         = CFG.GetBool(m_CFGKeyPrefix + "logs.console.chat", m_ConsoleLogChat);
-  m_FloodQuotaLines        = CFG.GetUint8(m_CFGKeyPrefix + "flood.lines", m_FloodQuotaLines + 1) - 1;
+  m_FloodQuotaLines        = CFG.GetUint8(m_CFGKeyPrefix + "flood.lines", 5);
+  m_FloodQuotaLines        = static_cast<uint8_t>(static_cast<uint32_t>(m_FloodQuotaLines) - LONG_ONE);
   m_FloodQuotaTime         = CFG.GetUint8(m_CFGKeyPrefix + "flood.time", m_FloodQuotaTime);
   m_VirtualLineLength      = CFG.GetUint16(m_CFGKeyPrefix + "flood.wrap", m_VirtualLineLength);
   m_MaxLineLength          = CFG.GetUint16(m_CFGKeyPrefix + "flood.max_size", m_MaxLineLength);

@@ -238,7 +238,7 @@ namespace GameProtocol
       cursor += thisSize;
       --removeCount;
     }
-    data.erase(data.begin(), data.begin() + cursor);
+    data.erase(data.begin(), data.begin() + (ptrdiff_t)cursor);
   }
 
   void PacketWrapper::Merge(const PacketWrapper& other)

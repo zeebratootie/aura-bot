@@ -952,7 +952,7 @@ void CGameUser::EventGProxyChangeKey(const uint32_t key)
 double CGameUser::GetAPM() const
 {
   if (m_Game.get().GetEffectiveTicks() == 0) return 0.;
-  return static_cast<double>(m_ActionCounter) * 60000. / m_Game.get().GetEffectiveTicks();
+  return static_cast<double>(m_ActionCounter) * 60000. / static_cast<double>(m_Game.get().GetEffectiveTicks());
 }
 
 double CGameUser::GetRecentAPM() const

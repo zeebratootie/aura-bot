@@ -226,6 +226,22 @@ inline uint16_t OR_SHORT(uint16_t a, uint16_t b, uint16_t c, uint16_t d) {
   return static_cast<uint16_t>(static_cast<uint32_t>(a) | static_cast<uint32_t>(b) | static_cast<uint32_t>(c) | static_cast<uint32_t>(d));
 }
 
+inline uint8_t PLUS_TINY(uint8_t a, uint8_t b) {
+  return static_cast<uint8_t>(static_cast<uint32_t>(a) + static_cast<uint32_t>(b));
+}
+
+inline uint16_t PLUS_SHORT(uint16_t a, uint16_t b) {
+  return static_cast<uint16_t>(static_cast<uint32_t>(a) + static_cast<uint32_t>(b));
+}
+
+inline uint8_t MINUS_TINY(uint8_t a, uint8_t b) {
+  return static_cast<uint8_t>(static_cast<uint32_t>(a) - static_cast<uint32_t>(b));
+}
+
+inline uint16_t MINUS_SHORT(uint16_t a, uint16_t b) {
+  return static_cast<uint16_t>(static_cast<uint32_t>(a) - static_cast<uint32_t>(b));
+}
+
 // time
 
 inline int64_t GetTime()

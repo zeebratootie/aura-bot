@@ -1170,12 +1170,12 @@ size_t CGame::GetNumSpectators() const
 
 uint8_t CGame::GetNumJoinedPlayersOrFake() const
 {
-  return GetNumJoinedPlayers() + GetNumFakePlayers();
+  return PLUS_TINY(GetNumJoinedPlayers(), GetNumFakePlayers());
 }
 
 uint8_t CGame::GetNumJoinedObserversOrFake() const
 {
-  return GetNumJoinedObservers() + GetNumFakeObservers();
+  return PLUS_TINY(GetNumJoinedObservers() + GetNumFakeObservers());
 }
 
 uint8_t CGame::GetNumJoinedPlayersOrFakeUsers() const
@@ -1649,7 +1649,7 @@ void CGame::UpdateLoaded()
           // Avoid showing everyone as lagging
           m_Users[bestLaggerIndex]->SetLagging(false);
           m_Users[bestLaggerIndex]->SetStartedLaggingTicks(0);
-          laggingPlayers.erase(laggingPlayers.begin() + (m_Users.size() - 1 - bestLaggerIndex));
+          laggingPlayers.erase(laggingPlayers.begin() + static_cast<ptrdiff_t>(m_Users.size() - 1 - bestLaggerIndex));
         }
 
         if (!laggingPlayers.empty()) {
@@ -1946,7 +1946,7 @@ bool CGame::Update(fd_set* fd, fd_set* send_fd)
 
   // start the gameover timer if there's only a configured number of players left
   // do not count observers, but fake users are counted regardless
-  uint8_t RemainingPlayers = GetNumJoinedPlayersOrFakeUsers() - m_JoinedVirtualHosts;
+  uint8_t RemainingPlayers = MINUS_TINY(GetNumJoinedPlayersOrFakeUsers(), m_JoinedVirtualHosts);
   if (RemainingPlayers != m_StartPlayers && !GetIsGameOverTrusted() && (m_GameLoading || m_GameLoaded)) {
     if (RemainingPlayers == 0) {
       LOG_APP_IF(LogLevel::kInfo, Concat("gameover timer started: 0 p | ", ToDecString(GetNumJoinedObservers()), " obs | 0 fake"));
@@ -2203,7 +2203,7 @@ void CGame::SendMulti(const std::vector<uint8_t>& UIDs, const std::vector<uint8_
     if (m_JoinInProgressVirtualUser.has_value() && UID == m_JoinInProgressVirtualUser->GetUID()) {
       if (m_GameLoaded && (m_BufferingEnabled & BUFFERING_ENABLED_PLAYING)) {
         GameFrame& frame = m_GameHistory->m_PlayingBuffer.emplace_back(GAME_FRAME_TYPE_CHAT);
-        frame.m_Bytes = vector<uint8_t>(begin(data), begin(data) + data.size());
+        frame.m_Bytes = vector<uint8_t>(begin(data), begin(data) + static_cast<ptrdiff_t>(data.size()));
       }
     } else {
       Send(UID, data);
@@ -2240,7 +2240,7 @@ bool CGame::SendAllAsChat(const std::vector<uint8_t>& data) const
 
   if (m_GameLoaded && (m_BufferingEnabled & BUFFERING_ENABLED_PLAYING)) {
     GameFrame& frame = m_GameHistory->m_PlayingBuffer.emplace_back(GAME_FRAME_TYPE_CHAT);
-    frame.m_Bytes = vector<uint8_t>(begin(data), begin(data) + data.size());
+    frame.m_Bytes = vector<uint8_t>(begin(data), begin(data) + static_cast<ptrdiff_t>(data.size()));
   }
 
   return success;
@@ -2261,7 +2261,7 @@ bool CGame::SendObserversAsChat(const std::vector<uint8_t>& data) const
 
   if (m_BufferingEnabled & BUFFERING_ENABLED_PLAYING) {
     GameFrame& frame = m_GameHistory->m_PlayingBuffer.emplace_back(GAME_FRAME_TYPE_CHAT);
-    frame.m_Bytes = vector<uint8_t>(begin(data), begin(data) + data.size());
+    frame.m_Bytes = vector<uint8_t>(begin(data), begin(data) + static_cast<ptrdiff_t>(data.size()));
   }
 
   return success;
@@ -2813,12 +2813,12 @@ bool CGame::SetLayoutCompact()
     return false;
   }
 
-  const uint8_t controllerCount = GetNumControllers();
+  const uint32_t controllerCount = GetNumControllers();
   if (controllerCount < 2) {
     return false;
   }
   //const uint8_t extraPlayers = controllerCount % largestTeam.second;
-  const uint8_t expectedFullTeams = controllerCount / largestTeam.second;
+  const uint8_t expectedFullTeams = static_cast<uint8_t>(controllerCount / (uint32_t)largestTeam.second);
   if (expectedFullTeams < 2) {
     // Compacting is used for NvNvN...
     return false;
@@ -2851,9 +2851,9 @@ bool CGame::SetLayoutCompact()
     if (i < autoTeamOffset) {
       teamSizes[i] = largestTeam.second;
     } else if (i == autoTeamOffset) {
-      teamSizes[i] = controllerCount - (largestTeam.second * autoTeamOffset);
+      teamSizes[i] = (uint8_t)(controllerCount - ((uint32_t)largestTeam.second * (uint32_t)autoTeamOffset));
     } else {
-      teamSizes[i] = 0;
+      teamSizes[i] = 0u;
     }
   }
 

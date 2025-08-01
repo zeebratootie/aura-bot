@@ -516,7 +516,7 @@ namespace BNETProtocol
     while (slotIndex < maxSlots) {
       vector<uint8_t> slotInfo = vector<uint8_t>(9, 0);
       copy_n(packet.data() + cursor, 9, slotInfo.begin());
-      gameConfig->SetUint8Vector("map.slot_" + ToDecString(slotIndex + 1), slotInfo);
+      gameConfig->SetUint8Vector("map.slot_" + ToDecString(ToBaseOne(slotIndex)), slotInfo);
       ++slotIndex;
       cursor += 9;
     }

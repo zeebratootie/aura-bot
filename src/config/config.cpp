@@ -516,7 +516,7 @@ uint8_t CConfig::GetSlot(const string& key, uint8_t maxSlots, uint8_t defaultVal
   if (maybeResult.value() <= 0 || maxSlots < maybeResult.value()) {
     CONFIG_ERROR(key, defaultValue);
   }
-  SUCCESS(maybeResult.value() - TINY_ONE);
+  SUCCESS(static_cast<uint8_t>(maybeResult.value() - TINY_ONE));
 }
 
 uint8_t CConfig::GetPlayerCount(const string& key, uint8_t defaultValue)
