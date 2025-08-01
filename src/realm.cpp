@@ -227,7 +227,7 @@ void CRealm::UpdateConnected(fd_set* fd, fd_set* send_fd)
               std::vector<uint8_t> relayPacket = {GameProtocol::Magic::W3FW_HEADER, 0, 0, 0};
               std::string ipString = m_Socket->GetIPString();
               AppendByteArrayString(relayPacket, ipString, true);
-              AppendNumberBE(relayPacket, static_cast<uint16_t>(6112u));
+              AppendNumberBE(relayPacket, m_Socket->GetRemotePort());
               AppendNumberLE(relayPacket, (uint32_t)m_AuthGameVersion.second);
               AppendByteArrayString(relayPacket, packet, false);
               AssignLength(relayPacket);
@@ -756,7 +756,7 @@ void CRealm::ProcessChatEvent(const uint32_t eventType, string_view fromUser, st
 uint8_t CRealm::CountChatQuota()
 {
   if (m_ChatQuotaInUse.empty()) return 0;
-  int64_t minTicks = m_Aura->GetLoopTicks() - static_cast<int64_t>(m_Config.m_FloodQuotaTime) * 1000 - 300; // 300 ms hardcoded latency
+  int64_t minTicks = m_Aura->GetLoopTicks() - signed_cast<int64_t>(m_Config.m_FloodQuotaTime) * 1000 - 300; // 300 ms hardcoded latency
   uint16_t spentQuota = 0;
   for (auto it = begin(m_ChatQuotaInUse); it != end(m_ChatQuotaInUse);) {
     if ((*it).first < minTicks) {
@@ -768,7 +768,7 @@ uint8_t CRealm::CountChatQuota()
     }
   }
   if (0xFF < spentQuota) return 0xFF;
-  return static_cast<uint8_t>(spentQuota);
+  return integer_cast_lossy<uint8_t>(spentQuota);
 }
 
 bool CRealm::CheckWithinChatQuota(CQueuedChatMessage* message)
@@ -1595,7 +1595,7 @@ bool CRealm::SendGameRefresh(shared_ptr<CGame> game)
   // when a user joins a game we can obtain the ID from the received host counter
   // note: LAN broadcasts use an ID of 0, IDs 1 to 15 are reserved
   // battle.net refreshes use IDs of 16-255
-  const uint32_t hostCounter = game->GetHostCounter() | (game->GetIsMirror() ? 0 : (static_cast<uint32_t>(m_PublicServerID) << 24));
+  const uint32_t hostCounter = game->GetHostCounter() | (game->GetIsMirror() ? 0 : (integer_cast<uint32_t>(m_PublicServerID) << 24));
 
   bool changedAny = (
     m_LastGamePort != connectPort ||
@@ -1626,7 +1626,7 @@ bool CRealm::SendGameRefresh(shared_ptr<CGame> game)
   if (!changedAny) {
     DPRINT_IF(LogLevel::kTrace2, GetLogPrefix() + "game refreshed");
   } else {
-    if (!m_Config.m_IsHostOften && !m_Aura->GetTicksIsFirstOrAfterDelay(m_GameBroadcastStartTicks, static_cast<int64_t>(REALM_HOST_COOLDOWN_TICKS))) {
+    if (!m_Config.m_IsHostOften && !m_Aura->GetTicksIsFirstOrAfterDelay(m_GameBroadcastStartTicks, REALM_HOST_COOLDOWN_TICKS)) {
       // Still in cooldown
       DPRINT_IF(LogLevel::kTrace, GetLogPrefix() + "not registering game... still in cooldown");
       return false;

@@ -77,7 +77,7 @@ CQueuedActionsFrame::~CQueuedActionsFrame() = default;
 
 void CQueuedActionsFrame::AddAction(CIncomingAction&& action)
 {
-  const uint16_t actionSize = static_cast<uint16_t>(action.GetOutgoingLength());
+  const size_t actionSize = action.GetOutgoingLength();
 
   // we aren't allowed to send more than 1460 bytes in a single packet but it's possible we might have more than that many bytes waiting in the queue
   // check if adding the next action to the sub actions queue would put us over the limit
@@ -89,12 +89,12 @@ void CQueuedActionsFrame::AddAction(CIncomingAction&& action)
       activeQueue = &actions.emplace_back();
     }
     bufferSize = actionSize;
-  } else */if (bufferSize + actionSize > 1452) {
+  } else */if (integer_cast<size_t>(bufferSize) + actionSize > 1452u) {
     activeQueue = &actions.emplace_back();
     activeQueue->reserve(DEFAULT_ACTIONS_PER_FRAME);
-    bufferSize = actionSize;
+    bufferSize = integer_cast_lossy<uint16_t>(actionSize);
   } else {
-    bufferSize += actionSize;
+    bufferSize = integer_cast_lossy<uint16_t>(integer_cast<size_t>(bufferSize) + actionSize);
   }
   activeQueue->push_back(std::move(action));
 }
@@ -256,7 +256,7 @@ void GameHistory::UpdateSpectatorActions(int64_t spectatorDelay /* seconds */)
   }
 
   int64_t gameDurationWanted = m_Duration - m_SpectatorDuration - spectatorDelay;
-  auto it = begin(m_PlayingBuffer) + static_cast<ptrdiff_t>(m_SpectatorOffset);
+  auto it = begin(m_PlayingBuffer) + signed_cast<ptrdiff_t>(m_SpectatorOffset);
   auto itEnd = end(m_PlayingBuffer);
   while (it != itEnd && (m_SpectatorActiveLatency <= gameDurationWanted || it->GetType() == GAME_FRAME_TYPE_LATENCY)) {
     //Print(GetLogPrefix() + "sending " + it->GetTypeName() + " frame");

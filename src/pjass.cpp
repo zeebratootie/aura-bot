@@ -46,7 +46,7 @@ pair<bool, string> ParseJASSFiles(const vector<filesystem::path>& filePaths, con
   char buffer[1024];
   int maxOutSize = sizeof(buffer);
   int outSize = 0;
-  int fileCount = static_cast<int>(filePaths.size());
+  int fileCount = signed_cast_lossy<int>(filePaths.size());
   if (fileCount <= 0) {
     details = "Invalid invocation";
     return make_pair(result, details);
@@ -157,7 +157,7 @@ pair<bool, string> ParseJASS(string commonJ, string blizzardJ, string war3mapJ, 
     return make_pair(result, details);
   }
 
-  const int bufferSizes[] = {static_cast<int>(commonSize), static_cast<int>(blizzardSize), static_cast<int>(war3mapSize)};
+  const int bufferSizes[] = {signed_cast_lossy<int>(commonSize), signed_cast_lossy<int>(blizzardSize), signed_cast_lossy<int>(war3mapSize)};
   char* targets[] = {commonJ.data(), blizzardJ.data(), war3mapJ.data()};
   char* fixedFlags[] = {flagString.data(), flagString.data(), flagString.data()};
 

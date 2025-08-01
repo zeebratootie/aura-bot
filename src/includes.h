@@ -186,60 +186,102 @@ std::string::size_type constexpr GetStringLength(const char* str)
 #define WriteUint32LE WriteUint32<Endianness::kLittle>
 #define WriteUint32BE WriteUint32<Endianness::kBig>
 
+template <typename To, typename From>
+constexpr void validate_integral_opposite_signedness() {
+  static_assert(std::is_integral_v<To>, "Target type must be integral");
+  static_assert(std::is_integral_v<From>, "Source type must be integral");
+  static_assert(std::is_signed_v<To> != std::is_signed_v<From>,
+                "Types must have opposite signedness");
+}
+
+template <typename To, typename From>
+constexpr void validate_integral_same_signedness() {
+  static_assert(std::is_integral_v<To>, "Target type must be integral");
+  static_assert(std::is_integral_v<From>, "Source type must be integral");
+  static_assert(std::is_signed_v<To> == std::is_signed_v<From>,
+                "Types must have the same signedness");
+}
+
+template <typename To, typename From>
+constexpr To signed_cast(From value) {
+  validate_integral_opposite_signedness<To, From>();
+  static_assert(sizeof(To) >= sizeof(From), "Target type must be large enough to hold source value");
+  return static_cast<To>(value);
+}
+
+template <typename To, typename From>
+constexpr To signed_cast_lossy(From value) {
+  validate_integral_opposite_signedness<To, From>();
+  return static_cast<To>(value);
+}
+
+template <typename To, typename From>
+constexpr To integer_cast(From value) {
+  validate_integral_same_signedness<To, From>();
+  static_assert(sizeof(To) >= sizeof(From), "Target type must be large enough to hold source value");
+  return static_cast<To>(value);
+}
+
+template <typename To, typename From>
+constexpr To integer_cast_lossy(From value) {
+  validate_integral_same_signedness<To, From>();
+  return static_cast<To>(value);
+}
+
 inline void SET_TINY(uint8_t& a, uint8_t b) {
-  a = static_cast<uint8_t>(static_cast<uint32_t>(a) | static_cast<uint32_t>(b));
+  a = integer_cast_lossy<uint8_t>(integer_cast<uint32_t>(a) | integer_cast<uint32_t>(b));
 }
 
 inline void UNSET_TINY(uint8_t& a, uint8_t b) {
-  a = static_cast<uint8_t>(static_cast<uint32_t>(a) & ~static_cast<uint32_t>(b));
+  a = integer_cast_lossy<uint8_t>(integer_cast<uint32_t>(a) & ~integer_cast<uint32_t>(b));
 }
 
 inline uint8_t OR_TINY(uint8_t a, uint8_t b) {
-  return static_cast<uint8_t>(static_cast<uint32_t>(a) | static_cast<uint32_t>(b));
+  return integer_cast_lossy<uint8_t>(integer_cast<uint32_t>(a) | integer_cast<uint32_t>(b));
 }
 
 inline uint8_t AND_TINY(uint8_t a, uint8_t b) {
-  return static_cast<uint8_t>(static_cast<uint32_t>(a) & static_cast<uint32_t>(b));
+  return integer_cast_lossy<uint8_t>(integer_cast<uint32_t>(a) & integer_cast<uint32_t>(b));
 }
 
 inline void SET_SHORT(uint16_t& a, uint16_t b) {
-  a = static_cast<uint16_t>(static_cast<uint32_t>(a) | static_cast<uint32_t>(b));
+  a = integer_cast_lossy<uint16_t>(integer_cast<uint32_t>(a) | integer_cast<uint32_t>(b));
 }
 
 inline void UNSET_SHORT(uint16_t& a, uint16_t b) {
-  a = static_cast<uint16_t>(static_cast<uint32_t>(a) & ~static_cast<uint32_t>(b));
+  a = integer_cast_lossy<uint16_t>(integer_cast<uint32_t>(a) & ~integer_cast<uint32_t>(b));
 }
 
 inline uint16_t OR_SHORT(uint16_t a, uint16_t b) {
-  return static_cast<uint16_t>(static_cast<uint32_t>(a) | static_cast<uint32_t>(b));
+  return integer_cast_lossy<uint16_t>(integer_cast<uint32_t>(a) | integer_cast<uint32_t>(b));
 }
 
 inline uint16_t AND_SHORT(uint16_t a, uint16_t b) {
-  return static_cast<uint16_t>(static_cast<uint32_t>(a) & static_cast<uint32_t>(b));
+  return integer_cast_lossy<uint16_t>(integer_cast<uint32_t>(a) & integer_cast<uint32_t>(b));
 }
 
 inline uint16_t OR_SHORT(uint16_t a, uint16_t b, uint16_t c) {
-  return static_cast<uint16_t>(static_cast<uint32_t>(a) | static_cast<uint32_t>(b) | static_cast<uint32_t>(c));
+  return integer_cast_lossy<uint16_t>(integer_cast<uint32_t>(a) | integer_cast<uint32_t>(b) | integer_cast<uint32_t>(c));
 }
 
 inline uint16_t OR_SHORT(uint16_t a, uint16_t b, uint16_t c, uint16_t d) {
-  return static_cast<uint16_t>(static_cast<uint32_t>(a) | static_cast<uint32_t>(b) | static_cast<uint32_t>(c) | static_cast<uint32_t>(d));
+  return integer_cast_lossy<uint16_t>(integer_cast<uint32_t>(a) | integer_cast<uint32_t>(b) | integer_cast<uint32_t>(c) | integer_cast<uint32_t>(d));
 }
 
 inline uint8_t PLUS_TINY(uint8_t a, uint8_t b) {
-  return static_cast<uint8_t>(static_cast<uint32_t>(a) + static_cast<uint32_t>(b));
+  return integer_cast_lossy<uint8_t>(integer_cast<uint32_t>(a) + integer_cast<uint32_t>(b));
 }
 
 inline uint16_t PLUS_SHORT(uint16_t a, uint16_t b) {
-  return static_cast<uint16_t>(static_cast<uint32_t>(a) + static_cast<uint32_t>(b));
+  return integer_cast_lossy<uint16_t>(integer_cast<uint32_t>(a) + integer_cast<uint32_t>(b));
 }
 
 inline uint8_t MINUS_TINY(uint8_t a, uint8_t b) {
-  return static_cast<uint8_t>(static_cast<uint32_t>(a) - static_cast<uint32_t>(b));
+  return integer_cast_lossy<uint8_t>(integer_cast<uint32_t>(a) - integer_cast<uint32_t>(b));
 }
 
 inline uint16_t MINUS_SHORT(uint16_t a, uint16_t b) {
-  return static_cast<uint16_t>(static_cast<uint32_t>(a) - static_cast<uint32_t>(b));
+  return integer_cast_lossy<uint16_t>(integer_cast<uint32_t>(a) - integer_cast<uint32_t>(b));
 }
 
 // time

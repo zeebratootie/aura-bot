@@ -1307,17 +1307,17 @@ uint8_t CNet::RequestUPnP(const NetProtocol protocolCode, const uint16_t externa
 
   switch (protocolCode) {
     case NetProtocol::kTCP: {
-      m_UPnPTCPCache[make_pair(externalPort, internalPort)] = TimedUint8(m_Aura->GetLoopTime(), success);
+      m_UPnPTCPCache[make_pair(externalPort, internalPort)] = TimedUint8(m_Aura->GetLoopTime(), integer_cast_lossy<uint8_t>(success));
       break;
     }
     case NetProtocol::kUDP: {
-      m_UPnPUDPCache[make_pair(externalPort, internalPort)] = TimedUint8(m_Aura->GetLoopTime(), success);
+      m_UPnPUDPCache[make_pair(externalPort, internalPort)] = TimedUint8(m_Aura->GetLoopTime(), integer_cast_lossy<uint8_t>(success));
       break;
     }
     IGNORE_ENUM_LAST(NetProtocol)
   }
 
-  return static_cast<uint8_t>(success);
+  return integer_cast_lossy<uint8_t>(success);
 }
 #endif
 

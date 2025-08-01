@@ -3525,7 +3525,7 @@ MapTransferStatus CGame::NextSendMap(CConnection* user, const uint8_t UID, MapTr
     }
 
     const vector<uint8_t> packet = GameProtocol::SEND_W3GS_MAPPART(GetHostUID(), UID, lastOffsetEnd, cachedChunk);
-    uint32_t chunkSendSize = static_cast<uint32_t>(packet.size() - 18);
+    uint32_t chunkSendSize = integer_cast_lossy<uint32_t>(packet.size() - 18);
     mapTransfer.SetLastSentOffsetEnd(lastOffsetEnd + chunkSendSize);
 
     // Update CRC32 for map parts sent to this user
@@ -5076,7 +5076,7 @@ void CGame::SendChatMessage(const GameUser::CGameUser* user, const CIncomingMess
     return;
   }
 
-  uint8_t inGameChannel = (uint8_t)chatMessage.GetInGameChannel();
+  uint8_t inGameChannel = chatMessage.GetInGameChannel();
 
   // Never allow observers/referees to send private messages to users.
   // Referee rulings/warnings are expected to be public.
@@ -6243,7 +6243,7 @@ void CGame::EventUserChat(GameUser::CGameUser* user, const CIncomingMessageOrSet
   }
 
   // relay the chat message to other users
-  const uint8_t targetType = static_cast<uint8_t>(incomingChatMessage.GetInGameChannel());
+  const uint8_t targetType = incomingChatMessage.GetInGameChannel();
   string_view textContent = incomingChatMessage.GetMessage();
   assert((!textContent.empty()) && "Chat message cannot be empty");
   const bool muteAll = !isLobbyChat && m_MuteAll;
@@ -8303,7 +8303,7 @@ uint8_t CGame::GetHiddenHostUID() const
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_int_distribution<> distribution(1, static_cast<int>(availableUIDs.size()));
-    return availableUIDs[distribution(gen) - 1];
+    return availableUIDs[signed_cast<size_t>(distribution(gen) - 1)];
   }
 
   return fallbackUID;

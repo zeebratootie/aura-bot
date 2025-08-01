@@ -180,7 +180,7 @@ void CPacked::Decompress(const bool allBlocks)
     uint32_t RawGameVersion;
 		ISS.read((char *)&m_War3Identifier, 4);	// version identifier
 		ISS.read((char *)&RawGameVersion, 4);		// version number
-    m_War3Version = GAMEVER(1, static_cast<uint8_t>(RawGameVersion));
+    m_War3Version = GAMEVER(1u, integer_cast_lossy<uint8_t>(RawGameVersion));
 	}
 
 	ISS.read((char *)&m_BuildNumber, 2);			// build number
@@ -334,7 +334,7 @@ void CPacked::Compress(const bool TFT)
     AppendNumberLE(Header, ProductID_ROC_LE);
   }
 
-	AppendNumberLE(Header, static_cast<uint32_t>(m_War3Version.second));
+	AppendNumberLE(Header, integer_cast<uint32_t>(m_War3Version.second));
 	AppendNumberLE(Header, m_BuildNumber);
 	AppendNumberLE(Header, m_Flags);
 	AppendNumberLE(Header, m_ReplayLength);

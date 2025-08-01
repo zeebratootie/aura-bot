@@ -117,7 +117,7 @@ namespace GPSProtocol
   vector<uint8_t> SEND_GPSS_SUPPORT_EXTENDED(const int64_t ticks, const uint32_t gameID)
   {
     vector<uint8_t> packet = {GPSProtocol::Magic::GPS_HEADER, GPSProtocol::Magic::SUPPORT_EXTENDED, 0, 0};
-    const uint32_t seconds = static_cast<uint32_t>(ticks / 1000);
+    const uint32_t seconds = signed_cast_lossy<uint32_t>(ticks / 1000);
     AppendNumberLE(packet, seconds);
     if (gameID > 0) {
       AppendNumberLE(packet, gameID);

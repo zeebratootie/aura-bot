@@ -267,13 +267,14 @@ uint8_t CConfig::CheckRealmKey(const string& key) const
   if (realmNum.empty() || realmNum.length() > 3) {
     return 0xFF;
   }
-  int32_t value = 0;
-  try {
-    value = stoi(realmNum);
-  } catch (...) {
+  optional<int64_t> maybeValue = ParseInt64(realmNum);
+  if (!maybeValue.has_value()) {
+    return 0xFF;
   }
-  if (1 <= value && value <= 120)
-    return static_cast<uint8_t>(value - 1);
+  int64_t value = *maybeValue;
+  if (1 <= value && value <= 120) {
+    return signed_cast_lossy<uint8_t>(value - 1);
+  }
 
   return 0xFF;
 }
@@ -516,7 +517,7 @@ uint8_t CConfig::GetSlot(const string& key, uint8_t maxSlots, uint8_t defaultVal
   if (maybeResult.value() <= 0 || maxSlots < maybeResult.value()) {
     CONFIG_ERROR(key, defaultValue);
   }
-  SUCCESS(static_cast<uint8_t>(maybeResult.value() - TINY_ONE));
+  SUCCESS(signed_cast_lossy<uint8_t>(maybeResult.value() - TINY_ONE));
 }
 
 uint8_t CConfig::GetPlayerCount(const string& key, uint8_t defaultValue)
@@ -650,7 +651,7 @@ set<uint8_t> CConfig::GetUint8Set(const string& key, char separator)
     if (value > 0xFF) {
       errored = true;
     } else {
-      uniqueEntries.insert(static_cast<uint8_t>(value));
+      uniqueEntries.insert(integer_cast_lossy<uint8_t>(value));
     }
   }
   END(key, uniqueEntries);

@@ -351,6 +351,7 @@ bool ReplaceText(std::string& input, const std::string& fragment, const std::str
 [[nodiscard]] float LinearInterpolation(const float x, const float x1, const float x2, const float y1, const float y2);
 [[nodiscard]] size_t DoubleToSize(double x);
 [[nodiscard]] uint64_t DoubleToUnsigned(double x);
+
 /*
 [[nodiscard]] float HyperbolicInterpolation(const float x, const float x1, const float x2, const float y1, const float y2);
 [[nodiscard]] float ExponentialInterpolation(const float x, const float x1, const float x2, const float y1, const float y2);

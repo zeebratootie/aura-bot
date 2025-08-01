@@ -83,7 +83,7 @@ void CGProxyServer::Init(uint8_t UID, uint32_t version, uint16_t port, uint8_t e
   UpdateEmptyActions(emptyActions);
   if (m_Version >= 2 && supportsExtended) {
     m_SupportsExtended = supportsExtended;
-    StartExtendedHandShake(extendedWaitTicks, static_cast<uint32_t>(gameID));
+    StartExtendedHandShake(extendedWaitTicks, signed_cast_lossy<uint32_t>(gameID));
   }
 }
 

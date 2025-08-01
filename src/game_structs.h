@@ -146,11 +146,11 @@ struct GameHistory
   [[nodiscard]] inline bool GetDesynchronized() const { return m_Desynchronized; }
   inline void SetSoftDesynchronized(const bool nSoftDesynchronized = true) { m_SoftDesynchronized = nSoftDesynchronized; }
   [[nodiscard]] inline bool GetSoftDesynchronized() const { return m_SoftDesynchronized; }
-  inline void SetDefaultLatency(const int64_t nLatency) { m_DefaultLatency = static_cast<uint16_t>(nLatency); }
+  inline void SetDefaultLatency(const int64_t nLatency) { m_DefaultLatency = signed_cast_lossy<uint16_t>(nLatency); }
   [[nodiscard]] inline uint16_t GetDefaultLatency() const { return m_DefaultLatency; }
-  inline void SetActiveLatency(const int64_t nLatency) { m_ActiveLatency = static_cast<uint16_t>(nLatency); }
+  inline void SetActiveLatency(const int64_t nLatency) { m_ActiveLatency = signed_cast_lossy<uint16_t>(nLatency); }
   [[nodiscard]] inline int64_t GetActiveLatency() const { return m_ActiveLatency; }
-  inline void SetSpectatorActiveLatency(const int64_t nLatency) { m_SpectatorActiveLatency = static_cast<uint16_t>(nLatency); }
+  inline void SetSpectatorActiveLatency(const int64_t nLatency) { m_SpectatorActiveLatency = signed_cast_lossy<uint16_t>(nLatency); }
   [[nodiscard]] inline int64_t GetSpectatorActiveLatency() const { return m_SpectatorActiveLatency; }
   inline void SetGProxyEmptyActions(const uint8_t nCount) { m_GProxyEmptyActions = nCount; }
   [[nodiscard]] inline uint32_t GetGProxyEmptyActions() const { return m_GProxyEmptyActions; }

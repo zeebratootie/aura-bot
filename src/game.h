@@ -285,7 +285,7 @@ public:
   std::string                                            GetCreationCounterText(std::shared_ptr<const CRealm> realm) const;
   std::string                                            GetNextCreationCounterText(std::shared_ptr<const CRealm> realm) const;
   inline uint64_t                                        GetGameID() const { return m_PersistentId; }
-  inline uint8_t                                         GetNumSlots() const { return static_cast<uint8_t>(m_Slots.size()); }
+  inline uint8_t                                         GetNumSlots() const { return integer_cast_lossy<uint8_t>(m_Slots.size()); }
   std::string                                            GetIndexHostName() const;
   std::string                                            GetLobbyVirtualHostName() const;
   std::string                                            GetCustomGameNameTemplate(std::shared_ptr<const CRealm> realm = nullptr, bool forceLobby = false) const;

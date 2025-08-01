@@ -49,7 +49,7 @@ bool UniformSampler::GetBernoulli() {
 
 template <typename T>
 UniformlySampledData<T>::UniformlySampledData(int nSampleRate, size_t nCapacity)
-: sampleRate(static_cast<size_t>(nSampleRate)),
+: sampleRate(signed_cast<size_t>(nSampleRate)),
   capacity(nCapacity),
   sampler(UniformSampler(nSampleRate))
 {

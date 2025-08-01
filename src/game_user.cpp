@@ -228,7 +228,7 @@ uint32_t CGameUser::GetOperationalRTT() const
 
   uint32_t weightedSum = 0;
   uint8_t backDelta = 0;
-  uint8_t i = static_cast<uint8_t>(m_RTTValues.size());
+  size_t i = m_RTTValues.size();
   uint32_t totalWeight = 0;
   while (i--) {
     const uint32_t weight = (backDelta >= MAX_PING_WEIGHT ? 1 : MAX_PING_WEIGHT - backDelta);
@@ -338,7 +338,7 @@ shared_ptr<CGProxyServer> CGameUser::GetGProxy() const
 uint32_t CGameUser::GetPingEqualizerDelay() const
 {
   if (!m_Game.get().GetGameLoaded()) return 0u;
-  return static_cast<uint32_t>(GetPingEqualizerOffset()) * static_cast<uint32_t>(m_Game.get().GetActiveLatency());
+  return integer_cast_lossy<uint32_t>(GetPingEqualizerOffset()) * signed_cast_lossy<uint32_t>(m_Game.get().GetActiveLatency());
 }
 
 CQueuedActionsFrame& CGameUser::GetPingEqualizerFrame()
@@ -706,7 +706,7 @@ bool CGameUser::Update(fd_set* fd, int64_t timeout)
                   if (m_RTTValues.size() == MAXIMUM_PINGS_COUNT) {
                     m_RTTValues.erase(begin(m_RTTValues));
                   }
-                  m_RTTValues.push_back(useLiteralRTT ? (static_cast<uint32_t>(m_Aura->GetLoopTicks()) - Pong) : ((static_cast<uint32_t>(m_Aura->GetLoopTicks()) - Pong) / 2));
+                  m_RTTValues.push_back(useLiteralRTT ? (signed_cast_lossy<uint32_t>(m_Aura->GetLoopTicks()) - Pong) : ((signed_cast_lossy<uint32_t>(m_Aura->GetLoopTicks()) - Pong) / 2));
                 }
               }
 

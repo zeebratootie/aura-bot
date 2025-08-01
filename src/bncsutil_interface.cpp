@@ -194,7 +194,7 @@ optional<Version> CBNCSUtilInterface::GetGameVersion(const filesystem::path& war
   char     buf[1024];
   uint32_t EXEVersion = 0;
   getExeInfo(PathToString(CheckExe).c_str(), buf, 1024, &EXEVersion, BNCSUTIL_PLATFORM_X86);
-  uint8_t readVersion = static_cast<uint8_t>(EXEVersion >> 16);
+  uint8_t readVersion = integer_cast_lossy<uint8_t>(EXEVersion >> 16);
 
   if (readVersion == 0) {
     Print("[CONFIG] Game path corrupted or invalid (" + PathToString(war3Path)  + ").");
@@ -260,7 +260,7 @@ bool CBNCSUtilInterface::ExtractEXEFeatures(const Version& war3DataVersion, cons
     buffer.resize(requiredSize);
     m_EXEInfo        = buffer.data();
     m_EXEVersion     = CreateFixedByteArrayLE(EXEVersion);
-    m_EXEVersionHash = CreateFixedByteArrayLossy<Endianness::kLittle>(static_cast<int64_t>(EXEVersionHash)); // Only uses 4 bytes
+    m_EXEVersionHash = CreateFixedByteArrayLossy<Endianness::kLittle>(signed_cast_lossy<int64_t>(EXEVersionHash)); // Only uses 4 bytes
 
     return true;
   }

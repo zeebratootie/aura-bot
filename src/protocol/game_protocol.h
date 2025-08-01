@@ -387,13 +387,13 @@ private:
   uint8_t                             m_Byte;
   uint8_t                             m_FromUID;
   uint8_t                             m_Discriminator;
-  uint32_t                            m_InGameChannel;
+  uint8_t                             m_InGameChannel;
   std::vector<uint8_t>                m_ToUIDs;
 
 public:
   CIncomingMessageOrSettingsView();
   CIncomingMessageOrSettingsView(uint8_t nFromUID, std::vector<uint8_t> nToUIDs, uint8_t nFlag, std::string_view nMessage);
-  CIncomingMessageOrSettingsView(uint8_t nFromUID, std::vector<uint8_t> nToUIDs, uint8_t nFlag, std::string_view nMessage, uint32_t nInGameChannel);
+  CIncomingMessageOrSettingsView(uint8_t nFromUID, std::vector<uint8_t> nToUIDs, uint8_t nFlag, std::string_view nMessage, uint8_t nInGameChannel);
   CIncomingMessageOrSettingsView(uint8_t nFromUID, std::vector<uint8_t> nToUIDs, uint8_t nFlag, uint8_t nByte);
   ~CIncomingMessageOrSettingsView();
 
@@ -404,7 +404,7 @@ public:
   [[nodiscard]] inline uint8_t                            GetDiscriminator() const { return m_Discriminator; }
   [[nodiscard]] inline std::string_view                   GetMessage() const { return m_Message; }
   [[nodiscard]] inline uint8_t                            GetByte() const { return m_Byte; }
-  [[nodiscard]] inline uint32_t                           GetInGameChannel() const { return m_InGameChannel; }
+  [[nodiscard]] inline uint8_t                            GetInGameChannel() const { return m_InGameChannel; }
 };
 
 class CIncomingMapFileSize

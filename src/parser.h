@@ -77,8 +77,8 @@
     return result;
   }
 
-  uint32_t majorVersion = static_cast<uint32_t>(stol(majorVersionString));
-  uint32_t minorVersion = static_cast<uint32_t>(stol(minorVersionString));
+  uint32_t majorVersion = signed_cast_lossy<uint32_t>(stol(majorVersionString));
+  uint32_t minorVersion = signed_cast_lossy<uint32_t>(stol(minorVersionString));
   result = Version((uint8_t)majorVersion, (uint8_t)minorVersion);
   return result;
 }
@@ -162,7 +162,7 @@
     if (parseEnd != input.size() || userValue < (int64_t)(std::numeric_limits<int8_t>::min()) || 0x7F < userValue) {
       return result;
     }
-    result = static_cast<int8_t>(userValue);
+    result = integer_cast_lossy<int8_t>(userValue);
   } catch (...) {
   }
   return result;
@@ -178,7 +178,7 @@
     if (parseEnd != input.size() || userValue < 0 || 0xFF < userValue) {
       return result;
     }
-    result = static_cast<uint8_t>(userValue);
+    result = signed_cast_lossy<uint8_t>(userValue);
   } catch (...) {
   }
   return result;
@@ -194,7 +194,7 @@
     if (parseEnd != input.size() || userValue < (int64_t)(std::numeric_limits<int16_t>::min()) || 0x7FFF < userValue) {
       return result;
     }
-    result = static_cast<int16_t>(userValue);
+    result = integer_cast_lossy<int16_t>(userValue);
   } catch (...) {
   }
   return result;
@@ -210,7 +210,7 @@
     if (parseEnd != input.size() || userValue < 0 || 0xFFFF < userValue) {
       return result;
     }
-    result = static_cast<uint16_t>(userValue);
+    result = signed_cast_lossy<uint16_t>(userValue);
   } catch (...) {
   }
   return result;
@@ -226,7 +226,7 @@
     if (parseEnd != input.size() || userValue < (int64_t)(std::numeric_limits<int32_t>::min()) || 0x7FFFFFFF < userValue) {
       return result;
     }
-    result = static_cast<int32_t>(userValue);
+    result = integer_cast_lossy<int32_t>(userValue);
   } catch (...) {
   }
   return result;
@@ -242,7 +242,7 @@
     if (parseEnd != input.size() || userValue < 0 || 0xFFFFFFFF < userValue) {
       return result;
     }
-    result = static_cast<uint32_t>(userValue);
+    result = signed_cast_lossy<uint32_t>(userValue);
   } catch (...) {
   }
   return result;

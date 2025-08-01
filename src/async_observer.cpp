@@ -388,8 +388,8 @@ uint8_t CAsyncObserver::GetChatChannel(bool forcePrivate) const
 {
   if (!m_StartedLoading) return 0;
   if (m_IsObserver && !forcePrivate) return CHAT_RECV_OBS;
-  uint32_t channel = static_cast<uint32_t>(CHAT_RECV_PRIVATE_OFFSET);
-  return static_cast<uint8_t>(channel + static_cast<uint32_t>(m_Color));
+  uint32_t channel = integer_cast<uint32_t>(CHAT_RECV_PRIVATE_OFFSET);
+  return integer_cast_lossy<uint8_t>(channel + integer_cast<uint32_t>(m_Color));
 }
 
 bool CAsyncObserver::GetIsGameOver() const
@@ -649,7 +649,7 @@ void CAsyncObserver::EventChat(const CIncomingMessageOrSettingsView& incomingCha
   string_view textContent = incomingChatMessage.GetMessage();
   assert((!textContent.empty()) && "Chat message cannot be empty");
   bool shouldRelay = !isLobbyChat; // relay the chat message to other users
-  const uint8_t targetType = static_cast<uint8_t>(incomingChatMessage.GetInGameChannel());
+  const uint8_t targetType = incomingChatMessage.GetInGameChannel();
 
   if (!isLobbyChat && m_Aura->m_Config.m_LogGameChat == LOG_GAME_CHAT_ALWAYS) {
     Print(Concat(GetLogPrefix(), "[", GetName(), "] ", textContent));

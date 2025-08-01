@@ -447,8 +447,8 @@ namespace GameProtocol
 
           const uint32_t inGameChannel = ByteArrayToUInt32LE(data, i);
           string_view message = ExtractUTF8View(data, i + 4u, MAX_IN_GAME_CHAT_SIZE);
-          if (!message.empty() && !HasUnsafeUTF8CodePoints(message)) {
-            return CIncomingMessageOrSettingsView(fromUID, ToUIDs, discriminator, message, inGameChannel);
+          if (inGameChannel <= 0xFF && !message.empty() && !HasUnsafeUTF8CodePoints(message)) {
+            return CIncomingMessageOrSettingsView(fromUID, ToUIDs, discriminator, message, integer_cast_lossy<uint8_t>(inGameChannel));
           }
         }
       }
@@ -1567,7 +1567,7 @@ CIncomingMessageOrSettingsView::CIncomingMessageOrSettingsView(uint8_t nFromUID,
 {
 }
 
-CIncomingMessageOrSettingsView::CIncomingMessageOrSettingsView(uint8_t nFromUID, std::vector<uint8_t> nToUIDs, uint8_t nDiscriminator, string_view nMessage, uint32_t nInGameChannel)
+CIncomingMessageOrSettingsView::CIncomingMessageOrSettingsView(uint8_t nFromUID, std::vector<uint8_t> nToUIDs, uint8_t nDiscriminator, string_view nMessage, uint8_t nInGameChannel)
   : m_Valid(true),
     m_Message(nMessage),
     m_Type(GameProtocol::ChatToHostType::CTH_MESSAGE_INGAME),

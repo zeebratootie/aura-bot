@@ -1704,7 +1704,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
             ErrorReply("Invalid maximum ping [" + target + "].");
             break;
           }
-          kickPing = static_cast<uint32_t>(Value);
+          kickPing = signed_cast_lossy<uint32_t>(Value);
         } catch (...) {
           ErrorReply("Invalid maximum ping [" + target + "].");
           break;
@@ -2105,19 +2105,19 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
       }
       vector<string> factors = {"0.00380", "0.01475", "0.03221", "0.05570", "0.08475", "0.11895", "0.14628", "0.18128", "0.21867", "0.25701", "0.29509", "0.33324", "0.38109", "0.42448", "0.46134", "0.50276"};
       vector<string> chances = {"5.0", "10.0", "15.0", "20.0", "24.9", "29.9", "33.6", "37.7", "41.8", "45.7", "49.3", "53.0", "56.6", "60.1", "63.2", "66.7"};
-      uint8_t nominalChance = static_cast<uint8_t>(Args[0]);
-      uint8_t index = nominalChance / 5 - 1;
+      uint32_t nominalChance = Args[0];
+      uint32_t index = nominalChance / 5 - 1;
       if (nominalChance <= 5) {
         SendReply("Nominal chance of 5% formula: P(N) = " + factors[0] + " N. Expected value: " + chances[0] + "%");
       } else if (nominalChance >= 80) {
         SendReply("Nominal chance of 80% formula: P(N) = " + factors[15] + "N. Expected value: " + chances[15] + "%");
       } else if (nominalChance % 5 == 0) {
-        SendReply("Nominal chance of " + ToDecString(nominalChance) + "% formula: P(N) = " + factors[index] + " N. Expected value: " + chances[index] + "%");
+        SendReply("Nominal chance of " + to_string(nominalChance) + "% formula: P(N) = " + factors[index] + " N. Expected value: " + chances[index] + "%");
       } else {
-        uint8_t lower = static_cast<uint8_t>(5 * (index + 1));
-        uint8_t upper = static_cast<uint8_t>(5 * (index + 2));
-        SendReply("Nominal chance of " + ToDecString(lower) + "% formula: P(N) = " + factors[index] + " N. Expected value: " + chances[index] + "%");
-        SendReply("Nominal chance of " + ToDecString(upper) + "% formula: P(N) = " + factors[index + 1] + " N. Expected value: " + chances[index + 1] + "%");
+        uint32_t lower = 5 * (index + 1);
+        uint32_t upper = 5 * (index + 2);
+        SendReply("Nominal chance of " + to_string(lower) + "% formula: P(N) = " + factors[index] + " N. Expected value: " + chances[index] + "%");
+        SendReply("Nominal chance of " + to_string(upper) + "% formula: P(N) = " + factors[index + 1] + " N. Expected value: " + chances[index + 1] + "%");
       }
       break;
     }
@@ -2138,19 +2138,19 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
         break;
       }
       vector<string> factors = {"0.00380166", "0.01474584", "0.03222091", "0.05570404", "0.08474409", "0.11894919", "0.15798310", "0.20154741", "0.24930700", "0.30210303", "0.36039785", "0.42264973", "0.48112548", "0.57142857", "0.66666667", "0.75000000", "0.82352941", "0.88888889", "0.94736842"};
-      uint8_t nominalChance = static_cast<uint8_t>(Args[0]);
-      uint8_t index = nominalChance / 5 - 1;
+      uint32_t nominalChance = Args[0];
+      uint32_t index = nominalChance / 5 - 1;
       if (nominalChance <= 5) {
         SendReply("Nominal chance of 5% formula: P(N) = " + factors[0] + " N. Expected value: 5%");
       } else if (nominalChance >= 95) {
         SendReply("Nominal chance of 95% formula: P(N) = " + factors[18] + "N. Expected value: 95%");
       } else if (nominalChance % 5 == 0) {
-        SendReply("Nominal chance of " + ToDecString(nominalChance) + "% formula: P(N) = " + factors[index] + " N. Expected value: " + ToDecString(nominalChance) + "%");
+        SendReply("Nominal chance of " + to_string(nominalChance) + "% formula: P(N) = " + factors[index] + " N. Expected value: " + to_string(nominalChance) + "%");
       } else {
-        uint8_t lower = static_cast<uint8_t>(5 * (index + 1));
-        uint8_t upper = static_cast<uint8_t>(5 * (index + 2));
-        SendReply("Nominal chance of " + ToDecString(lower) + "% formula: P(N) = " + factors[index] + " N. Expected value: " + ToDecString(lower) + "%");
-        SendReply("Nominal chance of " + ToDecString(upper) + "% formula: P(N) = " + factors[index + 1] + " N. Expected value: " + ToDecString(upper) + "%");
+        uint32_t lower = 5 * (index + 1);
+        uint32_t upper = 5 * (index + 2);
+        SendReply("Nominal chance of " + to_string(lower) + "% formula: P(N) = " + factors[index] + " N. Expected value: " + to_string(lower) + "%");
+        SendReply("Nominal chance of " + to_string(upper) + "% formula: P(N) = " + factors[index + 1] + " N. Expected value: " + to_string(upper) + "%");
       }
       break;
     }
@@ -2194,19 +2194,19 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
 
     case HashCode("roll"): {
       size_t diceStart = target.find('d');
-      uint16_t rollFaces = 0;
-      uint8_t rollCount = 1;
 
       string rawRollCount = diceStart == string::npos ? "1" : target.substr(0, diceStart);
       string rawRollFaces = target.empty() ? "100" : diceStart == string::npos ? target : target.substr(diceStart + 1);
 
-      try {
-        rollCount = static_cast<uint8_t>(stoi(rawRollCount));
-        rollFaces = static_cast<uint16_t>(stoi(rawRollFaces));
-      } catch (...) {
+      optional<uint8_t> maybeRollCount = ParseUInt8(rawRollCount);
+      optional<uint16_t> maybeRollFaces = ParseUInt16(rawRollFaces);
+      if (!maybeRollCount.has_value() || !maybeRollFaces.has_value()) {
         ErrorReply("Usage: " + cmdToken + "roll <FACES>");
         break;
       }
+
+      uint8_t rollCount = *maybeRollCount;
+      uint16_t rollFaces = *maybeRollFaces;
 
       if (!(0 < rollCount && rollCount <= 8)) {
         ErrorReply("Invalid dice count: " + to_string(rollCount));
@@ -2252,7 +2252,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
       }
       std::random_device rd;
       std::mt19937 gen(rd());
-      std::uniform_int_distribution<> distribution(1, static_cast<int>(options.size()));
+      std::uniform_int_distribution<> distribution(1, signed_cast_lossy<int>(options.size()));
 
       string randomPick = options[distribution(gen) - 1];
       bool sendAll = GetGameSource().GetIsEmpty() || (GetIsGameUser() && GetGameUser()->GetCanUsePublicChat());
@@ -2293,7 +2293,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
 
       std::random_device rd;
       std::mt19937 gen(rd());
-      std::uniform_int_distribution<> distribution(1, static_cast<int>(players.size()));
+      std::uniform_int_distribution<> distribution(1, signed_cast_lossy<int>(players.size()));
       const GameUser::CGameUser* pickedPlayer = players[distribution(gen) - 1];
       string randomPick = pickedPlayer->GetName();
       bool sendAll = GetGameSource().GetIsEmpty() || (GetIsGameUser() && GetGameUser()->GetCanUsePublicChat());
@@ -2320,7 +2320,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
 
       std::random_device rd;
       std::mt19937 gen(rd());
-      std::uniform_int_distribution<> distribution(1, static_cast<int>(players.size()));
+      std::uniform_int_distribution<> distribution(1, signed_cast_lossy<int>(players.size()));
       const GameUser::CGameUser* pickedPlayer = players[distribution(gen) - 1];
       string randomPick = pickedPlayer->GetName();
       bool sendAll = GetGameSource().GetIsEmpty() || (GetIsGameUser() && GetGameUser()->GetCanUsePublicChat());
@@ -2623,7 +2623,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
           ErrorReply("Usage: " + cmdToken + "c <SLOTNUM>");
           break;
         }
-        uint8_t SID = static_cast<uint8_t>(elem) - 1;
+        uint8_t SID = integer_cast_lossy<uint8_t>(elem - LONG_ONE);
         if (!targetGame->CloseSlot(SID, cmdHash == HashCode("close"))) {
           failedSlots.push_back(to_string(elem));
         }
@@ -3303,7 +3303,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
           ErrorReply("Usage: " + cmdToken + "o <SLOTNUM>");
           break;
         }
-        const uint8_t SID = static_cast<uint8_t>(elem) - 1;
+        const uint8_t SID = integer_cast_lossy<uint8_t>(elem - LONG_ONE);
         const CGameSlot* slot = targetGame->GetSlot(SID);
         if (!slot || slot->GetSlotStatus() == SLOTSTATUS_OPEN) {
           failedSlots.push_back(to_string(elem));
@@ -3642,7 +3642,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
         break;
       }
 
-      uint8_t minReadyControllers = static_cast<uint8_t>(Args[0]);
+      uint8_t minReadyControllers = integer_cast_lossy<uint8_t>(Args[0]);
       uint32_t MinMinutes = 0;
       if (Args.size() >= 2) {
         MinMinutes = Args[1];
@@ -3660,7 +3660,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
       }
 
       int64_t time = m_Aura->GetLoopTime();
-      int64_t dueTime = time + static_cast<int64_t>(MinMinutes) * 60;
+      int64_t dueTime = time + signed_cast<int64_t>(MinMinutes) * 60;
       if (dueTime < time) {
         ErrorReply("Failed to set timed start after " + to_string(MinMinutes) + " minutes.");
         break;
@@ -4194,8 +4194,8 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
         }
       }
 
-      uint16_t extPort = static_cast<uint16_t>(Args[0]);
-      uint16_t intPort = static_cast<uint16_t>(Args[1]);
+      uint16_t extPort = integer_cast_lossy<uint16_t>(Args[0]);
+      uint16_t intPort = integer_cast_lossy<uint16_t>(Args[1]);
 
       SendReply("Trying to forward external port " + to_string(extPort) + " to internal port " + to_string(intPort) + "...");
       uint8_t result = m_Aura->m_Net.RequestUPnP(NetProtocol::kTCP, extPort, intPort, LogLevel::kInfo, true);
@@ -5490,11 +5490,11 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
         break;
       }
 
-      if (slot->GetHandicap() == static_cast<uint8_t>(handicap[0])) {
+      if (slot->GetHandicap() == integer_cast_lossy<uint8_t>(handicap[0])) {
         ErrorReply("Handicap is already at " + Args[1] + "%");
         break;
       }
-      slot->SetHandicap(static_cast<uint8_t>(handicap[0]));
+      slot->SetHandicap(integer_cast_lossy<uint8_t>(handicap[0]));
       targetGame->m_SlotInfoChanged |= SLOTS_ALIGNMENT_CHANGED;
       if (targetPlayer) {
         SendReply("Player [" + targetPlayer->GetName() + "] handicap is now [" + Args[1] + "].");
@@ -5908,7 +5908,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
       try {
         int64_t parsedActions = stol(Args.back());
         if (0 <= parsedActions && parsedActions <= 0xFFFF) {
-          maxAPM = static_cast<size_t>(parsedActions);
+          maxAPM = signed_cast_lossy<size_t>(parsedActions);
         }
       } catch (...) {
       }
@@ -6038,14 +6038,14 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
       targetGame->ResetDraft();
       vector<string> failPlayers;
 
-      uint8_t team = static_cast<uint8_t>(Args.size());
+      uint8_t team = integer_cast_lossy<uint8_t>(Args.size());
       while (team--) {
         GameUser::CGameUser* user = GetTargetUser(Args[team]);
         if (user) {
           const uint8_t SID = targetGame->GetSIDFromUID(user->GetUID());
           if (targetGame->SetSlotTeam(SID, team, true) ||
             targetGame->InspectSlot(SID)->GetTeam() == team) {
-            user->SetDraftCaptain(team + 1);
+            user->SetDraftCaptain(ToBaseOne(team));
           } else {
             failPlayers.push_back(user->GetName());
           }
@@ -6195,7 +6195,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
           break;
         }
         targetGame->ResetLayout(false);
-        uint8_t computerCount = static_cast<uint8_t>(Args[0]);
+        uint8_t computerCount = integer_cast_lossy<uint8_t>(Args[0]);
         if (computerCount == targetGame->GetMap()->GetVersionMaxSlots()) --computerCount; // Fix 1v12 into 1v11
         // ignore layout, don't override computers
         if (!targetGame->ComputerNSlots(SLOTCOMP_HARD, computerCount, true, false)) {
@@ -6213,7 +6213,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
         ErrorReply("No computer slots found. Use [" + cmdToken + "terminator NUMBER] to play against one or more insane computers.");
         break;
       }
-      const uint8_t humansCount = static_cast<uint8_t>(targetGame->GetNumJoinedUsersOrFake());
+      const uint8_t humansCount = integer_cast_lossy<uint8_t>(targetGame->GetNumJoinedUsersOrFake());
       pair<uint8_t, uint8_t> matchedTeams;
       if (!targetGame->FindHumanVsAITeams(humansCount, computersCount, matchedTeams)) {
         ErrorReply("Not enough open slots to host " + ToDecString(humansCount) + " humans VS " + ToDecString(computersCount) + " computers game.");
@@ -7400,23 +7400,19 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
         break;
       }
 
-      optional<int32_t> TargetValue;
-      try {
-        TargetValue = stol(target);
-      } catch (...) {
-      }
-
-      if (!TargetValue.has_value()) {
+      optional<uint8_t> maybeTargetValue = ParseUInt8(target);
+      if (!maybeTargetValue.has_value()) {
         ErrorReply("Usage: " + cmdToken + "maptransfers <MODE>: Mode is 0/1/2.");
         break;
       }
 
-      if (TargetValue.value() != MAP_TRANSFERS_NEVER && TargetValue.value() != MAP_TRANSFERS_AUTOMATIC && TargetValue.value() != MAP_TRANSFERS_MANUAL) {
+      uint8_t targetValue = *maybeTargetValue;
+      if (targetValue != MAP_TRANSFERS_NEVER && targetValue != MAP_TRANSFERS_AUTOMATIC && targetValue != MAP_TRANSFERS_MANUAL) {
         ErrorReply("Usage: " + cmdToken + "maptransfers <MODE>: Mode is 0/1/2.");
         break;
       }
 
-      m_Aura->m_Net.m_Config.m_AllowTransfers = static_cast<uint8_t>(TargetValue.value());
+      m_Aura->m_Net.m_Config.m_AllowTransfers = targetValue;
       if (m_Aura->m_Net.m_Config.m_AllowTransfers == MAP_TRANSFERS_NEVER) {
         SendAll("Map transfers disabled.");
       } else if (m_Aura->m_Net.m_Config.m_AllowTransfers == MAP_TRANSFERS_AUTOMATIC) {
@@ -7667,14 +7663,13 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
         break;
       }
 
-      uint64_t gameID = 0;
-      try {
-        long long value = stoll(target);
-        gameID = static_cast<uint64_t>(value);
-      } catch (...) {
+      optional<uint64_t> maybeGameID = ParseUInt64(target);
+      if (!maybeGameID.has_value()) {
         ErrorReply("Invalid game identifier.");
         break;
       }
+      uint64_t gameID = *maybeGameID;
+
       CDBGameSummary* gameSummary = m_Aura->m_DB->GameCheck(gameID);
       if (!gameSummary) {
         ErrorReply("Game #" + to_string(gameID) + " not found in database.");
@@ -8079,7 +8074,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
       }
 
       try {
-        gamePort = static_cast<uint16_t>(stoul(Args[2]));
+        gamePort = integer_cast_lossy<uint16_t>(stoul(Args[2]));
         size_t posId;
         gameHostCounter = stoul(Args[3], &posId, 16);
         if (posId != Args[3].length()) {

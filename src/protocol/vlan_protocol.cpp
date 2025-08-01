@@ -31,7 +31,7 @@ namespace VLANProtocol
       if (gameVersion > 0xFF) {
         return CIncomingVLanSearchGame();
       }
-      return CIncomingVLanSearchGame(true, isExpansion, GAMEVER(1u, static_cast<uint8_t>(gameVersion)));
+      return CIncomingVLanSearchGame(true, isExpansion, GAMEVER(1u, integer_cast_lossy<uint8_t>(gameVersion)));
     }
     return CIncomingVLanSearchGame();
   }
@@ -111,7 +111,7 @@ namespace VLANProtocol
       AppendNumberLE(packet, ProductID_ROC_LE);                     // Product ID (ROC)
     }
 
-    AppendNumberLE(packet, static_cast<uint32_t>(war3Version.second));          // Version
+    AppendNumberLE(packet, integer_cast<uint32_t>(war3Version.second));          // Version
     AssignLength(packet);
     // DEBUG_Print("SENT W3GS_SEARCHGAME");
     // DEBUG_Print(packet);
@@ -144,7 +144,7 @@ namespace VLANProtocol
       AppendNumberLE(packet, ProductID_ROC_LE);                     // Product ID (ROC)
     }
 
-    AppendNumberLE(packet, static_cast<uint32_t>(war3Version.second));          // Version
+    AppendNumberLE(packet, integer_cast<uint32_t>(war3Version.second));          // Version
     AppendNumberLE(packet, hostCounter);          // Host Counter
     AppendNumberLE(packet, entryKey);             // Entry Key
     AppendByteArrayString(packet, gameName, true);                // Game Name
@@ -178,7 +178,7 @@ namespace VLANProtocol
       AppendNumberLE(packet, ProductID_ROC_LE);                     // Product ID (ROC)
     }
 
-    AppendNumberLE(packet, static_cast<uint32_t>(war3Version.second));          // Version
+    AppendNumberLE(packet, integer_cast<uint32_t>(war3Version.second));          // Version
     AppendNumberLE(packet, hostCounter);          // Host Counter
     AppendContainer(packet, ip);                      // IP - added by h3rmit
     AppendNumberLE(packet, port);                 // Port - added by h3rmit

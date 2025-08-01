@@ -60,7 +60,7 @@ optional<uint8_t> Dota::EnsureHeroColor(uint32_t input)
 {
   optional<uint8_t> result;
   if (GetIsHeroColor(input)) {
-    result = static_cast<uint8_t>(input);
+    result = integer_cast_lossy<uint8_t>(input);
   }
   return result;
 }
@@ -69,7 +69,7 @@ optional<uint8_t> Dota::EnsureActorColor(uint32_t input)
 {
   optional<uint8_t> result;
   if (input <= MAX_SLOTS_LEGACY) {
-    result = static_cast<uint8_t>(input);
+    result = integer_cast_lossy<uint8_t>(input);
   }
   return result;
 }
@@ -79,7 +79,7 @@ optional<uint8_t> Dota::ParseHeroColor(const string& input)
   optional<uint8_t> result;
   optional<uint32_t> maybeColor = ToUint32(input);
   if (GetIsHeroColor(*maybeColor)) {
-    result = static_cast<uint8_t>(*maybeColor);
+    result = integer_cast_lossy<uint8_t>(*maybeColor);
   }
   return result;
 }
@@ -89,7 +89,7 @@ optional<uint8_t> Dota::ParseActorColor(const string& input)
   optional<uint8_t> result;
   optional<uint32_t> maybeColor = ToUint32(input);
   if (*maybeColor <= MAX_SLOTS_LEGACY) {
-    result = static_cast<uint8_t>(*maybeColor);
+    result = integer_cast_lossy<uint8_t>(*maybeColor);
   }
   return result;
 }
@@ -7014,7 +7014,7 @@ bool CDotaStats::EventGameCacheInteger(const uint8_t fromUID, const std::string_
       // Value 1 -> sentinel
       // Value 2 -> scourge
 
-      uint8_t winner = static_cast<uint8_t>(cacheValue);
+      uint8_t winner = integer_cast_lossy<uint8_t>(cacheValue);
       if (winner == Dota::WINNER_SENTINEL || winner == Dota::WINNER_SCOURGE) {
         m_Winner = winner;
       }
@@ -7139,9 +7139,9 @@ bool CDotaStats::EventGameCacheInteger(const uint8_t fromUID, const std::string_
             // DotA sends id values from 1-10 with 1-5 being sentinel players and 6-10 being scourge players
             // unfortunately the actual player colours are from 1-5 and from 7-11 so we need to deal with this case here
             if (cacheValue >= 6) {
-              m_Players[*heroColor]->SetNewColor(static_cast<uint8_t>(cacheValue + 1));
+              m_Players[*heroColor]->SetNewColor(integer_cast_lossy<uint8_t>(cacheValue + 1));
             } else {
-              m_Players[*heroColor]->SetNewColor(static_cast<uint8_t>(cacheValue));
+              m_Players[*heroColor]->SetNewColor(integer_cast_lossy<uint8_t>(cacheValue));
             }
           }
           break;

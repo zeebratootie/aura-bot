@@ -611,7 +611,7 @@ public:
     if (num < 0 || num > 0xFFFFFFFF) {
       return result;
     }
-    result = static_cast<uint32_t>(num);
+    result = signed_cast_lossy<uint32_t>(num);
     return result;
   }
 

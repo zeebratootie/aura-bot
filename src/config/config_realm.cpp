@@ -95,13 +95,13 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CNetConfig* NetConfig)
   m_Locale = CFG.GetEnumSensitive<PvPGNLocale>(m_CFGKeyPrefix + "locale_short", TO_ARRAY("enUS", "csCZ", "deDE", "esES", "frFR", "itIT", "jaJA", "koKR", "plPL", "ruRU", "zhCN", "zhTW"), PvPGNLocale::kESES);
 
   if (m_Win32Locale == "system") {
-    m_Win32LocaleID = 10250;
+    m_Win32LocaleID = 10250u;
   } else {
     try {
-      m_Win32LocaleID  = static_cast<uint32_t>(stoul(m_Win32Locale));
+      m_Win32LocaleID  = integer_cast_lossy<uint32_t>(stoul(m_Win32Locale));
     } catch (...) {
       m_Win32Locale = "system";
-      m_Win32LocaleID = 10250;
+      m_Win32LocaleID = 10250u;
     }
   }
 
@@ -192,7 +192,7 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CNetConfig* NetConfig)
 
   m_ConsoleLogChat         = CFG.GetBool(m_CFGKeyPrefix + "logs.console.chat", true);
   m_FloodQuotaLines        = CFG.GetUint8(m_CFGKeyPrefix + "flood.lines", 5);
-  m_FloodQuotaLines        = static_cast<uint8_t>(static_cast<uint32_t>(m_FloodQuotaLines) - LONG_ONE);
+  m_FloodQuotaLines        = integer_cast_lossy<uint8_t>(integer_cast<uint32_t>(m_FloodQuotaLines) - LONG_ONE);
   m_FloodQuotaTime         = CFG.GetUint8(m_CFGKeyPrefix + "flood.time", 5);
   m_VirtualLineLength      = CFG.GetUint16(m_CFGKeyPrefix + "flood.wrap", 40);
   m_MaxLineLength          = CFG.GetUint16(m_CFGKeyPrefix + "flood.max_size", 160);
@@ -218,9 +218,9 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CNetConfig* NetConfig)
     m_MaxLineLength = 256;
     Print("[CONFIG] Error - Invalid value provided for <" + m_CFGKeyPrefix + "flood.max_size>.");
   }
-  const uint32_t maxDeductedLineLength = static_cast<uint32_t>(m_VirtualLineLength) * static_cast<uint32_t>(m_FloodQuotaLines);
-  if (static_cast<uint32_t>(m_MaxLineLength) > maxDeductedLineLength) {
-    m_MaxLineLength = static_cast<uint16_t>(maxDeductedLineLength);
+  const uint32_t maxDeductedLineLength = integer_cast<uint32_t>(m_VirtualLineLength) * integer_cast<uint32_t>(m_FloodQuotaLines);
+  if (integer_cast<uint32_t>(m_MaxLineLength) > maxDeductedLineLength) {
+    m_MaxLineLength = integer_cast_lossy<uint16_t>(maxDeductedLineLength);
     Print("[CONFIG] Error - Invalid value provided for <" + m_CFGKeyPrefix + "flood.max_size>. It cannot exceed " + to_string(maxDeductedLineLength) + " characters because of flood quota.");
   }
 
@@ -384,10 +384,10 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CRealmConfig* nRootConfig, uint8_t nSer
   m_Locale = CFG.GetEnumSensitive<PvPGNLocale>(m_CFGKeyPrefix + "locale_short", TO_ARRAY("enUS", "csCZ", "deDE", "esES", "frFR", "itIT", "jaJA", "koKR", "plPL", "ruRU", "zhCN", "zhTW"), m_Locale);
 
   if (m_Win32Locale == "system") {
-    m_Win32LocaleID = 10250;
+    m_Win32LocaleID = 10250u;
   } else {
     try {
-      m_Win32LocaleID  = static_cast<uint32_t>(stoul(m_Win32Locale));
+      m_Win32LocaleID  = integer_cast_lossy<uint32_t>(stoul(m_Win32Locale));
     } catch (...) {
       m_Win32Locale = nRootConfig->m_Win32Locale;
     }
@@ -527,7 +527,7 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CRealmConfig* nRootConfig, uint8_t nSer
 
   m_ConsoleLogChat         = CFG.GetBool(m_CFGKeyPrefix + "logs.console.chat", m_ConsoleLogChat);
   m_FloodQuotaLines        = CFG.GetUint8(m_CFGKeyPrefix + "flood.lines", 5);
-  m_FloodQuotaLines        = static_cast<uint8_t>(static_cast<uint32_t>(m_FloodQuotaLines) - LONG_ONE);
+  m_FloodQuotaLines        = integer_cast_lossy<uint8_t>(integer_cast<uint32_t>(m_FloodQuotaLines) - LONG_ONE);
   m_FloodQuotaTime         = CFG.GetUint8(m_CFGKeyPrefix + "flood.time", m_FloodQuotaTime);
   m_VirtualLineLength      = CFG.GetUint16(m_CFGKeyPrefix + "flood.wrap", m_VirtualLineLength);
   m_MaxLineLength          = CFG.GetUint16(m_CFGKeyPrefix + "flood.max_size", m_MaxLineLength);
@@ -553,9 +553,9 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CRealmConfig* nRootConfig, uint8_t nSer
     m_MaxLineLength = 256;
     Print("[CONFIG] Error - Invalid value provided for <" + m_CFGKeyPrefix + "flood.max_size>.");
   }
-  const uint32_t maxDeductedLineLength = static_cast<uint32_t>(m_VirtualLineLength) * static_cast<uint32_t>(m_FloodQuotaLines);
-  if (static_cast<uint32_t>(m_MaxLineLength) > maxDeductedLineLength) {
-    m_MaxLineLength = static_cast<uint16_t>(maxDeductedLineLength);
+  const uint32_t maxDeductedLineLength = integer_cast<uint32_t>(m_VirtualLineLength) * integer_cast<uint32_t>(m_FloodQuotaLines);
+  if (integer_cast<uint32_t>(m_MaxLineLength) > maxDeductedLineLength) {
+    m_MaxLineLength = integer_cast_lossy<uint16_t>(maxDeductedLineLength);
     // PvPGN defaults make no sense: 40x5=200 seems logical, but in fact the 5th line is not allowed.
     Print("[CONFIG] using <" + m_CFGKeyPrefix + "flood.max_size = " + to_string(m_MaxLineLength) + ">");
   }

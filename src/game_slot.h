@@ -116,9 +116,9 @@ inline uint8_t ParseSID(const std::string& input)
   } catch (...) {
   }
   if (SID <= 0 || 0xFF <= SID) {
-    return static_cast<uint8_t>(0xFF);
+    return 0xFF;
   }
-  return static_cast<uint8_t>(SID - 1);
+  return signed_cast_lossy<uint8_t>(SID - 1);
 }
 
 inline uint8_t ParseComputerSkill(const std::string& skill)

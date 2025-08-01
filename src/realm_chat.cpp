@@ -81,10 +81,10 @@ void CQueuedChatMessage::SetValidator(const uint8_t validatorType, const uint32_
       m_Validator = vector<uint8_t>();
       m_Validator.reserve(5);
       m_Validator.push_back(validatorType);
-      m_Validator.push_back(static_cast<uint8_t>(validatorData));
-      m_Validator.push_back(static_cast<uint8_t>(validatorData >> 8));
-      m_Validator.push_back(static_cast<uint8_t>(validatorData >> 16));
-      m_Validator.push_back(static_cast<uint8_t>(validatorData >> 24));
+      m_Validator.push_back(integer_cast_lossy<uint8_t>(validatorData));
+      m_Validator.push_back(integer_cast_lossy<uint8_t>(validatorData >> 8));
+      m_Validator.push_back(integer_cast_lossy<uint8_t>(validatorData >> 16));
+      m_Validator.push_back(integer_cast_lossy<uint8_t>(validatorData >> 24));
       break;
     default:
       break;

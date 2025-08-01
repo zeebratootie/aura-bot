@@ -692,14 +692,14 @@ bool CAura::LoadBNETs(CConfig& CFG, bitset<120>& definedRealms, bool strict)
   }
 
   m_RealmsByHostCounter.clear();
-  uint8_t i = static_cast<uint8_t>(m_Realms.size());
+  size_t i = m_Realms.size();
   while (i--) {
     string inputID = m_Realms[i]->GetInputID();
     if (uniqueInputIds.find(inputID) == uniqueInputIds.end()) {
       EventRealmDeleted(m_Realms[i]);
       m_Realms[i].reset();
       m_RealmsByInputID.erase(inputID);
-      m_Realms.erase(m_Realms.begin() + i);
+      m_Realms.erase(m_Realms.begin() + signed_cast<ptrdiff_t>(i));
     }
   }
 
@@ -961,7 +961,7 @@ shared_ptr<CGame> CAura::GetGameByString(const string& rawInput) const
   try {
     long long value = stoll(inputGame);
     if (value < 0) return nullptr;
-    gameID = static_cast<uint64_t>(value);
+    gameID = signed_cast<uint64_t>(value);
   } catch (...) {
     return nullptr;
   }
@@ -1040,8 +1040,8 @@ AppActionStatus CAura::HandleAction(const AppAction& action)
   switch (action.type) {
 #ifndef DISABLE_MINIUPNP
     case AppActionType::kUPnP: {
-      uint16_t externalPort = static_cast<uint16_t>(action.value_1);
-      uint16_t internalPort = static_cast<uint16_t>(action.value_2);
+      uint16_t externalPort = integer_cast_lossy<uint16_t>(action.value_1);
+      uint16_t internalPort = integer_cast_lossy<uint16_t>(action.value_2);
       switch (action.mode) {
         case AppActionMode::kTCP:
           m_Net.RequestUPnP(NetProtocol::kTCP, externalPort, internalPort, LogLevel::kDebug);
@@ -2245,7 +2245,7 @@ bool CAura::GetNewGameIsInQuotaAutoReHost() const
 bool CAura::GetIsAutoHostThrottled() const
 {
   if (m_Realms.empty()) return false;
-  return m_LastGameAutoHostedTicks.has_value() && m_LastGameAutoHostedTicks.value() + static_cast<int64_t>(AUTO_REHOST_COOLDOWN_TICKS) >= m_LoopTicks;
+  return m_LastGameAutoHostedTicks.has_value() && m_LastGameAutoHostedTicks.value() + AUTO_REHOST_COOLDOWN_TICKS >= m_LoopTicks;
 }
 
 bool CAura::CreateGame(shared_ptr<CGameSetup> gameSetup)

@@ -529,7 +529,7 @@ pair<uint8_t, filesystem::path> CGameSetup::SearchInputLocalFuzzy(vector<string>
 #ifndef DISABLE_CPR
 void CGameSetup::SearchInputRemoteFuzzy(vector<string>& fuzzyMatches) {
   if (fuzzyMatches.size() >= 5) return;
-  vector<pair<string, string>> remoteSuggestions = GetMapRepositorySuggestions(m_SearchTarget.second, 5 - static_cast<uint8_t>(fuzzyMatches.size()));
+  vector<pair<string, string>> remoteSuggestions = GetMapRepositorySuggestions(m_SearchTarget.second, 5 - integer_cast_lossy<uint8_t>(fuzzyMatches.size()));
   if (remoteSuggestions.empty()) {
     return;
   }
@@ -1099,7 +1099,7 @@ uint32_t CGameSetup::DownloadMapTask()
   // Signals completion.
   m_IsStepDownloaded = true;
 
-  return static_cast<uint32_t>(response.downloaded_bytes);
+  return signed_cast_lossy<uint32_t>(response.downloaded_bytes);
 }
 
 void CGameSetup::RunDownloadMap()
