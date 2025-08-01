@@ -198,34 +198,35 @@ bool CConfig::Read(const filesystem::path& file, CConfig* adapterConfig)
     // remove CR
     rawLine.erase(remove(begin(rawLine), end(rawLine), '\r'), end(rawLine));
 
-    string line = rawLine;
-    string::size_type Split = line.find('=');
+    string_view line(rawLine);
+    string_view::size_type eqIndex = line.find('=');
 
-    if (Split == string::npos || Split == 0) {
+    if (eqIndex == string_view::npos || eqIndex == 0) {
       continue;
     }
 
-    string::size_type keyStart   = line.find_first_not_of(' ');
-    string::size_type keyEnd     = line.find_last_not_of(' ', Split - 1) + 1;
-    string::size_type valueStart = line.find_first_not_of(' ', Split + 1);
-    string::size_type valueEnd   = line.find_last_not_of(' ') + 1;
+    string_view::size_type keyStart   = line.find_first_not_of(' ');
+    string_view::size_type keyEnd     = line.find_last_not_of(' ', eqIndex - 1) + 1;
+    string_view::size_type valueStart = line.find_first_not_of(' ', eqIndex + 1);
+    string_view::size_type valueEnd   = line.find_last_not_of(' ') + 1;
 
-    if (valueStart == string::npos) {
+    if (valueStart == string_view::npos) {
       continue;
     }
 
-    string key = line.substr(keyStart, keyEnd - keyStart);
+    string key(line.substr(keyStart, keyEnd - keyStart));
     if (adapterConfig) {
       key = adapterConfig->GetString(key, key);
     }
-    if (!utf8::is_valid(line.begin() + valueStart, line.begin() + valueEnd)) {
+    string_view value = line.substr(valueStart, valueEnd - valueStart);
+    if (!utf8::is_valid(value)) {
       // Be as lenient as possible - only check values.
       // This means that an invalid file may yield no warnings
       // (when errors are inside comments), but let's not worry about that.
-      Print("[CONFIG] warning - encoding errors found in [" + PathToString(file) + "] - expected UTF8 - omitted <" + key + ">");
+      Print(Concat("[CONFIG] warning - encoding errors found in [", PathToString(file), "] - expected UTF8 - omitted <", key, ">"));
       continue;
     }
-    m_CFG[key] = line.substr(valueStart, valueEnd - valueStart);
+    m_CFG[key] = string(value);
   }
 
   in.close();
@@ -511,7 +512,7 @@ uint8_t CConfig::GetSlot(const string& key, uint8_t maxSlots, uint8_t defaultVal
   if (maybeResult.value() <= 0 || maxSlots < maybeResult.value()) {
     CONFIG_ERROR(key, defaultValue);
   }
-  SUCCESS(maybeResult.value() - 1);
+  SUCCESS(maybeResult.value() - TINY_ONE);
 }
 
 uint8_t CConfig::GetPlayerCount(const string& key, uint8_t defaultValue)
@@ -1194,29 +1195,30 @@ std::string CConfig::ReadString(const std::filesystem::path& file, const std::st
     // remove CR
     rawLine.erase(remove(begin(rawLine), end(rawLine), '\r'), end(rawLine));
 
-    string line = rawLine;
-    string::size_type Split = line.find('=');
+    string_view line(rawLine);
+    string_view::size_type eqIndex = line.find('=');
 
-    if (Split == string::npos || Split == 0)
+    if (eqIndex == string_view::npos || eqIndex == 0)
       continue;
 
-    string::size_type keyStart   = line.find_first_not_of(' ');
-    string::size_type keyEnd     = line.find_last_not_of(' ', Split - 1) + 1;
-    string::size_type valueStart = line.find_first_not_of(' ', Split + 1);
-    string::size_type valueEnd   = line.find_last_not_of(' ') + 1;
+    string_view::size_type keyStart   = line.find_first_not_of(' ');
+    string_view::size_type keyEnd     = line.find_last_not_of(' ', eqIndex - 1) + 1;
+    string_view::size_type valueStart = line.find_first_not_of(' ', eqIndex + 1);
+    string_view::size_type valueEnd   = line.find_last_not_of(' ') + 1;
 
-    if (valueStart == string::npos)
+    if (valueStart == string_view::npos)
       continue;
 
     if (line.substr(keyStart, keyEnd - keyStart) == key) {
-      if (!utf8::is_valid(line.begin() + valueStart, line.begin() + valueEnd)) {
+      string_view value = line.substr(valueStart, valueEnd - valueStart);
+      if (!utf8::is_valid(value)) {
         // Be as lenient as possible - only check values.
         // This means that an invalid file may yield no warnings, if errors are inside comments,
         // but let's not worry about that.
-        Print("[CONFIG] warning - encoding errors found in [" + PathToString(file) + "] - expected UTF8 - omitted <" + key + ">");
+        Print(Concat("[CONFIG] warning - encoding errors found in [", PathToString(file), "] - expected UTF8 - omitted <", key, ">"));
         continue;
       }
-      cfgValue = line.substr(valueStart, valueEnd - valueStart);
+      cfgValue = string(value);
       break;
     }
   }

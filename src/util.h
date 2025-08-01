@@ -266,7 +266,6 @@ template <OOBPolicy oobPolicy>
 [[nodiscard]] const uint8_t* FindNullDelimiterInRangeOrEnd(const uint8_t* start, const uint8_t* end);
 [[nodiscard]] std::string GetStringAddressRange(const uint8_t* start, const uint8_t* end);
 [[nodiscard]] std::string GetStringAddressRange(const std::vector<uint8_t>& b, const size_t start, const size_t end);
-[[nodiscard]] std::vector<uint8_t> ExtractCString(const std::vector<uint8_t>& b, const size_t start);
 template <OOBPolicy oobPolicy, NullTerminatorPolicy nullPolicy, StringEncoding encoding>
 [[nodiscard]] std::string_view ExtractStringView(const std::vector<uint8_t>& b, const size_t start, const size_t maxSize);
 template <OOBPolicy oobPolicy, NullTerminatorPolicy nullPolicy, StringEncoding encoding>

@@ -232,7 +232,7 @@ bool CBNCSUtilInterface::ExtractEXEFeatures(const Version& war3DataVersion, cons
 
   if (!FileWar3EXE.empty() && (war3DataVersion >= GAMEVER(1u, 29u) || (!FileStormDLL.empty() && !FileGameDLL.empty())))
   {
-    int bufferSize = 512;
+    size_t bufferSize = 512;
     size_t requiredSize = 0;
     vector<char> buffer(bufferSize);
 

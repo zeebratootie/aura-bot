@@ -1219,28 +1219,6 @@ string GetStringAddressRange(const vector<uint8_t>& b, const size_t start, const
   return string(reinterpret_cast<const char*>(b.data() + start), end - start);
 }
 
-vector<uint8_t> ExtractCString(const vector<uint8_t>& b, const size_t start)
-{
-  // start searching the byte array at position 'start' for the first null value
-  // if found, return the subarray from 'start' to the null value but not including the null value
-
-  if (start < b.size())
-  {
-    for (size_t i = start; i < b.size(); ++i)
-    {
-      if (b[i] == 0)
-        return vector<uint8_t>(begin(b) + start, begin(b) + i);
-    }
-
-    // no null value found, return the rest of the byte array
-
-    return vector<uint8_t>(begin(b) + start, end(b));
-  }
-
-  return vector<uint8_t>();
-}
-
-
 template <OOBPolicy oobPolicy, NullTerminatorPolicy nullPolicy, StringEncoding encoding>
 string_view ExtractStringView(const vector<uint8_t>& b, const size_t start, const size_t maxSize)
 {
@@ -1416,115 +1394,106 @@ vector<string> SplitArgs(const string& s, const uint8_t expectedCount)
 {
   uint8_t parsedCount = 0;
   stringstream SS(s);
-  string NextItem;
-  vector<string> Output;
+  string nextItem;
+  vector<string> output;
   do {
-    getline(SS, NextItem, ',');
+    getline(SS, nextItem, ',');
     if (SS.fail()) {
       break;
     }
-    Output.push_back(TrimString(NextItem));
+    output.push_back(TrimString(nextItem));
     ++parsedCount;
   } while (!SS.eof() && parsedCount < expectedCount);
 
   if (parsedCount != expectedCount)
-    Output.clear();
+    output.clear();
 
-  return Output;
+  return output;
 }
 
 vector<string> SplitArgs(const string& s, const uint8_t minCount, const uint8_t maxCount)
 {
   uint8_t parsedCount = 0;
   stringstream SS(s);
-  string NextItem;
-  vector<string> Output;
+  string nextItem;
+  vector<string> output;
   do {
-    getline(SS, NextItem, ',');
+    getline(SS, nextItem, ',');
     if (SS.fail()) {
       break;
     }
-    Output.push_back(TrimString(NextItem));
+    output.push_back(TrimString(nextItem));
     ++parsedCount;
   } while (!SS.eof() && parsedCount < maxCount);
 
   if (!(minCount <= parsedCount && parsedCount <= maxCount))
-    Output.clear();
+    output.clear();
 
-  return Output;
+  return output;
 }
 
 vector<uint32_t> SplitNumericArgs(const string& s, const uint8_t expectedCount)
 {
   uint8_t parsedCount = 0;
   stringstream SS(s);
-  uint32_t NextItem;
-  string NextString;
-  vector<uint32_t> Output;
+  string nextString;
+  vector<uint32_t> output;
+  output.reserve(expectedCount);
   do {
-    bool elemOkay = true;
-    getline(SS, NextString, ',');
+    getline(SS, nextString, ',');
     if (SS.fail()) {
       break;
     }
-    try {
-      NextItem = stol(TrimString(NextString));
-    } catch (...) {
-      elemOkay = false;
-    }
-    if (!elemOkay) {
-      Output.clear();
+    optional<uint32_t> nextItem = ToUint32(TrimString(nextString));
+    if (!nextItem.has_value()) {
+      output.clear(),
       break;
     }
-    Output.push_back(NextItem);
+    output.push_back(*nextItem);
     ++parsedCount;
   } while (!SS.eof() && parsedCount < expectedCount);
 
   if (parsedCount != expectedCount)
-    Output.clear();
+    output.clear();
 
-  return Output;
+  return output;
 }
 
 vector<uint32_t> SplitNumericArgs(const string& s, const uint8_t minCount, const uint8_t maxCount)
 {
   uint8_t parsedCount = 0;
   stringstream SS(s);
-  uint32_t NextItem;
-  string NextString;
-  vector<uint32_t> Output;
+  string nextString;
+  vector<uint32_t> output;
+  output.reserve(minCount);
   do {
-    bool elemOkay = true;
-    getline(SS, NextString, ',');
+    getline(SS, nextString, ',');
     if (SS.fail()) {
       break;
     }
-    try {
-      NextItem = stol(TrimString(NextString));
-    } catch (...) {
-      elemOkay = false;
-    }
-    if (!elemOkay) {
-      Output.clear();
+    optional<uint32_t> nextItem = ToUint32(TrimString(nextString));
+    if (!nextItem.has_value()) {
+      output.clear(),
       break;
     }
-    Output.push_back(NextItem);
+    output.push_back(*nextItem);
     ++parsedCount;
   } while (!SS.eof() && parsedCount < maxCount);
 
   if (!(minCount <= parsedCount && parsedCount <= maxCount))
-    Output.clear();
+    output.clear();
 
-  return Output;
+  return output;
 }
 
 void AssignLength(vector<uint8_t>& content)
 {
   // insert the actual length of the content array into bytes 3 and 4 (indices 2 and 3)
 
-  const uint16_t Size = static_cast<uint16_t>(content.size());
-  content[2] = static_cast<uint8_t>(Size);
-  content[3] = static_cast<uint8_t>(Size >> 8);
+  const uint16_t size = static_cast<uint16_t>(content.size());
+  assert((size >= 4) && "Protocol requires packets at least 4 bytes long.");
+  content[2] = static_cast<uint8_t>(size);
+  content[3] = static_cast<uint8_t>(size >> 8);
 }
 
 bool ValidateLength(const vector<uint8_t>& content)
