@@ -744,8 +744,12 @@ void CAsyncObserver::EventChat(const CIncomingMessageOrSettingsView& incomingCha
       string prefix = Concat("[", ToFormattedTimeStamp(m_GameTicks / 1000), "] [", m_Name, "]: ");
       relaySuccess = game->SendSpectatorChat(this, prefix, textContent);
     }
-    if (shouldRelay && !relaySuccess && m_IsObserver && targetType != CHAT_RECV_OBS) {
-      SendChat("You are in spectator mode, and may only chat with other spectators.");
+    if (shouldRelay && m_IsObserver) {
+      if (relaySuccess && targetType != CHAT_RECV_OBS) {
+        SendChat("[All] Chat is DISABLED. You are in spectator mode, and may only chat with other spectators.");
+      } else (!relaySuccess) {
+        SendChat("You are in spectator mode, and may only chat with other spectators. No other spectators found.");
+      }
     }
     if (shouldRelay && relaySuccess) {
       shouldRelay = false;
