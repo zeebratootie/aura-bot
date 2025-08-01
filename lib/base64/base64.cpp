@@ -47,8 +47,8 @@ using namespace std;
 constexpr unsigned int UpperCaseA = static_cast<unsigned int>(static_cast<unsigned char>('A'));
 constexpr unsigned int UpperCaseZ = static_cast<unsigned int>(static_cast<unsigned char>('Z'));
 constexpr unsigned int AlphabetSize = UpperCaseZ - UpperCaseA + 1;
-constexpr unsigned int POS_OF_UPPER_CASE_OFFSET = -UpperCaseA;
-constexpr unsigned int POS_OF_LOWER_CASE_OFFSET = AlphabetSize - static_cast<unsigned int>(static_cast<unsigned char>('a'));
+constexpr unsigned int POS_OF_UPPER_CASE_OFFSET_MINUS = UpperCaseA;
+constexpr unsigned int POS_OF_LOWER_CASE_OFFSET_MINUS = static_cast<unsigned int>(static_cast<unsigned char>('a')) - AlphabetSize;
 constexpr unsigned int POS_OF_DIGITS_OFFSET = 2 * AlphabetSize - static_cast<unsigned int>(static_cast<unsigned char>('0'));
 
 namespace Base64
@@ -75,8 +75,8 @@ namespace Base64
    // Return the position of chr within Encode()
    //
 
-      if      (chr >= 'A' && chr <= 'Z') return static_cast<unsigned int>(chr) + POS_OF_UPPER_CASE_OFFSET;
-      else if (chr >= 'a' && chr <= 'z') return static_cast<unsigned int>(chr) + POS_OF_LOWER_CASE_OFFSET;
+      if      (chr >= 'A' && chr <= 'Z') return static_cast<unsigned int>(chr) - POS_OF_UPPER_CASE_OFFSET_MINUS;
+      else if (chr >= 'a' && chr <= 'z') return static_cast<unsigned int>(chr) - POS_OF_LOWER_CASE_OFFSET_MINUS;
       else if (chr >= '0' && chr <= '9') return static_cast<unsigned int>(chr) + POS_OF_DIGITS_OFFSET;
       else if (chr == '+' || chr == '-') return 62; // Be liberal with input and accept both url ('-') and non-url ('+') base 64 characters (
       else if (chr == '/' || chr == '_') return 63; // Ditto for '/' and '_'
