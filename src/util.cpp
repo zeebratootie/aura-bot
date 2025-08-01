@@ -96,7 +96,7 @@ string ToDecStringPadded(const int64_t num, const string::size_type padding)
   if (numeral.size() >= padding) return numeral;
   string padded = string(padding, '0');
   string::size_type replacePos = static_cast<string::size_type>(padding - numeral.size());
-  padded.replace(padded.begin() + replacePos, padded.end(), numeral);
+  padded.replace(padded.begin() + static_cast<string::difference_type>(replacePos), padded.end(), numeral);
   return padded;
 }
 
@@ -291,12 +291,12 @@ string ToVersionString(const Version& version)
 
 uint32_t ToVersionFlattened(const Version& version) // MDNS protocol
 {
-  return (uint32_t)10000u + (uint32_t)100u * (uint32_t)(version.first - 1) + (uint32_t)(version.second);
+  return (uint32_t)10000u + (uint32_t)100u * ((uint32_t)version.first - 1u) + (uint32_t)(version.second);
 }
 
 uint8_t ToVersionOrdinal(const Version& version) // Aura internal
 {
-  return (uint8_t)(version.first - TINY_ONE) * TINY_37 + version.second;
+  return static_cast<uint8_t>((uint32_t)(version.first - TINY_ONE) * (uint32_t)TINY_37 + (uint32_t)version.second);
 }
 
 bool GetIsValidVersion(const Version& version)
@@ -1210,7 +1210,7 @@ const uint8_t* FindNullDelimiterInRangeOrEnd(const uint8_t* start, const uint8_t
 string GetStringAddressRange(const uint8_t* start, const uint8_t* end)
 {
   if (end == start) return string();
-  return string(reinterpret_cast<const char*>(start), end - start);
+  return string(reinterpret_cast<const char*>(start), static_cast<size_t>(end - start));
 }
 
 string GetStringAddressRange(const vector<uint8_t>& b, const size_t start, const size_t end)

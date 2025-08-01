@@ -62,6 +62,8 @@ GameStat::GameStat(const uint8_t* ptr, size_t size)
   m_MapWidth(0),
   m_MapHeight(0)
 {
+  if (size > PTRDIFF_MAX) return;
+
   const uint8_t* dataEnd = ptr + size;
   const uint8_t* cursorStart = ptr;
   const uint8_t* cursorEnd = cursorStart;

@@ -194,6 +194,9 @@ bool CConfig::Read(const filesystem::path& file, CConfig* adapterConfig)
     if (rawLine.empty() || rawLine[0] == '#' || rawLine[0] == ';' || rawLine == "\n") {
       continue;
     }
+    if (rawLine.size() > PTRDIFF_MAX) {
+      continue;
+    }
 
     // remove CR
     rawLine.erase(remove(begin(rawLine), end(rawLine), '\r'), end(rawLine));
@@ -206,14 +209,15 @@ bool CConfig::Read(const filesystem::path& file, CConfig* adapterConfig)
     }
 
     string_view::size_type keyStart   = line.find_first_not_of(' ');
-    string_view::size_type keyEnd     = line.find_last_not_of(' ', eqIndex - 1) + 1;
+    string_view::size_type keyBeforeEnd     = line.find_last_not_of(' ', eqIndex - 1);
     string_view::size_type valueStart = line.find_first_not_of(' ', eqIndex + 1);
-    string_view::size_type valueEnd   = line.find_last_not_of(' ') + 1;
+    string_view::size_type valueBeforeEnd   = line.find_last_not_of(' ');
 
-    if (valueStart == string_view::npos) {
+    if (keyStart == string_view::npos || keyBeforeEnd == string_view::npos || valueStart == string_view::npos || valueBeforeEnd == string_view::npos) {
       continue;
     }
-
+    string_view::size_type keyEnd = keyBeforeEnd + 1;
+    string_view::size_type valueEnd = valueBeforeEnd + 1;
     string key(line.substr(keyStart, keyEnd - keyStart));
     if (adapterConfig) {
       key = adapterConfig->GetString(key, key);
@@ -1191,6 +1195,9 @@ std::string CConfig::ReadString(const std::filesystem::path& file, const std::st
     if (rawLine.empty() || rawLine[0] == '#' || rawLine[0] == ';' || rawLine == "\n") {
       continue;
     }
+    if (rawLine.size() > PTRDIFF_MAX) {
+      continue;
+    }
 
     // remove CR
     rawLine.erase(remove(begin(rawLine), end(rawLine), '\r'), end(rawLine));
@@ -1198,16 +1205,20 @@ std::string CConfig::ReadString(const std::filesystem::path& file, const std::st
     string_view line(rawLine);
     string_view::size_type eqIndex = line.find('=');
 
-    if (eqIndex == string_view::npos || eqIndex == 0)
+    if (eqIndex == string_view::npos || eqIndex == 0) {
       continue;
+    }
 
     string_view::size_type keyStart   = line.find_first_not_of(' ');
-    string_view::size_type keyEnd     = line.find_last_not_of(' ', eqIndex - 1) + 1;
+    string_view::size_type keyBeforeEnd     = line.find_last_not_of(' ', eqIndex - 1);
     string_view::size_type valueStart = line.find_first_not_of(' ', eqIndex + 1);
-    string_view::size_type valueEnd   = line.find_last_not_of(' ') + 1;
+    string_view::size_type valueBeforeEnd   = line.find_last_not_of(' ');
 
-    if (valueStart == string_view::npos)
+    if (keyStart == string_view::npos || keyBeforeEnd == string_view::npos || valueStart == string_view::npos || valueBeforeEnd == string_view::npos) {
       continue;
+    }
+    string_view::size_type keyEnd = keyBeforeEnd + 1;
+    string_view::size_type valueEnd = valueBeforeEnd + 1;
 
     if (line.substr(keyStart, keyEnd - keyStart) == key) {
       string_view value = line.substr(valueStart, valueEnd - valueStart);

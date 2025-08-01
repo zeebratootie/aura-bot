@@ -28,6 +28,7 @@
 
 #include <array>
 #include <string>
+#include <limits>
 #include <type_traits>
 
 template<typename T>
