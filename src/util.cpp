@@ -1446,7 +1446,7 @@ vector<uint32_t> SplitNumericArgs(const string& s, const uint8_t expectedCount)
     }
     optional<uint32_t> nextItem = ToUint32(TrimString(nextString));
     if (!nextItem.has_value()) {
-      output.clear(),
+      output.clear();
       break;
     }
     output.push_back(*nextItem);
@@ -1473,7 +1473,7 @@ vector<uint32_t> SplitNumericArgs(const string& s, const uint8_t minCount, const
     }
     optional<uint32_t> nextItem = ToUint32(TrimString(nextString));
     if (!nextItem.has_value()) {
-      output.clear(),
+      output.clear();
       break;
     }
     output.push_back(*nextItem);
