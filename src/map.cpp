@@ -216,27 +216,27 @@ uint32_t CMap::GetGameConvertedFlags() const
 
   switch (m_GameVisibility) {
     case GameVisibilityMode::kHideTerrain:
-      gameFlags |= 0x00000100;
+      gameFlags |= 0x00000100u;
       break;
     case GameVisibilityMode::kExplored:
-      gameFlags |= 0x00000200;
+      gameFlags |= 0x00000200u;
       break;
     case GameVisibilityMode::kAlwaysVisible:
-      gameFlags |= 0x00000400;
+      gameFlags |= 0x00000400u;
       break;
     default:
-      gameFlags |= 0x00000800;
+      gameFlags |= 0x00000800u;
   }
 
   switch (m_GameObservers) {
     case GameObserversMode::kOnDefeat:
-      gameFlags |= 0x00002000;
+      gameFlags |= 0x00002000u;
       break;
     case GameObserversMode::kStartOrOnDefeat:
-      gameFlags |= 0x00003000;
+      gameFlags |= 0x00003000u;
       break;
     case GameObserversMode::kReferees:
-      gameFlags |= 0x40000000;
+      gameFlags |= 0x40000000u;
       break;
     default:
       break;
@@ -245,24 +245,24 @@ uint32_t CMap::GetGameConvertedFlags() const
   // teams/units/hero/race
 
   if (m_GameFlags & GAMEFLAG_TEAMSTOGETHER) {
-    gameFlags |= 0x00004000;
+    gameFlags |= 0x00004000u;
   }
 
   if (m_GameFlags & GAMEFLAG_FIXEDTEAMS)
-    gameFlags |= 0x00060000;
+    gameFlags |= 0x00060000u;
 
   if (m_GameFlags & GAMEFLAG_UNITSHARE)
-    gameFlags |= 0x01000000;
+    gameFlags |= 0x01000000u;
 
   if (m_GameFlags & GAMEFLAG_RANDOMHERO)
-    gameFlags |= 0x02000000;
+    gameFlags |= 0x02000000u;
 
   if (!(m_MapOptions & MAPOPT_FIXEDPLAYERSETTINGS)) {
     // WC3 GUI is misleading in displaying the Random Races tickbox when creating LAN games.
     // It even shows Random Races: Yes in the game lobby.
     // However, this flag is totally ignored when Fixed Player Settings is enabled.
     if (m_GameFlags & GAMEFLAG_RANDOMRACES)
-      gameFlags |= 0x04000000;
+      gameFlags |= 0x04000000u;
   }
 
   return gameFlags;
@@ -500,8 +500,6 @@ bool CMap::SetGameSpeed(const GameSpeed gameSpeed)
 
 bool CMap::SetGameConvertedFlags(const uint32_t gameFlags)
 {
-  m_GameFlags = 0;
-
   // speed
 
   if (gameFlags & 0x00000002) {
@@ -538,25 +536,29 @@ bool CMap::SetGameConvertedFlags(const uint32_t gameFlags)
 
   // teams/units/hero/race
 
+  uint32_t convertedFlags = 0;
+
   if (gameFlags & 0x00004000) {
-    m_GameFlags |= GAMEFLAG_TEAMSTOGETHER;
+    convertedFlags |= (uint32_t)GAMEFLAG_TEAMSTOGETHER;
   }
 
   if (gameFlags & 0x00060000) {
-    m_GameFlags |= GAMEFLAG_FIXEDTEAMS;
+    convertedFlags |= (uint32_t)GAMEFLAG_FIXEDTEAMS;
   }
 
   if (gameFlags & 0x01000000) {
-    m_GameFlags |= GAMEFLAG_UNITSHARE;
+    convertedFlags |= (uint32_t)GAMEFLAG_UNITSHARE;
   }
 
   if (gameFlags & 0x02000000) {
-    m_GameFlags |= GAMEFLAG_RANDOMHERO;
+    convertedFlags |= (uint32_t)GAMEFLAG_RANDOMHERO;
   }
 
   if (gameFlags & 0x04000000) {
-    m_GameFlags |= GAMEFLAG_RANDOMRACES;
+    convertedFlags |= (uint32_t)GAMEFLAG_RANDOMRACES;
   }
+
+  m_GameFlags = convertedFlags;
 
   return true;
 }
@@ -564,9 +566,9 @@ bool CMap::SetGameConvertedFlags(const uint32_t gameFlags)
 bool CMap::SetGameTeamsLocked(const bool nEnable)
 {
   if (nEnable) {
-    m_GameFlags |= GAMEFLAG_FIXEDTEAMS;
+    SET_TINY(m_GameFlags, GAMEFLAG_FIXEDTEAMS);
   } else {
-    m_GameFlags &= (uint8_t)~GAMEFLAG_FIXEDTEAMS;
+    UNSET_TINY(m_GameFlags, GAMEFLAG_FIXEDTEAMS);
   }
   return true;
 }
@@ -574,9 +576,9 @@ bool CMap::SetGameTeamsLocked(const bool nEnable)
 bool CMap::SetGameTeamsTogether(const bool nEnable)
 {
   if (nEnable) {
-    m_GameFlags |= GAMEFLAG_TEAMSTOGETHER;
+    SET_TINY(m_GameFlags, GAMEFLAG_TEAMSTOGETHER);
   } else {
-    m_GameFlags &= (uint8_t)~GAMEFLAG_TEAMSTOGETHER;
+    UNSET_TINY(m_GameFlags, GAMEFLAG_TEAMSTOGETHER);
   }
   return true;
 }
@@ -584,9 +586,9 @@ bool CMap::SetGameTeamsTogether(const bool nEnable)
 bool CMap::SetGameAdvancedSharedUnitControl(const bool nEnable)
 {
   if (nEnable) {
-    m_GameFlags |= GAMEFLAG_UNITSHARE;
+    SET_TINY(m_GameFlags, GAMEFLAG_UNITSHARE);
   } else {
-    m_GameFlags &= (uint8_t)~GAMEFLAG_UNITSHARE;
+    UNSET_TINY(m_GameFlags, GAMEFLAG_UNITSHARE);
   }
   return true;
 }
@@ -594,9 +596,9 @@ bool CMap::SetGameAdvancedSharedUnitControl(const bool nEnable)
 bool CMap::SetGameRandomHeroes(const bool nEnable)
 {
   if (nEnable) {
-    m_GameFlags |= GAMEFLAG_RANDOMHERO;
+    SET_TINY(m_GameFlags, GAMEFLAG_RANDOMHERO);
   } else {
-    m_GameFlags &= (uint8_t)~GAMEFLAG_RANDOMHERO;
+    UNSET_TINY(m_GameFlags, GAMEFLAG_RANDOMHERO);
   }
   return true;
 }
@@ -607,9 +609,9 @@ bool CMap::SetGameRandomRaces(const bool nEnable)
     return false;
   }
   if (nEnable) {
-    m_GameFlags |= GAMEFLAG_RANDOMRACES;
+    SET_TINY(m_GameFlags, GAMEFLAG_RANDOMRACES);
   } else {
-    m_GameFlags &= (uint8_t)~GAMEFLAG_RANDOMRACES;
+    UNSET_TINY(m_GameFlags, GAMEFLAG_RANDOMRACES);
   }
   return true;
 }

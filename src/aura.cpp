@@ -2151,10 +2151,10 @@ bool CAura::CheckDependencies()
 #ifndef DISABLE_MDNS
     bool foundMDNS = CMDNS::CheckLibrary();
     if (foundMDNS) {
-      m_FoundDeps |= APP_FOUND_DEPS_MDNS;
+      SET_TINY(m_FoundDeps, APP_FOUND_DEPS_MDNS);
     } else {
       success = false;
-      m_FoundDeps &= (uint8_t)~APP_FOUND_DEPS_MDNS;
+      UNSET_TINY(m_FoundDeps, APP_FOUND_DEPS_MDNS);
 #ifdef _WIN32
       Print("[AURA] warning - MDNS not found. Install MDNS to enable LAN support for v1.30 onwards: https://support.apple.com/en-us/106380");
 #else
@@ -2168,10 +2168,10 @@ bool CAura::CheckDependencies()
   if (m_DPPDependency != OptionalDependencyMode::kNotUseful && !(m_FoundDeps & APP_FOUND_DEPS_DPP)) {
     bool foundDPP = CDiscord::CheckLibraries();
     if (foundDPP) {
-      m_FoundDeps |= APP_FOUND_DEPS_DPP;
+      SET_TINY(m_FoundDeps, APP_FOUND_DEPS_DPP);
     } else {
       success = false;
-      m_FoundDeps &= (uint8_t)~APP_FOUND_DEPS_DPP;
+      UNSET_TINY(m_FoundDeps, APP_FOUND_DEPS_DPP);
       m_Discord.m_Config.m_Enabled = false;
       Print("[AURA] error - Discord service disabled because some required files are missing.");
     }
@@ -2330,13 +2330,13 @@ bool CAura::CreateGame(shared_ptr<CGameSetup> gameSetup)
 #endif
 
   if (createdLobby->GetIsCheckJoinable() && !m_Net.GetIsFetchingIPAddresses()) {
-    uint8_t checkMode = HEALTH_CHECK_ALL;
+    uint32_t checkMode = (uint32_t)HEALTH_CHECK_ALL;
     if (!m_Net.m_SupportTCPOverIPv6) {
-      checkMode &= NOT_HEALTH_CHECK_PUBLIC_IPV6;
-      checkMode &= NOT_HEALTH_CHECK_LOOPBACK_IPV6;
+      checkMode &= ~(uint32_t)HEALTH_CHECK_PUBLIC_IPV6;
+      checkMode &= ~(uint32_t)HEALTH_CHECK_LOOPBACK_IPV6;
     }
     if (createdLobby->GetIsVerbose()) {
-      checkMode |= HEALTH_CHECK_VERBOSE;
+      checkMode |= (uint32_t)HEALTH_CHECK_VERBOSE;
     }
     m_Net.QueryHealthCheck(gameSetup->m_Ctx, checkMode, nullptr, createdLobby);
     createdLobby->SetIsCheckJoinable(false);

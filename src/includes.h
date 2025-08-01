@@ -186,6 +186,46 @@ std::string::size_type constexpr GetStringLength(const char* str)
 #define WriteUint32LE WriteUint32<Endianness::kLittle>
 #define WriteUint32BE WriteUint32<Endianness::kBig>
 
+inline void SET_TINY(uint8_t& a, uint8_t b) {
+  a = static_cast<uint8_t>(static_cast<uint32_t>(a) | static_cast<uint32_t>(b));
+}
+
+inline void UNSET_TINY(uint8_t& a, uint8_t b) {
+  a = static_cast<uint8_t>(static_cast<uint32_t>(a) & ~static_cast<uint32_t>(b));
+}
+
+inline uint8_t OR_TINY(uint8_t a, uint8_t b) {
+  return static_cast<uint8_t>(static_cast<uint32_t>(a) | static_cast<uint32_t>(b));
+}
+
+inline uint8_t AND_TINY(uint8_t a, uint8_t b) {
+  return static_cast<uint8_t>(static_cast<uint32_t>(a) & static_cast<uint32_t>(b));
+}
+
+inline void SET_SHORT(uint16_t& a, uint16_t b) {
+  a = static_cast<uint16_t>(static_cast<uint32_t>(a) | static_cast<uint32_t>(b));
+}
+
+inline void UNSET_SHORT(uint16_t& a, uint16_t b) {
+  a = static_cast<uint16_t>(static_cast<uint32_t>(a) & ~static_cast<uint32_t>(b));
+}
+
+inline uint16_t OR_SHORT(uint16_t a, uint16_t b) {
+  return static_cast<uint16_t>(static_cast<uint32_t>(a) | static_cast<uint32_t>(b));
+}
+
+inline uint16_t AND_SHORT(uint16_t a, uint16_t b) {
+  return static_cast<uint16_t>(static_cast<uint32_t>(a) & static_cast<uint32_t>(b));
+}
+
+inline uint16_t OR_SHORT(uint16_t a, uint16_t b, uint16_t c) {
+  return static_cast<uint16_t>(static_cast<uint32_t>(a) | static_cast<uint32_t>(b) | static_cast<uint32_t>(c));
+}
+
+inline uint16_t OR_SHORT(uint16_t a, uint16_t b, uint16_t c, uint16_t d) {
+  return static_cast<uint16_t>(static_cast<uint32_t>(a) | static_cast<uint32_t>(b) | static_cast<uint32_t>(c) | static_cast<uint32_t>(d));
+}
+
 // time
 
 inline int64_t GetTime()

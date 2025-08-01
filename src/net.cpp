@@ -109,13 +109,13 @@ uint32_t CGameTestConnection::GetHostCounter() const
   if (lobby && lobby->GetIsMirror()) {
     return m_BaseHostCounter;
   }
-  uint32_t hostCounter = m_BaseHostCounter | (0x01 << 24); // informational bit
+  uint32_t hostCounter = m_BaseHostCounter | (LONG_ONE << HOST_COUNTER_REALM_OFFSET); // informational bit
   string realmId = m_Aura->m_RealmsIdentifiers[m_RealmInternalId];
   shared_ptr<CRealm> realm = m_Aura->GetRealmByInputId(realmId);
   if (realm == nullptr) {
     return hostCounter;
   }
-  hostCounter |= static_cast<uint32_t>(realm->GetHostCounterID()) << 24;
+  hostCounter |= static_cast<uint32_t>(realm->GetHostCounterID()) << HOST_COUNTER_REALM_OFFSET;
   return hostCounter;
 }
 
@@ -1229,7 +1229,7 @@ uint8_t CNet::RequestUPnP(const NetProtocol protocolCode, const uint16_t externa
   PRINT_IF(LogLevel::kNotice, "[NET] Requesting UPnP port-mapping (" + protocol + ") " + to_string(externalPort) + " -> " + to_string(internalPort));
 
   devlist = upnpDiscover(2000, nullptr, nullptr, 0, 0, 2, 0);
-  uint8_t success = 0;
+  uint32_t success = 0;
 
   string extPort = to_string(externalPort);
   string intPort = to_string(internalPort);
@@ -1266,7 +1266,7 @@ uint8_t CNet::RequestUPnP(const NetProtocol protocolCode, const uint16_t externa
 
     int result = UPNP_AddPortMapping(urls.controlURL, data.first.servicetype, extPort.c_str(), intPort.c_str(), lanaddr, "Warcraft 3 game hosting", protocol.c_str(), nullptr, "86400");
     if (result == UPNPCOMMAND_SUCCESS) {
-      success |= (uint8_t)(1 << (type - 1));
+      success |= (uint32_t)(LONG_ONE << (uint32_t)(type - 1u));
     } else if (logLevel >= LogLevel::kInfo) {
       switch (result) {
         case UPNPCOMMAND_UNKNOWN_ERROR:
@@ -1298,7 +1298,7 @@ uint8_t CNet::RequestUPnP(const NetProtocol protocolCode, const uint16_t externa
   if (logLevel >= LogLevel::kInfo) {
     if (success == 0) {
       Print("[UPNP] Universal Plug and Play is not supported by the host router.");
-    } else if (0 != (success & 1)) {
+    } else if (LONG_ZERO != (success & LONG_ONE)) {
       Print("[UPNP] forwarding " + protocol + " external port " + extPort + " to internal port " + intPort + " OK.");
     } else {
       Print("[UPNP] warning - multi-layer NAT detected, port-forwarding may fail.");
@@ -1317,21 +1317,21 @@ uint8_t CNet::RequestUPnP(const NetProtocol protocolCode, const uint16_t externa
     IGNORE_ENUM_LAST(NetProtocol)
   }
 
-  return success;
+  return static_cast<uint8_t>(success);
 }
 #endif
 
-bool CNet::QueryHealthCheck(shared_ptr<CCommandContext> ctx, const uint8_t checkMode, shared_ptr<CRealm> targetRealm, shared_ptr<const CGame> game)
+bool CNet::QueryHealthCheck(shared_ptr<CCommandContext> ctx, const uint32_t checkMode, shared_ptr<CRealm> targetRealm, shared_ptr<const CGame> game)
 {
   if (m_Aura->m_ExitingSoon || m_HealthCheckInProgress) {
     return false;
   }
 
-  bool isVerbose = 0 != (checkMode & HEALTH_CHECK_VERBOSE);
+  bool isVerbose = LONG_ZERO != (checkMode | (uint32_t)HEALTH_CHECK_VERBOSE);
   const uint16_t gamePort = game->GetHostPortFromType(GAME_DISCOVERY_INTERFACE_IPV4);
   const uint32_t hostCounter = game->GetHostCounter();
 
-  if (0 != (checkMode & HEALTH_CHECK_LOOPBACK_IPV4)) {
+  if (LONG_ZERO != (checkMode & (uint32_t)HEALTH_CHECK_LOOPBACK_IPV4)) {
     sockaddr_storage loopBackAddress;
     memset(&loopBackAddress, 0, sizeof(sockaddr_storage));
     loopBackAddress.ss_family = AF_INET;
@@ -1341,7 +1341,7 @@ bool CNet::QueryHealthCheck(shared_ptr<CCommandContext> ctx, const uint8_t check
     m_HealthCheckClients.push_back(new CGameTestConnection(m_Aura, nullptr, loopBackAddress, hostCounter, CONNECTION_TYPE_LOOPBACK, "[Loopback]"));
   }
 
-  if (0 != (checkMode & HEALTH_CHECK_LOOPBACK_IPV6)) {
+  if (LONG_ZERO != (checkMode & (uint32_t)HEALTH_CHECK_LOOPBACK_IPV6)) {
     sockaddr_storage loopBackAddress;
     memset(&loopBackAddress, 0, sizeof(sockaddr_storage));
     loopBackAddress.ss_family = AF_INET6;
@@ -1353,16 +1353,16 @@ bool CNet::QueryHealthCheck(shared_ptr<CCommandContext> ctx, const uint8_t check
 
   sockaddr_storage* publicIPv4 = GetPublicIPv4();
   sockaddr_storage* publicIPv6 = GetPublicIPv6();
-  if (publicIPv4 == nullptr && (0 != (checkMode & HEALTH_CHECK_PUBLIC_IPV4)) && m_Config.m_PublicIPv4Algorithm != NET_PUBLIC_IP_ADDRESS_ALGORITHM_NONE) {
+  if (publicIPv4 == nullptr && (LONG_ZERO != (checkMode & (uint32_t)HEALTH_CHECK_PUBLIC_IPV4)) && m_Config.m_PublicIPv4Algorithm != NET_PUBLIC_IP_ADDRESS_ALGORITHM_NONE) {
     Print("[NET] Public IPv4 address unknown - check <net.ipv4.public_address.algorithm>, <net.ipv4.public_address.value>");
   }
-  if (publicIPv6 == nullptr && (0 != (checkMode & HEALTH_CHECK_PUBLIC_IPV6)) && m_Config.m_PublicIPv6Algorithm != NET_PUBLIC_IP_ADDRESS_ALGORITHM_NONE) {
+  if (publicIPv6 == nullptr && (LONG_ZERO != (checkMode & (uint32_t)HEALTH_CHECK_PUBLIC_IPV6)) && m_Config.m_PublicIPv6Algorithm != NET_PUBLIC_IP_ADDRESS_ALGORITHM_NONE) {
     Print("[NET] Public IPv6 address unknown - check <net.ipv6.public_address.algorithm>, <net.ipv6.public_address.value>");
   }
 
   bool anySendsPublicIp = false;
   for (const auto& realm : m_Aura->m_Realms) {
-    if ((0 == (checkMode & HEALTH_CHECK_REALM)) && realm != targetRealm) {
+    if ((LONG_ZERO == (checkMode & (uint32_t)HEALTH_CHECK_REALM)) && realm != targetRealm) {
       continue;
     }
     const sockaddr_storage* selfIPInThisRealm = realm->GetUsesCustomIPAddress() ? realm->GetPublicHostAddress() : publicIPv4;
@@ -1391,7 +1391,7 @@ bool CNet::QueryHealthCheck(shared_ptr<CCommandContext> ctx, const uint8_t check
     }
   }
   if (!anySendsPublicIp && publicIPv4 != nullptr && (
-    (0 != (checkMode & HEALTH_CHECK_PUBLIC_IPV4)))
+    (LONG_ZERO != (checkMode & (uint32_t)HEALTH_CHECK_PUBLIC_IPV4)))
   ) {
     sockaddr_storage targetHost;
     memcpy(&targetHost, publicIPv4, sizeof(sockaddr_storage));
@@ -1399,7 +1399,7 @@ bool CNet::QueryHealthCheck(shared_ptr<CCommandContext> ctx, const uint8_t check
     m_HealthCheckClients.push_back(new CGameTestConnection(m_Aura, nullptr, targetHost, hostCounter, 0, "[Public IPv4]"));
   }
   if (publicIPv6 != nullptr && !IN6_IS_ADDR_UNSPECIFIED(&(reinterpret_cast<sockaddr_in6*>(publicIPv6)->sin6_addr)) && (
-    (0 != (checkMode & HEALTH_CHECK_PUBLIC_IPV6))
+    (LONG_ZERO != (checkMode & (uint32_t)HEALTH_CHECK_PUBLIC_IPV6))
     )) {
     sockaddr_storage targetHost;
     memcpy(&targetHost, publicIPv6, sizeof(sockaddr_storage));
@@ -1464,11 +1464,11 @@ void CNet::ReportHealthCheck()
     if (!m_HealthCheckContext->GetWritesToStdout()) {
       Print("[AURA] Game at " + testConnection->m_Name + " - " + ResultText);
     }
-    if (0 == (testConnection->m_Type & NOT_CONNECTION_TYPE_CUSTOM_PORT)) {
+    if (TINY_ZERO == TINY_AND(testConnection->m_Type, NOT_CONNECTION_TYPE_CUSTOM_PORT)) {
       hasDirectAttempts = true;
       if (success) anyDirectSuccess = true;
     }
-    if (0 != (testConnection->m_Type & (CONNECTION_TYPE_IPV6))) {
+    if (TINY_ZERO != TINY_AND(testConnection->m_Type, (CONNECTION_TYPE_IPV6))) {
       if (success) isIPv6Reachable = true;
     }
     if (m_HealthCheckVerbose && !success) {
@@ -1632,13 +1632,13 @@ void CNet::CheckJoinableLobbies()
   // TODO: Missing support for concurrent (or even serial) joinable checks for multiple lobbies.
   for (const auto& lobby : m_Aura->m_Lobbies) {
     if (lobby->GetIsCheckJoinable()) {
-      uint8_t checkMode = HEALTH_CHECK_ALL;
+      uint32_t checkMode = (uint32_t)HEALTH_CHECK_ALL;
       if (!m_SupportTCPOverIPv6) {
-        checkMode &= NOT_HEALTH_CHECK_PUBLIC_IPV6;
-        checkMode &= NOT_HEALTH_CHECK_LOOPBACK_IPV6;
+        checkMode &= ~(uint32_t)HEALTH_CHECK_PUBLIC_IPV6;
+        checkMode &= ~(uint32_t)HEALTH_CHECK_LOOPBACK_IPV6;
       }
       if (lobby->GetIsVerbose()) {
-        checkMode |= HEALTH_CHECK_VERBOSE;
+        checkMode |= (uint32_t)HEALTH_CHECK_VERBOSE;
       }
       shared_ptr<CCommandContext> ctx = nullptr;
       try {
@@ -1759,7 +1759,7 @@ optional<tuple<string, string, uint16_t, string>> CNet::ParseURL(const string& a
 optional<sockaddr_storage> CNet::ParseAddress(const string& address, const uint8_t inputMode)
 {
   std::optional<sockaddr_storage> result;
-  if (0 != (inputMode & ACCEPT_IPV4)) {
+  if (TINY_ZERO != TINY_AND(inputMode, ACCEPT_IPV4)) {
     sockaddr_in addr4;
     memset(&addr4, 0, sizeof(addr4));
     addr4.sin_family = AF_INET;
@@ -1773,7 +1773,7 @@ optional<sockaddr_storage> CNet::ParseAddress(const string& address, const uint8
     }
   }
 
-  if (0 != (inputMode & ACCEPT_IPV6)) {
+  if (TINY_ZERO != TINY_AND(inputMode, ACCEPT_IPV6)) {
     sockaddr_in6 addr6;
     memset(&addr6, 0, sizeof(addr6));
     addr6.sin6_family = AF_INET6;
@@ -1843,12 +1843,12 @@ bool CNet::ResolveHostName(sockaddr_storage& address, const uint8_t acceptFamily
     SetAddressPort(&address, port);
     return true;
   }
-  if (0 != (acceptFamily & ACCEPT_IPV4)) {
+  if (TINY_ZERO != TINY_AND(acceptFamily, ACCEPT_IPV4)) {
     if (ResolveHostNameInner(address, hostName, port, AF_INET, m_IPv4DNSCache)) {
       return true;
     }
   }
-  if (0 != (acceptFamily & ACCEPT_IPV6)) {
+  if (TINY_ZERO != TINY_AND(acceptFamily, ACCEPT_IPV6)) {
     if (ResolveHostNameInner(address, hostName, port, AF_INET6, m_IPv6DNSCache)) {
       return true;
     }

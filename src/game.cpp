@@ -1495,7 +1495,7 @@ void CGame::UpdateJoinable()
     if (m_SlotInfoChanged & SLOTS_DOWNLOAD_PROGRESS_CHANGED) {
       SendAllSlotInfo();
       UpdateReadyCounters();
-      m_SlotInfoChanged &= (uint8_t)~SLOTS_DOWNLOAD_PROGRESS_CHANGED;
+      UNSET_TINY(m_SlotInfoChanged, SLOTS_DOWNLOAD_PROGRESS_CHANGED);
     }
 
     m_LastDownloadCounterResetTicks = m_Aura->GetLoopTicks();
@@ -1507,7 +1507,7 @@ bool CGame::UpdateLobby()
   if (m_SlotInfoChanged & SLOTS_ALIGNMENT_CHANGED) {
     SendAllSlotInfo();
     UpdateReadyCounters();
-    m_SlotInfoChanged &= (uint8_t)~SLOTS_ALIGNMENT_CHANGED;
+    UNSET_TINY(m_SlotInfoChanged, SLOTS_ALIGNMENT_CHANGED);
   }
 
   if (GetIsAutoStartDue()) {
@@ -1849,7 +1849,7 @@ bool CGame::Update(fd_set* fd, fd_set* send_fd)
 
     if (m_GameDiscoveryInfoChanged & GAME_DISCOVERY_CHANGED_SLOTS) {
       SendGameDiscoveryInfoMDNS();
-      m_GameDiscoveryInfoChanged &= (uint8_t)~GAME_DISCOVERY_CHANGED_SLOTS;
+      UNSET_TINY(m_GameDiscoveryInfoChanged, GAME_DISCOVERY_CHANGED_SLOTS);
     }
 
     m_LastPingTicks = loopTicks;
@@ -4336,7 +4336,7 @@ vector<uint8_t>* CGame::GetGameDiscoveryInfoTemplate()
     return &m_GameDiscoveryInfo;
   }
   m_GameDiscoveryInfo = GetGameDiscoveryInfoTemplateInner(&m_GameDiscoveryInfoVersionOffset, &m_GameDiscoveryInfoDynamicOffset);
-  m_GameDiscoveryInfoChanged &= (uint8_t)~GAME_DISCOVERY_CHANGED_MAJOR;
+  UNSET_TINY(m_GameDiscoveryInfoChanged, GAME_DISCOVERY_CHANGED_MAJOR);
   return &m_GameDiscoveryInfo;
 }
 

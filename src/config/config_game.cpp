@@ -445,7 +445,7 @@ CGameConfig::CGameConfig(CGameConfig* nRootConfig, shared_ptr<CMap> nMap, shared
   }
 
   if (m_LogCommands) {
-    m_LogChatTypes |= LOG_CHAT_TYPE_COMMANDS;
+    SET_TINY(m_LogChatTypes, LOG_CHAT_TYPE_COMMANDS);
   }
 
   INHERIT_CUSTOM(m_CrossPlayMode, m_CrossPlayMode)

@@ -850,9 +850,9 @@ public:
   inline void SetDraftMode(const bool nIsDraftMode) {
     m_IsDraftMode = nIsDraftMode;
     if (nIsDraftMode) {
-      m_CustomLayout |= CUSTOM_LAYOUT_DRAFT;
+      SET_TINY(m_CustomLayout, CUSTOM_LAYOUT_DRAFT);
     } else {
-      m_CustomLayout &= (uint8_t)~CUSTOM_LAYOUT_DRAFT;
+      UNSET_TINY(m_CustomLayout, CUSTOM_LAYOUT_DRAFT);
     }
   }
 

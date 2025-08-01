@@ -45,7 +45,7 @@
 using namespace std;
 
 constexpr uint8_t MAP_MATCH_TYPE_MAP = 0x80;
-constexpr uint8_t NOT_MAP_MATCH_TYPE_MAP = static_cast<uint8_t>(~MAP_MATCH_TYPE_MAP);
+constexpr uint8_t NOT_MAP_MATCH_TYPE_MAP = (uint8_t)~(uint32_t)MAP_MATCH_TYPE_MAP;
 
 // CGameExtraOptions
 

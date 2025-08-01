@@ -185,7 +185,7 @@ public:
 #ifndef DISABLE_MINIUPNP
   uint8_t RequestUPnP(const NetProtocol protocolCode, const uint16_t externalPort, const uint16_t internalPort, const LogLevel logLevel, bool ignoreCache = false);
 #endif
-  bool QueryHealthCheck(std::shared_ptr<CCommandContext> ctx, const uint8_t checkMode, std::shared_ptr<CRealm> realm, std::shared_ptr<const CGame> game);
+  bool QueryHealthCheck(std::shared_ptr<CCommandContext> ctx, const uint32_t checkMode, std::shared_ptr<CRealm> realm, std::shared_ptr<const CGame> game);
   void ResetHealthCheck();
   void ReportHealthCheck();
 
