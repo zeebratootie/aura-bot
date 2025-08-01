@@ -1175,7 +1175,7 @@ uint8_t CGame::GetNumJoinedPlayersOrFake() const
 
 uint8_t CGame::GetNumJoinedObserversOrFake() const
 {
-  return PLUS_TINY(GetNumJoinedObservers() + GetNumFakeObservers());
+  return PLUS_TINY(GetNumJoinedObservers(), GetNumFakeObservers());
 }
 
 uint8_t CGame::GetNumJoinedPlayersOrFakeUsers() const
