@@ -141,7 +141,7 @@ Assemble:
   # Doubles build time
   - export AURABUILD_SANITIZE=0
   - ccache -z
-  - make WFLAGS="-Wall -Wextra -Wconversion -Wsign-conversion -Warith-conversion -Wshadow" OFLAGS="-O1"
+  - make WFLAGS="-Wall -Wextra -Wconversion -Wsign-conversion -Wno-arith-conversion -Wshadow" OFLAGS="-O1"
   - ccache -s
   - make install
   - unset AURABUILD_CPR
