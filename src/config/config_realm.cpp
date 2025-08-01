@@ -387,7 +387,7 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CRealmConfig* nRootConfig, uint8_t nSer
     m_Win32LocaleID = 10250;
   } else {
     try {
-      m_Win32LocaleID  = stoul(m_Win32Locale);
+      m_Win32LocaleID  = static_cast<uint32_t>(stoul(m_Win32Locale));
     } catch (...) {
       m_Win32Locale = nRootConfig->m_Win32Locale;
     }
