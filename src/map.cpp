@@ -949,6 +949,15 @@ optional<MapEssentials> CMap::ParseMPQ()
           ISS.seekg(4, ios::cur);            // game data version
         }
 
+        if (FileFormat >= 32) {
+          ISS.seekg(4, ios::cur);            // default zoom distance
+          ISS.seekg(4, ios::cur);            // max zoom distance
+        }
+
+        if (FileFormat >= 33) {
+          ISS.seekg(4, ios::cur);            // min zoom distance
+        }
+
         mapEssentials->dataSet = static_cast<uint8_t>(RawGameDataSet);
         mapEssentials->editorVersion = RawEditorVersion;
         mapEssentials->isExpansion = FileFormat >= 25;
