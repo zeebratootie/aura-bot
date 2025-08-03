@@ -62,19 +62,37 @@
 
   periodIndex = versionString.find('.');
   periodIndex2 = versionString.find('.', periodIndex + 1);
-  if (periodIndex2 == std::string::npos) {
+
+  bool manyDots = periodIndex2 != std::string::npos;
+  if (!manyDots) {
     periodIndex2 = versionString.size();
   }
 
   std::string majorVersionString = versionString.substr(0, periodIndex);
   std::string minorVersionString = versionString.substr(periodIndex + 1, periodIndex2 - (periodIndex + 1));
 
+  if (!manyDots && !minorVersionString.empty()) {
+    // Remove patch version in letter format (e.g. 1.27b is normalized to 1.27)
+    char patch = minorVersionString[minorVersionString.size() - 1];
+    if (('a' <= patch && patch <= 'z') || ('A' <= patch && patch <= 'Z')) {
+      minorVersionString = minorVersionString.substr(0, minorVersionString.size() - 1);
+    }
+  }
+
   if (!IsBase10NaturalOrZero(majorVersionString)) {
     return result;
   }
 
-  if (!IsBase10NaturalOrZero(minorVersionString)) {
+  if (minorVersionString.empty() || 2 < minorVersionString.size() || !IsOnlyDigits(minorVersionString)) {
     return result;
+  }
+
+  // Normalize leftmost zeroes to avoid octal confusion.
+  std::string::size_type firstMinorNonZeroPos = minorVersionString.find_first_not_of('0');
+  if (firstMinorNonZeroPos == std::string::npos) {
+    minorVersionString = "0";
+  } else {
+    minorVersionString = minorVersionString.substr(firstMinorNonZeroPos);
   }
 
   uint32_t majorVersion = signed_cast_lossy<uint32_t>(stol(majorVersionString));

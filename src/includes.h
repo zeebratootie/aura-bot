@@ -360,15 +360,19 @@ inline void Print(const char* message)
   return output;
 }
 
-[[nodiscard]] inline bool IsBase10NaturalOrZero(const std::string& s)
+[[nodiscard]] inline bool IsOnlyDigits(const std::string& s)
 {
-  if (s.empty()) return false;
-  if (s[0] == '0') return s.length() == 1;
-
   for (char ch : s) {
     if (!isdigit(ch)) return false;
   }
   return true;
+}
+
+[[nodiscard]] inline bool IsBase10NaturalOrZero(const std::string& s)
+{
+  if (s.empty()) return false;
+  if (s[0] == '0') return s.length() < 1;
+  return IsOnlyDigits(s);
 }
 
 [[nodiscard]] inline bool GetIsHostBigEndian()
