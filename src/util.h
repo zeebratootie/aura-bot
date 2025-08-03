@@ -272,7 +272,7 @@ template <OOBPolicy oobPolicy, NullTerminatorPolicy nullPolicy, StringEncoding e
 [[nodiscard]] std::string_view ExtractStringView(const std::string_view b, const size_t start, const size_t maxSize);
 [[nodiscard]] std::string_view ExtractUTF8View(const std::vector<uint8_t>& b, const size_t start, const size_t maxSize);
 [[nodiscard]] std::string_view ExtractUTF8View(const std::string_view b, const size_t start, const size_t maxSize);
-[[nodiscard]] std::vector<uint8_t> ExtractNumbers(const std::string& s, const uint32_t maxCount);
+[[nodiscard]] std::vector<uint8_t> ExtractNumbers(const std::string& s, const size_t maxCount);
 [[nodiscard]] std::vector<uint8_t> ExtractHexNumbers(const std::string& s);
 [[nodiscard]] std::vector<uint8_t> ExtractIPv4(const std::string& s);
 [[nodiscard]] std::string ToUpperCase(const std::string& input);

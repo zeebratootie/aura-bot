@@ -558,7 +558,7 @@ bool CMap::SetGameConvertedFlags(const uint32_t gameFlags)
     convertedFlags |= (uint32_t)GAMEFLAG_RANDOMRACES;
   }
 
-  m_GameFlags = convertedFlags;
+  m_GameFlags = integer_cast_lossy<uint8_t>(convertedFlags);
 
   return true;
 }

@@ -1225,7 +1225,7 @@ string_view ExtractStringView(const vector<uint8_t>& b, const size_t start, cons
   if constexpr (oobPolicy == OOBPolicy::kCheck) {
     if (start >= b.size()) return string_view();
   }
-  assert((end > start) && "Out of bounds access searching for null delimiter.");
+  assert((b.size() > start) && "Out of bounds access searching for null delimiter.");
 
   size_t nullPos = FindNullDelimiterOrEnd<OOBPolicy::kUnsafe>(b, start);
   string_view sv;
@@ -1255,7 +1255,7 @@ string_view ExtractStringView(const string_view b, const size_t start, const siz
   if constexpr (oobPolicy == OOBPolicy::kCheck) {
     if (start >= b.size()) return string_view();
   }
-  assert((end > start) && "Out of bounds access searching for null delimiter.");
+  assert((b.size() > start) && "Out of bounds access searching for null delimiter.");
 
   size_t nullPos = FindNullDelimiterOrEnd<OOBPolicy::kUnsafe>(b, start);
   string_view sv;
@@ -1295,17 +1295,16 @@ string_view ExtractUTF8View(const string_view b, const size_t start, const size_
   return ExtractStringView<OOBPolicy::kUnsafe, NullTerminatorPolicy::kRequired, StringEncoding::kUTF8>(b, start, maxSize);
 }
 
-vector<uint8_t> ExtractNumbers(const string& s, const uint32_t maxCount)
+vector<uint8_t> ExtractNumbers(const string& s, const size_t maxCount)
 {
   // consider the string to contain a bytearray in dec-text form, e.g. "52 99 128 1"
 
   vector<uint8_t> result;
-  uint32_t             c;
-  stringstream    SS;
+  uint32_t c;
+  stringstream SS;
   SS << s;
 
-  for (uint32_t i = 0; i < maxCount; ++i)
-  {
+  for (size_t i = 0; i < maxCount; ++i) {
     if (SS.eof())
       break;
 

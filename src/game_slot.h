@@ -51,6 +51,8 @@
 
 #include "hash.h"
 
+constexpr uint8_t NOT_SLOTRACE_SELECTABLE = NOT_TINY(SLOTRACE_SELECTABLE);
+
 //
 // CGameSlot
 //

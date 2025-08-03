@@ -63,6 +63,8 @@
 
 using namespace std;
 
+constexpr uint16_t NOT_USER_PERMISSIONS_BOT_SUDO_OK = NOT_SHORT(USER_PERMISSIONS_BOT_SUDO_OK);
+
 //
 // CCommandContext
 //

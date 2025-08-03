@@ -236,12 +236,16 @@ inline void UNSET_TINY(uint8_t& a, uint8_t b) {
   a = integer_cast_lossy<uint8_t>(integer_cast<uint32_t>(a) & ~integer_cast<uint32_t>(b));
 }
 
-inline uint8_t OR_TINY(uint8_t a, uint8_t b) {
+constexpr uint8_t OR_TINY(uint8_t a, uint8_t b) {
   return integer_cast_lossy<uint8_t>(integer_cast<uint32_t>(a) | integer_cast<uint32_t>(b));
 }
 
-inline uint8_t AND_TINY(uint8_t a, uint8_t b) {
+constexpr uint8_t AND_TINY(uint8_t a, uint8_t b) {
   return integer_cast_lossy<uint8_t>(integer_cast<uint32_t>(a) & integer_cast<uint32_t>(b));
+}
+
+constexpr uint8_t NOT_TINY(uint8_t a) {
+  return integer_cast_lossy<uint8_t>(~integer_cast<uint32_t>(a));
 }
 
 inline void SET_SHORT(uint16_t& a, uint16_t b) {
@@ -252,35 +256,39 @@ inline void UNSET_SHORT(uint16_t& a, uint16_t b) {
   a = integer_cast_lossy<uint16_t>(integer_cast<uint32_t>(a) & ~integer_cast<uint32_t>(b));
 }
 
-inline uint16_t OR_SHORT(uint16_t a, uint16_t b) {
+constexpr uint16_t OR_SHORT(uint16_t a, uint16_t b) {
   return integer_cast_lossy<uint16_t>(integer_cast<uint32_t>(a) | integer_cast<uint32_t>(b));
 }
 
-inline uint16_t AND_SHORT(uint16_t a, uint16_t b) {
+constexpr uint16_t AND_SHORT(uint16_t a, uint16_t b) {
   return integer_cast_lossy<uint16_t>(integer_cast<uint32_t>(a) & integer_cast<uint32_t>(b));
 }
 
-inline uint16_t OR_SHORT(uint16_t a, uint16_t b, uint16_t c) {
+constexpr uint16_t NOT_SHORT(uint16_t a) {
+  return integer_cast_lossy<uint16_t>(~integer_cast<uint32_t>(a));
+}
+
+constexpr uint16_t OR_SHORT(uint16_t a, uint16_t b, uint16_t c) {
   return integer_cast_lossy<uint16_t>(integer_cast<uint32_t>(a) | integer_cast<uint32_t>(b) | integer_cast<uint32_t>(c));
 }
 
-inline uint16_t OR_SHORT(uint16_t a, uint16_t b, uint16_t c, uint16_t d) {
+constexpr uint16_t OR_SHORT(uint16_t a, uint16_t b, uint16_t c, uint16_t d) {
   return integer_cast_lossy<uint16_t>(integer_cast<uint32_t>(a) | integer_cast<uint32_t>(b) | integer_cast<uint32_t>(c) | integer_cast<uint32_t>(d));
 }
 
-inline uint8_t PLUS_TINY(uint8_t a, uint8_t b) {
+constexpr uint8_t PLUS_TINY(uint8_t a, uint8_t b) {
   return integer_cast_lossy<uint8_t>(integer_cast<uint32_t>(a) + integer_cast<uint32_t>(b));
 }
 
-inline uint16_t PLUS_SHORT(uint16_t a, uint16_t b) {
+constexpr uint16_t PLUS_SHORT(uint16_t a, uint16_t b) {
   return integer_cast_lossy<uint16_t>(integer_cast<uint32_t>(a) + integer_cast<uint32_t>(b));
 }
 
-inline uint8_t MINUS_TINY(uint8_t a, uint8_t b) {
+constexpr uint8_t MINUS_TINY(uint8_t a, uint8_t b) {
   return integer_cast_lossy<uint8_t>(integer_cast<uint32_t>(a) - integer_cast<uint32_t>(b));
 }
 
-inline uint16_t MINUS_SHORT(uint16_t a, uint16_t b) {
+constexpr uint16_t MINUS_SHORT(uint16_t a, uint16_t b) {
   return integer_cast_lossy<uint16_t>(integer_cast<uint32_t>(a) - integer_cast<uint32_t>(b));
 }
 

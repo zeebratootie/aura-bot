@@ -731,8 +731,6 @@ constexpr uint8_t ACTION_SOURCE_REFEREE = 4u;
 constexpr uint8_t ACTION_SOURCE_OBSERVER_ANY = ACTION_SOURCE_OBSERVER | ACTION_SOURCE_REFEREE;
 constexpr uint8_t ACTION_SOURCE_ANY = ACTION_SOURCE_PLAYER | ACTION_SOURCE_OBSERVER_ANY;
 
-constexpr uint8_t NOT_ACTION_SOURCE_OBSERVER = (uint8_t)~(uint32_t)ACTION_SOURCE_OBSERVER;
-
 // game_slot.h
 
 constexpr uint8_t UID_ZERO = 0;
@@ -751,8 +749,6 @@ constexpr uint8_t SLOTRACE_RANDOM = 32u;
 constexpr uint8_t SLOTRACE_SELECTABLE = 64u;
 constexpr uint8_t SLOTRACE_PICKRANDOM = 128u;
 constexpr uint8_t SLOTRACE_INVALID = 255u;
-
-constexpr uint8_t NOT_SLOTRACE_SELECTABLE = (uint8_t)~(uint32_t)SLOTRACE_SELECTABLE;
 
 constexpr uint8_t SLOTCOMP_EASY = 0u;
 constexpr uint8_t SLOTCOMP_NORMAL = 1u;
@@ -1150,7 +1146,6 @@ constexpr uint16_t USER_PERMISSIONS_BOT_SUDO_SPOOFABLE = (1 << 6);
 constexpr uint16_t USER_PERMISSIONS_BOT_SUDO_OK = (1 << 7);
 
 constexpr uint16_t SET_USER_PERMISSIONS_ALL = (0xFFFF);
-constexpr uint16_t NOT_USER_PERMISSIONS_BOT_SUDO_OK = (uint16_t)~(uint32_t)USER_PERMISSIONS_BOT_SUDO_OK;
 
 constexpr uint8_t COMMAND_TOKEN_MATCH_NONE = 0;
 constexpr uint8_t COMMAND_TOKEN_MATCH_PRIVATE = 1;
@@ -1486,8 +1481,6 @@ constexpr uint8_t CONNECTION_TYPE_CUSTOM_IP_ADDRESS = (1 << 2);
 constexpr uint8_t CONNECTION_TYPE_VPN = (1 << 3);
 constexpr uint8_t CONNECTION_TYPE_IPV6 = (1 << 4);
 
-constexpr uint8_t NOT_CONNECTION_TYPE_CUSTOM_PORT = (uint8_t)~(uint32_t)CONNECTION_TYPE_CUSTOM_PORT;
-
 constexpr uint8_t NET_PUBLIC_IP_ADDRESS_ALGORITHM_NONE = 0;
 constexpr uint8_t NET_PUBLIC_IP_ADDRESS_ALGORITHM_MANUAL = 1;
 constexpr uint8_t NET_PUBLIC_IP_ADDRESS_ALGORITHM_API = 2;
@@ -1512,9 +1505,6 @@ constexpr uint8_t HEALTH_CHECK_LOOPBACK_IPV6 = (1 << 3);
 constexpr uint8_t HEALTH_CHECK_REALM = (1 << 4);
 constexpr uint8_t HEALTH_CHECK_ALL = (HEALTH_CHECK_PUBLIC_IPV4 | HEALTH_CHECK_PUBLIC_IPV6 | HEALTH_CHECK_LOOPBACK_IPV4 | HEALTH_CHECK_LOOPBACK_IPV6 | HEALTH_CHECK_REALM);
 constexpr uint8_t HEALTH_CHECK_VERBOSE = (1 << 5);
-
-constexpr uint8_t NOT_HEALTH_CHECK_PUBLIC_IPV6 = (uint8_t)~(uint32_t)HEALTH_CHECK_PUBLIC_IPV6;
-constexpr uint8_t NOT_HEALTH_CHECK_LOOPBACK_IPV6 = (uint8_t)~(uint32_t)HEALTH_CHECK_LOOPBACK_IPV6;
 
 constexpr int64_t GAME_TEST_TIMEOUT = 3000;
 constexpr int64_t IP_ADDRESS_API_TIMEOUT = 3000;

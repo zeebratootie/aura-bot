@@ -120,6 +120,8 @@ using namespace std;
 #define DLOG_APP_IF_CUSTOM(T, U, V) do {} while (0)
 #endif
 
+constexpr uint8_t NOT_ACTION_SOURCE_OBSERVER = NOT_TINY(ACTION_SOURCE_OBSERVER);
+
 //
 // CGame
 //
