@@ -378,7 +378,7 @@
     </ClCompile>
     <Link>
       <AdditionalDependencies>ws2_32.lib;Crypt32.lib;Wldap32.lib;winmm.lib;StormLibRUS.lib;BNCSUtil.lib;pjass.lib;cpr.lib;libcurl.lib;iphlpapi.lib;libcmtd.lib;miniupnpc.lib;dpp.lib;dnssd.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>..\deps\bncsutil\vc8_build\Release;..\deps\StormLib\bin\StormLib\Win32\ReleaseUS;..\deps\pjass\msvc\pjass-lib\Release;..\deps\miniupnpc\msvc\Debug;..\cpr\vcpkg\bin\Release;..\curl\vcpkg\bin\Release;..\dpp\official\bin\Release;$(BONJOUR_SDK_HOME)Lib\Win32;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>..\deps\bncsutil\vc8_build\Release;..\deps\StormLib\bin\StormLib\Win32\ReleaseUS;..\deps\pjass\msvc\pjass-lib\Release;..\deps\miniupnpc\msvc\Release;..\cpr\vcpkg\bin\Release;..\curl\vcpkg\bin\Release;..\dpp\official\bin\Release;$(BONJOUR_SDK_HOME)Lib\Win32;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Console</SubSystem>
