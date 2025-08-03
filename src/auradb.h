@@ -534,15 +534,15 @@ public:
   [[nodiscard]] inline uint32_t GetTotalTowerKills() const { return m_TotalTowerKills; }
   [[nodiscard]] inline uint32_t GetTotalRaxKills() const { return m_TotalRaxKills; }
   [[nodiscard]] inline uint32_t GetTotalCourierKills() const { return m_TotalCourierKills; }
-  [[nodiscard]] inline float    GetAvgKills() const { return m_TotalGames > 0 ? static_cast<float>(m_TotalKills) / m_TotalGames : 0.f; }
-  [[nodiscard]] inline float    GetAvgDeaths() const { return m_TotalGames > 0 ? static_cast<float>(m_TotalDeaths) / m_TotalGames : 0.f; }
-  [[nodiscard]] inline float    GetAvgCreepKills() const { return m_TotalGames > 0 ? static_cast<float>(m_TotalCreepKills) / m_TotalGames : 0.f; }
-  [[nodiscard]] inline float    GetAvgCreepDenies() const { return m_TotalGames > 0 ? static_cast<float>(m_TotalCreepDenies) / m_TotalGames : 0.f; }
-  [[nodiscard]] inline float    GetAvgAssists() const { return m_TotalGames > 0 ? static_cast<float>(m_TotalAssists) / m_TotalGames : 0.f; }
-  [[nodiscard]] inline float    GetAvgNeutralKills() const { return m_TotalGames > 0 ? static_cast<float>(m_TotalNeutralKills) / m_TotalGames : 0.f; }
-  [[nodiscard]] inline float    GetAvgTowerKills() const { return m_TotalGames > 0 ? static_cast<float>(m_TotalTowerKills) / m_TotalGames : 0.f; }
-  [[nodiscard]] inline float    GetAvgRaxKills() const { return m_TotalGames > 0 ? static_cast<float>(m_TotalRaxKills) / m_TotalGames : 0.f; }
-  [[nodiscard]] inline float    GetAvgCourierKills() const { return m_TotalGames > 0 ? static_cast<float>(m_TotalCourierKills) / m_TotalGames : 0.f; }
+  [[nodiscard]] inline float    GetAvgKills() const { return DIVIDE(m_TotalKills, m_TotalGames); }
+  [[nodiscard]] inline float    GetAvgDeaths() const { return DIVIDE(m_TotalKills, m_TotalGames); }
+  [[nodiscard]] inline float    GetAvgCreepKills() const { return DIVIDE(m_TotalCreepKills, m_TotalGames); }
+  [[nodiscard]] inline float    GetAvgCreepDenies() const { return DIVIDE(m_TotalCreepDenies, m_TotalGames); }
+  [[nodiscard]] inline float    GetAvgAssists() const { return DIVIDE(m_TotalAssists, m_TotalGames); }
+  [[nodiscard]] inline float    GetAvgNeutralKills() const { return DIVIDE(m_TotalNeutralKills, m_TotalGames); }
+  [[nodiscard]] inline float    GetAvgTowerKills() const { return DIVIDE(m_TotalTowerKills, m_TotalGames); }
+  [[nodiscard]] inline float    GetAvgRaxKills() const { return DIVIDE(m_TotalRaxKills, m_TotalGames); }
+  [[nodiscard]] inline float    GetAvgCourierKills() const { return DIVIDE(m_TotalCourierKills, m_TotalGames); }
 };
 
 [[nodiscard]] inline uint32_t signed_to_unsigned_32(const int32_t value)

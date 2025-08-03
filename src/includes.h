@@ -292,6 +292,11 @@ constexpr uint16_t MINUS_SHORT(uint16_t a, uint16_t b) {
   return integer_cast_lossy<uint16_t>(integer_cast<uint32_t>(a) - integer_cast<uint32_t>(b));
 }
 
+inline float DIVIDE(uint32_t a, uint32_t b) {
+  if (b == 0) return 0.f;
+  return static_cast<float>(static_cast<double>(a) / static_cast<double>(b));
+}
+
 // time
 
 inline int64_t GetTime()
