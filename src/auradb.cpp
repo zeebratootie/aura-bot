@@ -1054,8 +1054,8 @@ CDBGamePlayerSummary CAuraDB::GamePlayerSummaryCheck(const string& rawName, cons
       } else {
         float averageLoadingTime = 0.;
         uint32_t averageLeftPercent = static_cast<uint32_t>(round(static_cast<double>(duration) / left * 100));
-        if (TotalGames > 0) {
-          averageLoadingTime = static_cast<float>(static_cast<double>(loadingTime) / TotalGames / 1000);
+        if (totalGames > 0) {
+          averageLoadingTime = static_cast<float>(static_cast<double>(loadingTime) / totalGames / 1000);
         }
         summary = CDBGamePlayerSummary(
           signed_cast<uint64_t>(totalGames),
