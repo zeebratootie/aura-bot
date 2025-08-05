@@ -1908,25 +1908,32 @@ void CAura::LoadIPToCountryData(const CConfig& CFG)
     return;
   }
 
-  string    Line, Skip, IP1, IP2, Country;
+  string Line, Skip, IP1, IP2, Country;
   CSVParser parser;
 
   in.seekg(0, ios::end);
   in.seekg(0, ios::beg);
 
-  while (!in.eof()) {
-    getline(in, Line);
+  try {
+    while (!in.eof()) {
+      getline(in, Line);
 
-    if (Line.empty())
-      continue;
+      if (Line.empty())
+        continue;
 
-    parser << Line;
-    parser >> Skip;
-    parser >> Skip;
-    parser >> IP1;
-    parser >> IP2;
-    parser >> Country;
-    static_cast<void>(m_DB->FromAdd(stoul(IP1), stoul(IP2), Country));
+      parser << Line;
+      parser >> Skip;
+      parser >> Skip;
+      parser >> IP1;
+      parser >> IP2;
+      parser >> Country;
+
+      uint32_t IPValue1 = integer_cast_lossy<uint32_t>(stoul(IP1));
+      uint32_t IPValue2 = integer_cast_lossy<uint32_t>(stoul(IP2));
+      static_cast<void>(m_DB->FromAdd(IPValue1, IPValue2, Country));
+    }
+  } catch (const exception& e) {
+    Print("[AURA] warning - unable to parse file [ip-to-country.csv] (" + string(e.what()) + "), geolocalization data not loaded");
   }
 
   if (!m_DB->Commit()) {

@@ -471,7 +471,7 @@ bool CW3MMD::ProcessAction(CW3MMDAction* action)
           m_VarPReals[VP] -= *realValue;
         }
       } else { // MMD_VALUE_TYPE_INT
-        optional<uint32_t> intValue = ToUint32(operand);
+        optional<int32_t> intValue = ToInt32(operand);
         if (!intValue.has_value()) {
           Print(GetLogPrefix() + "invalid int VarP " + SanitizeWrapUTF8(action->GetName()) + " value " + SanitizeWrapUTF8(operand) + " found, ignoring");
           return false;

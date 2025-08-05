@@ -797,7 +797,7 @@ void CGame::TrySaveStats() const
     LOG_APP_IF(LogLevel::kDebug, "[STATS] saving game end player data to database");
     if (m_Aura->m_DB->Begin()) {
       for (auto& controllerData : m_GameControllers) {
-        m_Aura->m_DB->UpdateGamePlayerOnEnd(m_PersistentId, controllerData, m_EffectiveTicks / 1000);
+        m_Aura->m_DB->UpdateGamePlayerOnEnd(m_PersistentId, controllerData, signed_cast<uint64_t>(m_EffectiveTicks / 1000));
       }
       if (!m_Aura->m_DB->Commit()) {
         LOG_APP_IF(LogLevel::kWarning, "[STATS] failed to commit game end player data");
@@ -4674,7 +4674,7 @@ void CGame::EventUserDeleted(GameUser::CGameUser* user, fd_set* /*fd*/, fd_set* 
     CGameController* controllerData = GetGameControllerFromColor(slot->GetColor());
     if (controllerData) {
       controllerData->SetServerLeftCode(static_cast<uint8_t>(user->GetLeftCode()));
-      controllerData->SetLeftGameTime(m_EffectiveTicks / 1000);
+      controllerData->SetLeftGameTime(signed_cast<uint64_t>(m_EffectiveTicks / 1000));
     }
 
     // keep track of the last user to leave for the !banlast command
@@ -5903,7 +5903,7 @@ void CGame::EventUserLoaded(GameUser::CGameUser* user)
   const CGameSlot* slot = InspectSlot(GetSIDFromUID(user->GetUID()));
   CGameController* controllerData = GetGameControllerFromColor(slot->GetColor());
   if (controllerData) {
-    controllerData->SetLoadingTime((user->GetFinishedLoadingTicks() - m_StartedLoadingTicks) / 1000);
+    controllerData->SetLoadingTime(signed_cast<uint64_t>((user->GetFinishedLoadingTicks() - m_StartedLoadingTicks) / 1000));
   }
 
   if (!m_Config.m_LoadInGame) {
@@ -5967,7 +5967,7 @@ bool CGame::EventUserIncomingAction(GameUser::CGameUser* user, CIncomingAction& 
   vector<const uint8_t*> delimiters = action.SplitAtomic();
   for (size_t i = 0, j = 1, l = delimiters.size(); j < l; i++, j++) {
     const uint8_t actionType = delimiters[i][0];
-    const size_t actionSize = delimiters[j] - delimiters[i];
+    const auto actionSize = delimiters[j] - delimiters[i];
     if (actionType == ACTION_ALLIANCE_SETTINGS && actionSize >= 6) {
       if (delimiters[i][1] == JN_ALLIANCE_SETTINGS_SYNC_DATA) {
         LOG_APP_IF(LogLevel::kDebug, Concat("Player [", user->GetName(), "] synchronizing JNLoader data"));

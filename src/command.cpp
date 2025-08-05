@@ -1522,15 +1522,8 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
         ErrorReply("Only players may enable APM trainer.");
         break;
       }
-      optional<int64_t> targetAPM;
-      try {
-        int64_t parsedValue = stol(target);
-        if (0 <= parsedValue && parsedValue <= 1000) {
-          targetAPM = parsedValue;
-        }
-      } catch (...) {
-      }
-      if (!targetAPM.has_value()) {
+      optional<uint32_t> targetAPM = ParseUInt32(target);
+      if (!targetAPM.has_value() || 1000 < targetAPM.value()) {
         ErrorReply("Usage: " + cmdToken + "apmtrainer <APM>");
         break;
       }
@@ -1700,14 +1693,8 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
           ErrorReply("Not allowed to set maximum ping.");
           break;
         }
-        try {
-          int64_t Value = stoul(target);
-          if (Value <= 0 || 0xFFFFFFFF < Value) {
-            ErrorReply("Invalid maximum ping [" + target + "].");
-            break;
-          }
-          kickPing = signed_cast_lossy<uint32_t>(Value);
-        } catch (...) {
+        kickPing = ParseUInt32(target);
+        if (!kickPing.has_value()) {
           ErrorReply("Invalid maximum ping [" + target + "].");
           break;
         }
@@ -2221,7 +2208,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
 
       std::random_device rd;
       std::mt19937 gen(rd());
-      std::uniform_int_distribution<> distribution(1, rollFaces);
+      std::uniform_int_distribution<uint16_t> distribution(1u, rollFaces);
 
       vector<string> gotRolls;
       for (uint8_t i = 1; i <= rollCount; ++i) {
@@ -2254,9 +2241,9 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
       }
       std::random_device rd;
       std::mt19937 gen(rd());
-      std::uniform_int_distribution<> distribution(1, signed_cast_lossy<int>(options.size()));
+      std::uniform_int_distribution<size_t> distribution(1u, options.size());
 
-      string randomPick = options[distribution(gen) - 1];
+      string randomPick = options[distribution(gen) - 1u];
       bool sendAll = GetGameSource().GetIsEmpty() || (GetIsGameUser() && GetGameUser()->GetCanUsePublicChat());
       SendReply("Randomly picked: " + randomPick, sendAll ? CHAT_SEND_TARGET_ALL : 0);
       break;
@@ -2269,8 +2256,8 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
     case HashCode("pickrace"): {
       std::random_device rd;
       std::mt19937 gen(rd());
-      std::uniform_int_distribution<> distribution(0, 3);
-      const uint8_t race = 1 << distribution(gen);
+      std::uniform_int_distribution<uint32_t> distribution(0u, 3u);
+      const uint8_t race = integer_cast_lossy<uint8_t>(1u << distribution(gen));
       string randomPick = GetRaceName(race);
       bool sendAll = GetGameSource().GetIsEmpty() || (GetIsGameUser() && GetGameUser()->GetCanUsePublicChat());
       SendReply("Randomly picked: " + randomPick + " race", sendAll ? CHAT_SEND_TARGET_ALL : 0);
@@ -2295,8 +2282,8 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
 
       std::random_device rd;
       std::mt19937 gen(rd());
-      std::uniform_int_distribution<> distribution(1, signed_cast_lossy<int>(players.size()));
-      const GameUser::CGameUser* pickedPlayer = players[distribution(gen) - 1];
+      std::uniform_int_distribution<size_t> distribution(1u, players.size());
+      const GameUser::CGameUser* pickedPlayer = players[distribution(gen) - 1u];
       string randomPick = pickedPlayer->GetName();
       bool sendAll = GetGameSource().GetIsEmpty() || (GetIsGameUser() && GetGameUser()->GetCanUsePublicChat());
       SendReply("Randomly picked: " + randomPick, sendAll ? CHAT_SEND_TARGET_ALL : 0);
@@ -2322,8 +2309,8 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
 
       std::random_device rd;
       std::mt19937 gen(rd());
-      std::uniform_int_distribution<> distribution(1, signed_cast_lossy<int>(players.size()));
-      const GameUser::CGameUser* pickedPlayer = players[distribution(gen) - 1];
+      std::uniform_int_distribution<size_t> distribution(1u, players.size());
+      const GameUser::CGameUser* pickedPlayer = players[distribution(gen) - 1u];
       string randomPick = pickedPlayer->GetName();
       bool sendAll = GetGameSource().GetIsEmpty() || (GetIsGameUser() && GetGameUser()->GetCanUsePublicChat());
       SendReply("Randomly picked: " + randomPick, sendAll ? CHAT_SEND_TARGET_ALL : 0);
@@ -5565,8 +5552,8 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
       if (Race == SLOTRACE_PICKRANDOM) {
         std::random_device rd;
         std::mt19937 gen(rd());
-        std::uniform_int_distribution<> distribution(0, 3);
-        Race = 1 << distribution(gen);
+        std::uniform_int_distribution<uint32_t> distribution(0u, 3u);
+        Race = integer_cast_lossy<uint8_t>(1u << distribution(gen));
       }
 
       if (targetGame->GetMap()->GetMapOptions() & MAPOPT_FIXEDPLAYERSETTINGS) {
@@ -5827,33 +5814,27 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
         break;
       }
 
-      optional<int64_t> handicapTicks;
-      try {
-        int64_t parsedSeconds = stol(Args.back());
-        if (parsedSeconds < 0 || 300 < parsedSeconds) {
-          ErrorReply("Time handicap cannot exceed 300 seconds (5 minutes)");
-          break;
-        }
-        handicapTicks = 1000 * parsedSeconds;
-      } catch (...) {
-      }
-
-      if (!handicapTicks.has_value()) {
+      optional<int64_t> handicapSeconds = ParseInt64(Args.back());
+      if (!handicapSeconds.has_value()) {
         ErrorReply("Usage: " + cmdToken + "timehandicap <SECONDS>");
         ErrorReply("Usage: " + cmdToken + "timehandicap <PLAYER>, <SECONDS>");
         break;
       }
-
-      if (targetPlayer->GetHandicapTicks() == handicapTicks.value()) {
-        ErrorReply("Time handicap already set to " + ToDurationString(handicapTicks.value() / 1000));
+      if ((handicapSeconds.value() < 0) || (300 < handicapSeconds.value())) {
+        ErrorReply("Time handicap cannot exceed 300 seconds (5 minutes)");
+        break;
+      }
+      int64_t handicapTicks = 1000 * handicapSeconds.value();
+      if (targetPlayer->GetHandicapTicks() == handicapTicks) {
+        ErrorReply("Time handicap already set to " + ToDurationString(handicapTicks / 1000));
         break;
       }
 
-      targetPlayer->SetHandicapTicks(targetGame->GetEffectiveTicks() + handicapTicks.value());
+      targetPlayer->SetHandicapTicks(targetGame->GetEffectiveTicks() + handicapTicks);
       if (targetPlayer->GetHasAPMQuota()) {
         targetPlayer->GetAPMQuota().PauseRefillUntil(targetPlayer->GetHandicapTicks());
       }
-      SendAll("Player [" + targetPlayer->GetDisplayName() + "] will start playing after " + ToDurationString(handicapTicks.value() / 1000));
+      SendAll("Player [" + targetPlayer->GetDisplayName() + "] will start playing after " + ToDurationString(handicapTicks / 1000));
       break;
     }
 
@@ -5906,31 +5887,30 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
         break;
       }
 
-      optional<size_t> maxAPM;
-      try {
-        int64_t parsedActions = stol(Args.back());
-        if (0 <= parsedActions && parsedActions <= 0xFFFF) {
-          maxAPM = signed_cast_lossy<size_t>(parsedActions);
-        }
-      } catch (...) {
+      optional<int64_t> parsedActions = ParseInt64(Args.back());
+      if (!parsedActions.has_value()) {
+        ErrorReply("Usage: " + cmdToken + "apmhandicap <APM>");
+        ErrorReply("Usage: " + cmdToken + "apmhandicap <PLAYER>, <APM>");
+        break;
       }
-
-      if (!maxAPM.has_value()) {
+      if ((parsedActions.value() < 0) || (0xFFFF < parsedActions.value())) {
         ErrorReply("Usage: " + cmdToken + "apmhandicap <APM>");
         ErrorReply("Usage: " + cmdToken + "apmhandicap <PLAYER>, <APM>");
         break;
       }
 
-      if (maxAPM.value() < APM_RATE_LIMITER_MIN && !GetIsSudo()) {
+      size_t maxAPM = parsedActions.value();
+
+      if (maxAPM < APM_RATE_LIMITER_MIN && !GetIsSudo()) {
         maxAPM = APM_RATE_LIMITER_MIN;
-      } else if (APM_RATE_LIMITER_MAX < maxAPM.value() && !GetIsSudo()) {
+      } else if (APM_RATE_LIMITER_MAX < maxAPM && !GetIsSudo()) {
         maxAPM = APM_RATE_LIMITER_MAX;
       }
 
-      targetPlayer->RestrictAPM((double)maxAPM.value(), (double)targetGame->m_Config.m_MaxBurstAPM.value_or(APM_RATE_LIMITER_BURST_ACTIONS));
+      targetPlayer->RestrictAPM((double)maxAPM, (double)targetGame->m_Config.m_MaxBurstAPM.value_or(APM_RATE_LIMITER_BURST_ACTIONS));
       targetPlayer->GetAPMQuota().PauseRefillUntil(targetPlayer->GetHandicapTicks());
 
-      string limitText = to_string(maxAPM.value()) + " actions per minute (APM)";
+      string limitText = to_string(maxAPM) + " actions per minute (APM)";
       SendAll("Player [" + targetPlayer->GetDisplayName() + "] will be restricted to " + limitText);
       break;
     }
@@ -8078,7 +8058,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
       try {
         gamePort = integer_cast_lossy<uint16_t>(stoul(Args[2]));
         size_t posId;
-        gameHostCounter = stoul(Args[3], &posId, 16);
+        gameHostCounter = integer_cast_lossy<uint32_t>(stoul(Args[3], &posId, 16));
         if (posId != Args[3].length()) {
           ErrorReply("Usage: " + cmdToken + "mirror <EXCLUDESERVER> , <IP> , <PORT> , <GAMEID> , <GAMEKEY> , <GAMENAME> - GAMEID expected hex.");
           break;

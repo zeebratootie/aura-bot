@@ -94,7 +94,7 @@ CRealm::CRealm(CAura* nAura, CRealmConfig* nRealmConfig)
 
     m_InternalServerID(nAura->NextServerID()),
     m_ServerIndex(nRealmConfig->m_ServerIndex),
-    m_PublicServerID(14 + 2 * nRealmConfig->m_ServerIndex), // First is 16
+    m_PublicServerID(integer_cast_lossy<uint8_t>(14u + 2u * integer_cast<uint32_t>(nRealmConfig->m_ServerIndex))), // First is 16
     m_LastDisconnectedTime(0),
     m_LastConnectionAttemptTime(0),
     m_LastGameRefreshTime(APP_MIN_TICKS),

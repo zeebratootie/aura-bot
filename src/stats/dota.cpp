@@ -7106,8 +7106,8 @@ bool CDotaStats::EventGameCacheInteger(const uint8_t fromUID, const std::string_
           break;
         case '8': {
           // 8_0 to 8_5
-          if (key.size() >= 3 && key[1] == '_' && (0x30 <= key[2] && key[2] <= 0x35)) {
-            const uint8_t slotIndex = key[2] - 0x30;
+          if (key.size() >= 3 && key[1] == '_' && ('0' <= key[2] && key[2] <= '5')) {
+            const uint8_t slotIndex = static_cast<uint8_t>(key[2] - '5');
             m_Players[*heroColor]->SetItem(slotIndex, FourCCToString(cacheValue));
             LogMetaData(m_Game.get().GetEffectiveTicks(), "[" + playerName + "] holds <" + GetItemName(cacheValue) + "> at slot " + ToDecString(slotIndex + 1) + ".");
           }

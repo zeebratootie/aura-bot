@@ -454,8 +454,8 @@ bool CAsyncObserver::PushGameFrames(bool isFlush)
   }
 
   bool success = false;
-  auto it = begin(m_GameHistory->m_PlayingBuffer) + m_Offset;
-  auto itEnd = begin(m_GameHistory->m_PlayingBuffer) + m_GameHistory->GetSpectatorOffset();
+  auto it = begin(m_GameHistory->m_PlayingBuffer) + signed_cast<ptrdiff_t>(m_Offset);
+  auto itEnd = begin(m_GameHistory->m_PlayingBuffer) + signed_cast<ptrdiff_t>(m_GameHistory->GetSpectatorOffset());
   while (it != itEnd && (m_Latency <= gameDurationWanted || it->GetType() == GAME_FRAME_TYPE_LATENCY)) {
     //Print(Concat(GetLogPrefix(), "sending ", it->GetTypeName(), " frame"));
     switch (it->GetType()) {
@@ -556,14 +556,14 @@ void CAsyncObserver::UpdateDownloadProgression(const uint8_t downloadProgression
 {
   if (m_Game.expired()) return;
   vector<uint8_t> slotInfo = m_Game.lock()->GetSlotInfo();
-  constexpr static uint16_t fixedOffset = (
+  constexpr static size_t fixedOffset = (
     2 /* W3GS type headers */ +
     2 /* W3GS packet byte size */ +
     2 /* EncodeSlotInfo() byte size */ +
     1 /* number of slots */ +
     1 /* download status offset in CGameSlot::GetProtocolArray() */
   );
-  uint16_t progressionIndex = 9 * m_SID + fixedOffset;
+  size_t progressionIndex = 9u * integer_cast<size_t>(m_SID) + fixedOffset;
   slotInfo[progressionIndex] = downloadProgression;
   Send(slotInfo);
 }
