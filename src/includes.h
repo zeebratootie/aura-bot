@@ -212,7 +212,7 @@ constexpr To signed_cast(From value) {
     static_assert(sizeof(To) >= sizeof(From), "Target type must be large enough to hold source value");
   }
   */
-  static_assert(sizeof(To) >= sizeof(From), "Target type must be large enough to hold source value");/
+  static_assert(sizeof(To) >= sizeof(From), "Target type must be large enough to hold source value");
   return static_cast<To>(value);
 }
 
