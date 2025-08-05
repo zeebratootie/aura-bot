@@ -1038,7 +1038,7 @@ CDBGamePlayerSummary CAuraDB::GamePlayerSummaryCheck(const string& rawName, cons
     }
     case SQLITE_ROW: {
       if (sqlite3_column_count(m_StmtCache[PLAYER_SUMMARY_IDX]) != 4) {
-        PRINT_IF(LogLevel::kError, Concat("[SQLITE3] error checking gameplayersummary [", name, "@", server, "] - row doesn't have 4 columns");
+        PRINT_IF(LogLevel::kError, Concat("[SQLITE3] error checking gameplayersummary [", name, "@", server, "] - row doesn't have 4 columns"));
         break;
       }
       const int totalGames = sqlite3_column_int(m_StmtCache[PLAYER_SUMMARY_IDX], 0);
@@ -1046,7 +1046,7 @@ CDBGamePlayerSummary CAuraDB::GamePlayerSummaryCheck(const string& rawName, cons
       const sqlite3_int64 left = sqlite3_column_int64(m_StmtCache[PLAYER_SUMMARY_IDX], 2);
       const sqlite3_int64 duration = sqlite3_column_int64(m_StmtCache[PLAYER_SUMMARY_IDX], 3);
       if (totalGames < 0 || loadingTime < 0 || left < 0 || duration < 0) {
-        PRINT_IF(LogLevel::kError, Concat("[SQLITE3] error checking gameplayersummary [", name, "@", server, "] - unexpected negative values");
+        PRINT_IF(LogLevel::kError, Concat("[SQLITE3] error checking gameplayersummary [", name, "@", server, "] - unexpected negative values"));
         break;
       }
       if (totalGames == 0) {
