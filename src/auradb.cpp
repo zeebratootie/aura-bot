@@ -1215,7 +1215,7 @@ CDBDotAPlayerSummary CAuraDB::DotAPlayerSummaryCheck(const string& rawName, cons
         || totalCreepKills < 0 || totalCreepDenies < 0 || totalAssists < 0 || totalNeutralKills < 0
         || totalTowerKills < 0 || totalRaxKills < 0 || totalCourierKills < 0
       ) {
-        Print(Concat("[SQLITE3] error checking dotaplayersummary [", name, "@", server, "] - unexpected negative values");
+        Print(Concat("[SQLITE3] error checking dotaplayersummary [", name, "@", server, "] - unexpected negative values"));
         break;
       }
 
