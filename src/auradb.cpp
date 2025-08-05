@@ -1223,7 +1223,20 @@ CDBDotAPlayerSummary CAuraDB::DotAPlayerSummaryCheck(const string& rawName, cons
         break;
       }
 
-      summary = CDBDotAPlayerSummary(totalGames, totalWins, totalLosses, totalKills, totalDeaths, totalCreepKills, totalCreepDenies, totalAssists, totalNeutralKills, totalTowerKills, totalRaxKills, totalCourierKills);
+      summary = CDBDotAPlayerSummary(
+        signed_cast<uint32_t>(totalGames),
+        signed_cast<uint32_t>(totalWins),
+        signed_cast<uint32_t>(totalLosses),
+        signed_cast<uint32_t>(totalKills),
+        signed_cast<uint32_t>(totalDeaths),
+        signed_cast<uint32_t>(totalCreepKills),
+        signed_cast<uint32_t>(totalCreepDenies),
+        signed_cast<uint32_t>(totalAssists),
+        signed_cast<uint32_t>(totalNeutralKills),
+        signed_cast<uint32_t>(totalTowerKills),
+        signed_cast<uint32_t>(totalRaxKills),
+        signed_cast<uint32_t>(totalCourierKills)
+      );
     }
   }
 
