@@ -1854,47 +1854,53 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
       if (isUnverified) targetIdentity += " (unverified)";
 
       if (isDota) {
-        CDBDotAPlayerSummary* DotAPlayerSummary = m_Aura->m_DB->DotAPlayerSummaryCheck(targetName, targetHostName);
-        if (!DotAPlayerSummary) {
+        CDBDotAPlayerSummary summary = m_Aura->m_DB->DotAPlayerSummaryCheck(targetName, targetHostName);
+        if (summary.GetIsError()) {
+          ErrorReply("Failed to retrieve player data.");
+          break;
+        }
+        if (!summary.GetTotalGames()) {
           SendReply(targetIdentity + " has no registered DotA games.");
           break;
         }
         const string summaryText = (
           targetIdentity +
-          " - " + to_string(DotAPlayerSummary->GetTotalGames()) + " games (W/L: " +
-          to_string(DotAPlayerSummary->GetTotalWins()) + "/" + to_string(DotAPlayerSummary->GetTotalLosses()) +
-          ") Hero K/D/A: " + to_string(DotAPlayerSummary->GetTotalKills()) +
-          "/" + to_string(DotAPlayerSummary->GetTotalDeaths()) +
-          "/" + to_string(DotAPlayerSummary->GetTotalAssists()) +
-          " (" + to_string(DotAPlayerSummary->GetAvgKills()) +
-          "/" + to_string(DotAPlayerSummary->GetAvgDeaths()) +
-          "/" + to_string(DotAPlayerSummary->GetAvgAssists()) +
-          ") Creep K/D/N: " + to_string(DotAPlayerSummary->GetTotalCreepKills()) +
-          "/" + to_string(DotAPlayerSummary->GetTotalCreepDenies()) +
-          "/" + to_string(DotAPlayerSummary->GetTotalNeutralKills()) +
-          " (" + to_string(DotAPlayerSummary->GetAvgCreepKills()) +
-          "/" + to_string(DotAPlayerSummary->GetAvgCreepDenies()) +
-          "/" + to_string(DotAPlayerSummary->GetAvgNeutralKills()) +
-          ") T/R/C: " + to_string(DotAPlayerSummary->GetTotalTowerKills()) +
-          "/" + to_string(DotAPlayerSummary->GetTotalRaxKills()) +
-          "/" + to_string(DotAPlayerSummary->GetTotalCourierKills())
+          " - " + to_string(summary.GetTotalGames()) + " games (W/L: " +
+          to_string(summary.GetTotalWins()) + "/" + to_string(summary.GetTotalLosses()) +
+          ") Hero K/D/A: " + to_string(summary.GetTotalKills()) +
+          "/" + to_string(summary.GetTotalDeaths()) +
+          "/" + to_string(summary.GetTotalAssists()) +
+          " (" + to_string(summary.GetAvgKills()) +
+          "/" + to_string(summary.GetAvgDeaths()) +
+          "/" + to_string(summary.GetAvgAssists()) +
+          ") Creep K/D/N: " + to_string(summary.GetTotalCreepKills()) +
+          "/" + to_string(summary.GetTotalCreepDenies()) +
+          "/" + to_string(summary.GetTotalNeutralKills()) +
+          " (" + to_string(summary.GetAvgCreepKills()) +
+          "/" + to_string(summary.GetAvgCreepDenies()) +
+          "/" + to_string(summary.GetAvgNeutralKills()) +
+          ") T/R/C: " + to_string(summary.GetTotalTowerKills()) +
+          "/" + to_string(summary.GetTotalRaxKills()) +
+          "/" + to_string(summary.GetTotalCourierKills())
         );
         SendReply(summaryText);
-        delete DotAPlayerSummary;
       } else {
-        CDBGamePlayerSummary* GamePlayerSummary = m_Aura->m_DB->GamePlayerSummaryCheck(targetName, targetHostName);
-        if (!GamePlayerSummary) {
+        CDBGamePlayerSummary summary = m_Aura->m_DB->GamePlayerSummaryCheck(targetName, targetHostName);
+        if (summary.GetIsError()) {
+          ErrorReply("Failed to retrieve player data.");
+          break;
+        }
+        if (!summary.GetTotalGames()) {
           SendReply(targetIdentity + " has no registered games.");
           break;
         }
         const string summaryText = (
           targetIdentity + " has played " +
-          to_string(GamePlayerSummary->GetTotalGames()) + " games with this bot. Average loading time: " +
-          ToFormattedString(static_cast<double>(GamePlayerSummary->GetAvgLoadingTime())) + " seconds. Average stay: " +
-          to_string(GamePlayerSummary->GetAvgLeftPercent()) + "%"
+          to_string(summary.GetTotalGames()) + " games with this bot. Average loading time: " +
+          ToFormattedString(static_cast<double>(summary.GetAvgLoadingTime())) + " seconds. Average stay: " +
+          to_string(summary.GetAvgLeftPercent()) + "%"
         );
         SendReply(summaryText);
-        delete GamePlayerSummary;
       }
 
       break;

@@ -1013,50 +1013,61 @@ void CAuraDB::UpdateGamePlayerOnEnd(const uint64_t /*gamePersistentId*/, const C
   m_DB->Reset(m_StmtCache[UPDATE_PLAYER_END_IDX]);
 }
 
-CDBGamePlayerSummary* CAuraDB::GamePlayerSummaryCheck(const string& rawName, const string& server)
+CDBGamePlayerSummary CAuraDB::GamePlayerSummaryCheck(const string& rawName, const string& server)
 {
-  CDBGamePlayerSummary* GamePlayerSummary = nullptr;
+  CDBGamePlayerSummary summary;
   const string name = ToLowerCase(rawName);
 
   if (!m_StmtCache[PLAYER_SUMMARY_IDX]) {
     m_DB->Prepare("SELECT games, loadingtime, duration, left FROM players WHERE name=? AND server=?", &(m_StmtCache[PLAYER_SUMMARY_IDX]), true);
   }
 
-  if (m_StmtCache[PLAYER_SUMMARY_IDX])
-  {
-    sqlite3_bind_text(m_StmtCache[PLAYER_SUMMARY_IDX], 1, name.c_str(), -1, SQLITE_TRANSIENT);
-    sqlite3_bind_text(m_StmtCache[PLAYER_SUMMARY_IDX], 2, server.c_str(), -1, SQLITE_TRANSIENT);
-
-    const int32_t RC = m_DB->Step(m_StmtCache[PLAYER_SUMMARY_IDX]);
-
-    if (RC == SQLITE_ROW) {
-      if (sqlite3_column_count(m_StmtCache[PLAYER_SUMMARY_IDX]) == 4)
-      {
-        const uint32_t TotalGames  = sqlite3_column_int(m_StmtCache[PLAYER_SUMMARY_IDX], 0);
-        const uint64_t LoadingTime = sqlite3_column_int64(m_StmtCache[PLAYER_SUMMARY_IDX], 1);
-        const uint64_t Left        = sqlite3_column_int64(m_StmtCache[PLAYER_SUMMARY_IDX], 2);
-        const uint64_t Duration    = sqlite3_column_int64(m_StmtCache[PLAYER_SUMMARY_IDX], 3);
-
-        float AvgLoadingTime = 0.;
-        uint32_t AvgLeftPercent = static_cast<uint32_t>(static_cast<double>(Duration) / Left * 100);
-        if (TotalGames > 0) {
-          AvgLoadingTime = static_cast<float>(static_cast<double>(LoadingTime) / TotalGames / 1000);
-        }
-
-        GamePlayerSummary = new CDBGamePlayerSummary(TotalGames, AvgLoadingTime, AvgLeftPercent);
-      }
-      else
-        Print("[SQLITE3] error checking gameplayersummary [" + name + "@" + server + "] - row doesn't have 4 columns");
-    } else if (RC == SQLITE_ERROR) {
-      PRINT_IF(LogLevel::kError, "[SQLITE3] error checking gameplayersummary [" + name + "@" + server + "] - " + m_DB->GetError());
-    }
-
-    m_DB->Reset(m_StmtCache[PLAYER_SUMMARY_IDX]);
-  }
-  else
+  if (!m_StmtCache[PLAYER_SUMMARY_IDX]) {
     Print("[SQLITE3] prepare error checking gameplayersummary [" + name + "@" + server + "] - " + m_DB->GetError());
+    return summary;
+  }
+  sqlite3_bind_text(m_StmtCache[PLAYER_SUMMARY_IDX], 1, name.c_str(), -1, SQLITE_TRANSIENT);
+  sqlite3_bind_text(m_StmtCache[PLAYER_SUMMARY_IDX], 2, server.c_str(), -1, SQLITE_TRANSIENT);
 
-  return GamePlayerSummary;
+  const int32_t RC = m_DB->Step(m_StmtCache[PLAYER_SUMMARY_IDX]);
+
+  switch (RC) {
+    case SQLITE_ERROR: {
+      PRINT_IF(LogLevel::kError, Concat("[SQLITE3] error checking gameplayersummary [", name, "@", server, "] - ", m_DB->GetError()));
+      break;
+    }
+    case SQLITE_ROW: {
+      if (sqlite3_column_count(m_StmtCache[PLAYER_SUMMARY_IDX]) != 4) {
+        PRINT_IF(LogLevel::kError, Concat("[SQLITE3] error checking gameplayersummary [", name, "@", server, "] - row doesn't have 4 columns");
+        break;
+      }
+      const int totalGames = sqlite3_column_int(m_StmtCache[PLAYER_SUMMARY_IDX], 0);
+      const sqlite3_int64 loadingTime = sqlite3_column_int64(m_StmtCache[PLAYER_SUMMARY_IDX], 1);
+      const sqlite3_int64 left = sqlite3_column_int64(m_StmtCache[PLAYER_SUMMARY_IDX], 2);
+      const sqlite3_int64 duration = sqlite3_column_int64(m_StmtCache[PLAYER_SUMMARY_IDX], 3);
+      if (totalGames < 0 || loadingTime < 0 || left < 0 || duration < 0) {
+        PRINT_IF(LogLevel::kError, Concat("[SQLITE3] error checking gameplayersummary [", name, "@", server, "] - unexpected negative values");
+        break;
+      }
+      if (totalGames == 0) {
+        summary = GamePlayerSummary(0, 0., 0);
+      } else {
+        float averageLoadingTime = 0.;
+        uint32_t averageLeftPercent = static_cast<uint32_t>(round(static_cast<double>(duration) / left * 100));
+        if (TotalGames > 0) {
+          averageLoadingTime = static_cast<float>(static_cast<double>(loadingTime) / TotalGames / 1000);
+        }
+        summary = GamePlayerSummary(
+          signed_cast<uint64_t>(totalGames),
+          averageLoadingTime,
+          averageLeftPercent
+        );
+      }
+    }
+  }
+
+  m_DB->Reset(m_StmtCache[PLAYER_SUMMARY_IDX]);
+  return summary;
 }
 
 void CAuraDB::UpdateDotAPlayerOnEnd(const string& name, const string& server, GamePlayerResult gameResult, const CDBDotAPlayer* dotaPlayer)
@@ -1100,18 +1111,18 @@ void CAuraDB::UpdateDotAPlayerOnEnd(const string& name, const string& server, Ga
 
   if (RC == SQLITE_ROW)
   {
-    Dotas += sqlite3_column_int(Statement, 0);
-    Wins += sqlite3_column_int(Statement, 1);
-    Losses += sqlite3_column_int(Statement, 2);
-    kills += sqlite3_column_int(Statement, 3);
-    deaths += sqlite3_column_int(Statement, 4);
-    creepkills += sqlite3_column_int(Statement, 5);
-    creepdenies += sqlite3_column_int(Statement, 6);
-    assists += sqlite3_column_int(Statement, 7);
-    neutralkills += sqlite3_column_int(Statement, 8);
-    towerkills += sqlite3_column_int(Statement, 9);
-    raxkills += sqlite3_column_int(Statement, 10);
-    courierkills += sqlite3_column_int(Statement, 11);
+    Dotas += static_cast<uint32_t>(sqlite3_column_int(Statement, 0));
+    Wins += static_cast<uint32_t>(sqlite3_column_int(Statement, 1));
+    Losses += static_cast<uint32_t>(sqlite3_column_int(Statement, 2));
+    kills += static_cast<uint32_t>(sqlite3_column_int(Statement, 3));
+    deaths += static_cast<uint32_t>(sqlite3_column_int(Statement, 4));
+    creepkills += static_cast<uint32_t>(sqlite3_column_int(Statement, 5));
+    creepdenies += static_cast<uint32_t>(sqlite3_column_int(Statement, 6));
+    assists += static_cast<uint32_t>(sqlite3_column_int(Statement, 7));
+    neutralkills += static_cast<uint32_t>(sqlite3_column_int(Statement, 8));
+    towerkills += static_cast<uint32_t>(sqlite3_column_int(Statement, 9));
+    raxkills += static_cast<uint32_t>(sqlite3_column_int(Statement, 10));
+    courierkills += static_cast<uint32_t>(sqlite3_column_int(Statement, 11));
 
     Success = true;
   }
@@ -1158,55 +1169,67 @@ void CAuraDB::UpdateDotAPlayerOnEnd(const string& name, const string& server, Ga
   m_DB->Finalize(Statement);
 }
 
-CDBDotAPlayerSummary* CAuraDB::DotAPlayerSummaryCheck(const string& rawName, const string& server)
+CDBDotAPlayerSummary CAuraDB::DotAPlayerSummaryCheck(const string& rawName, const string& server)
 {
-  sqlite3_stmt*         Statement;
-  CDBDotAPlayerSummary* DotAPlayerSummary = nullptr;
+  CDBDotAPlayerSummary summary;
+  sqlite3_stmt* Statement;
   string name = ToLowerCase(rawName);
   m_DB->Prepare("SELECT dotas, wins, losses, kills, deaths, creepkills, creepdenies, assists, neutralkills, towerkills, raxkills, courierkills FROM players WHERE name=?", reinterpret_cast<void**>(&Statement));
 
-  if (Statement)
-  {
-    sqlite3_bind_text(Statement, 1, name.c_str(), -1, SQLITE_TRANSIENT);
-    sqlite3_bind_text(Statement, 2, server.c_str(), -1, SQLITE_TRANSIENT);
-
-    const int32_t RC = m_DB->Step(Statement);
-
-    if (RC == SQLITE_ROW)
-    {
-      if (sqlite3_column_count(Statement) == 12)
-      {
-        const uint32_t TotalGames = sqlite3_column_int(Statement, 0);
-
-        if (TotalGames != 0)
-        {
-          const uint32_t TotalWins         = sqlite3_column_int(Statement, 1);
-          const uint32_t TotalLosses       = sqlite3_column_int(Statement, 2);
-          const uint32_t TotalKills        = sqlite3_column_int(Statement, 3);
-          const uint32_t TotalDeaths       = sqlite3_column_int(Statement, 4);
-          const uint32_t TotalCreepKills   = sqlite3_column_int(Statement, 5);
-          const uint32_t TotalCreepDenies  = sqlite3_column_int(Statement, 6);
-          const uint32_t TotalAssists      = sqlite3_column_int(Statement, 7);
-          const uint32_t TotalNeutralKills = sqlite3_column_int(Statement, 8);
-          const uint32_t TotalTowerKills   = sqlite3_column_int(Statement, 9);
-          const uint32_t TotalRaxKills     = sqlite3_column_int(Statement, 10);
-          const uint32_t TotalCourierKills = sqlite3_column_int(Statement, 11);
-
-          DotAPlayerSummary = new CDBDotAPlayerSummary(TotalGames, TotalWins, TotalLosses, TotalKills, TotalDeaths, TotalCreepKills, TotalCreepDenies, TotalAssists, TotalNeutralKills, TotalTowerKills, TotalRaxKills, TotalCourierKills);
-        }
-      }
-      else
-        Print("[SQLITE3] error checking dotaplayersummary [" + name + "@" + server + "] - row doesn't have 12 columns");
-    } else if (RC == SQLITE_ERROR) {
-      PRINT_IF(LogLevel::kError, "[SQLITE3] error checking dotaplayersummary [" + name + "@" + server + "] - " + m_DB->GetError());
-    }
-
-    m_DB->Finalize(Statement);
-  }
-  else
+  if (!Statement) {
     Print("[SQLITE3] prepare error checking dotaplayersummary [" + name + "@" + server + "] - " + m_DB->GetError());
+    return summary;
+  }
 
-  return DotAPlayerSummary;
+  sqlite3_bind_text(Statement, 1, name.c_str(), -1, SQLITE_TRANSIENT);
+  sqlite3_bind_text(Statement, 2, server.c_str(), -1, SQLITE_TRANSIENT);
+
+  const int32_t RC = m_DB->Step(Statement);
+
+  switch (RC) {
+    case SQLITE_ERROR: {
+      PRINT_IF(LogLevel::kError, Concat("[SQLITE3] error checking dotaplayersummary [", name, "@", server, "] - ", m_DB->GetError()));
+      break;
+    }
+    case SQLITE_ROW: {
+      if (sqlite3_column_count(Statement) != 12) {
+        Print(Concat("[SQLITE3] error checking dotaplayersummary [", name, "@", server, "] - row doesn't have 12 columns"));
+        break;
+      }
+
+      const int totalGames = sqlite3_column_int(Statement, 0);
+      const int totalWins         = sqlite3_column_int(Statement, 1);
+      const int totalLosses       = sqlite3_column_int(Statement, 2);
+      const int totalKills        = sqlite3_column_int(Statement, 3);
+      const int totalDeaths       = sqlite3_column_int(Statement, 4);
+      const int totalCreepKills   = sqlite3_column_int(Statement, 5);
+      const int totalCreepDenies  = sqlite3_column_int(Statement, 6);
+      const int totalAssists      = sqlite3_column_int(Statement, 7);
+      const int totalNeutralKills = sqlite3_column_int(Statement, 8);
+      const int totalTowerKills   = sqlite3_column_int(Statement, 9);
+      const int totalRaxKills     = sqlite3_column_int(Statement, 10);
+      const int totalCourierKills = sqlite3_column_int(Statement, 11);
+
+      if (
+        totalGames < 0 || totalWins < 0 || totalLosses < 0 || totalKills < 0 || totalDeaths < 0
+        || totalCreepKills < 0 || totalCreepDenies < 0 || totalAssists < 0 || totalNeutralKills < 0
+        || totalTowerKills < 0 || totalRaxKills < 0 || totalCourierKills < 0
+      ) {
+        Print(Concat("[SQLITE3] error checking dotaplayersummary [", name, "@", server, "] - unexpected negative values");
+        break;
+      }
+
+      if (totalGames == 0) {
+        break;
+      }
+
+      summary = CDBDotAPlayerSummary(totalGames, totalWins, totalLosses, totalKills, totalDeaths, totalCreepKills, totalCreepDenies, totalAssists, totalNeutralKills, totalTowerKills, totalRaxKills, totalCourierKills);
+    }
+  }
+
+  m_DB->Finalize(Statement);
+
+  return summary;
 }
 
 string CAuraDB::GetInitialIP(const string& rawName, const string& server)
@@ -1733,10 +1756,19 @@ CDBGameSummary::~CDBGameSummary() = default;
 // CDBGamePlayerSummary
 //
 
+CDBGamePlayerSummary::CDBGamePlayerSummary()
+: m_Error(true),
+  m_TotalGames(0),
+  m_AvgLoadingTime(0),
+  m_AvgLeftPercent(0)
+{
+}
+
 CDBGamePlayerSummary::CDBGamePlayerSummary(uint32_t nTotalGames, float nAvgLoadingTime, uint32_t nAvgLeftPercent)
-  : m_TotalGames(nTotalGames),
-    m_AvgLoadingTime(nAvgLoadingTime),
-    m_AvgLeftPercent(nAvgLeftPercent)
+: m_Error(false),
+  m_TotalGames(nTotalGames),
+  m_AvgLoadingTime(nAvgLoadingTime),
+  m_AvgLeftPercent(nAvgLeftPercent)
 {
 }
 
@@ -1784,19 +1816,37 @@ CDBDotAPlayer::~CDBDotAPlayer() = default;
 // CDBDotAPlayerSummary
 //
 
+CDBDotAPlayerSummary::CDBDotAPlayerSummary()
+: m_Error(true),
+  m_TotalGames(0),
+  m_TotalWins(0),
+  m_TotalLosses(0),
+  m_TotalKills(0),
+  m_TotalDeaths(0),
+  m_TotalCreepKills(0),
+  m_TotalCreepDenies(0),
+  m_TotalAssists(0),
+  m_TotalNeutralKills(0),
+  m_TotalTowerKills(0),
+  m_TotalRaxKills(0),
+  m_TotalCourierKills(0)
+{
+}
+
 CDBDotAPlayerSummary::CDBDotAPlayerSummary(uint32_t nTotalGames, uint32_t nTotalWins, uint32_t nTotalLosses, uint32_t nTotalKills, uint32_t nTotalDeaths, uint32_t nTotalCreepKills, uint32_t nTotalCreepDenies, uint32_t nTotalAssists, uint32_t nTotalNeutralKills, uint32_t nTotalTowerKills, uint32_t nTotalRaxKills, uint32_t nTotalCourierKills)
-  : m_TotalGames(nTotalGames),
-    m_TotalWins(nTotalWins),
-    m_TotalLosses(nTotalLosses),
-    m_TotalKills(nTotalKills),
-    m_TotalDeaths(nTotalDeaths),
-    m_TotalCreepKills(nTotalCreepKills),
-    m_TotalCreepDenies(nTotalCreepDenies),
-    m_TotalAssists(nTotalAssists),
-    m_TotalNeutralKills(nTotalNeutralKills),
-    m_TotalTowerKills(nTotalTowerKills),
-    m_TotalRaxKills(nTotalRaxKills),
-    m_TotalCourierKills(nTotalCourierKills)
+: m_Error(false),
+  m_TotalGames(nTotalGames),
+  m_TotalWins(nTotalWins),
+  m_TotalLosses(nTotalLosses),
+  m_TotalKills(nTotalKills),
+  m_TotalDeaths(nTotalDeaths),
+  m_TotalCreepKills(nTotalCreepKills),
+  m_TotalCreepDenies(nTotalCreepDenies),
+  m_TotalAssists(nTotalAssists),
+  m_TotalNeutralKills(nTotalNeutralKills),
+  m_TotalTowerKills(nTotalTowerKills),
+  m_TotalRaxKills(nTotalRaxKills),
+  m_TotalCourierKills(nTotalCourierKills)
 {
 }
 

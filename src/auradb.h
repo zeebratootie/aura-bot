@@ -327,9 +327,9 @@ public:
   // Players
   void                                        UpdateGamePlayerOnStart(const uint64_t gamePersistentId, const CGameController* controllerData);
   void                                        UpdateGamePlayerOnEnd(const uint64_t gamePersistentId, const CGameController* controllerData, const uint64_t durationSeconds);
-  [[nodiscard]] CDBGamePlayerSummary*         GamePlayerSummaryCheck(const std::string& name, const std::string& server);
+  [[nodiscard]] CDBGamePlayerSummary          GamePlayerSummaryCheck(const std::string& name, const std::string& server);
   void                                        UpdateDotAPlayerOnEnd(const std::string& name, const std::string& server, GamePlayerResult result, const CDBDotAPlayer* dotaPlayer);
-  [[nodiscard]] CDBDotAPlayerSummary*         DotAPlayerSummaryCheck(const std::string& name, const std::string& server);
+  [[nodiscard]] CDBDotAPlayerSummary          DotAPlayerSummaryCheck(const std::string& name, const std::string& server);
   [[nodiscard]] std::string                   GetInitialIP(const std::string& name, const std::string& server);
   [[nodiscard]] std::string                   GetLatestIP(const std::string& name, const std::string& server);
   [[nodiscard]] std::vector<std::string>      GetIPs(const std::string& name, const std::string& server);
@@ -419,14 +419,17 @@ public:
 class CDBGamePlayerSummary
 {
 private:
+  bool m_Error;
   uint32_t m_TotalGames;     // total number of games played
   float    m_AvgLoadingTime; // average loading time in milliseconds (this could be skewed because different maps have different load times)
   uint32_t m_AvgLeftPercent; // average time at which the player left the game expressed as a percentage of the game duration (0-100)
 
 public:
+  CDBGamePlayerSummary();
   CDBGamePlayerSummary(uint32_t nTotalGames, float nAvgLoadingTime, uint32_t nAvgLeftPercent);
   ~CDBGamePlayerSummary();
 
+  [[nodiscard]] inline bool GetIsError() const { return m_Error; }
   [[nodiscard]] inline uint32_t GetTotalGames() const { return m_TotalGames; }
   [[nodiscard]] inline float    GetAvgLoadingTime() const { return m_AvgLoadingTime; }
   [[nodiscard]] inline uint32_t GetAvgLeftPercent() const { return m_AvgLeftPercent; }
@@ -505,6 +508,7 @@ public:
 class CDBDotAPlayerSummary
 {
 private:
+  bool m_Error;
   uint32_t m_TotalGames;        // total number of dota games played
   uint32_t m_TotalWins;         // total number of dota games won
   uint32_t m_TotalLosses;       // total number of dota games lost
@@ -519,9 +523,11 @@ private:
   uint32_t m_TotalCourierKills; // total number of courier kills
 
 public:
+  CDBDotAPlayerSummary();
   CDBDotAPlayerSummary(uint32_t nTotalGames, uint32_t nTotalWins, uint32_t nTotalLosses, uint32_t nTotalKills, uint32_t nTotalDeaths, uint32_t nTotalCreepKills, uint32_t nTotalCreepDenies, uint32_t nTotalAssists, uint32_t nTotalNeutralKills, uint32_t nTotalTowerKills, uint32_t nTotalRaxKills, uint32_t nTotalCourierKills);
   ~CDBDotAPlayerSummary();
 
+  [[nodiscard]] inline bool GetIsError() const { return m_Error; }
   [[nodiscard]] inline uint32_t GetTotalGames() const { return m_TotalGames; }
   [[nodiscard]] inline uint32_t GetTotalWins() const { return m_TotalWins; }
   [[nodiscard]] inline uint32_t GetTotalLosses() const { return m_TotalLosses; }
