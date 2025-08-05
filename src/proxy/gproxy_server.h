@@ -74,7 +74,7 @@ public:
   bool UnqueuePackets(const size_t lastPacket);
   void SynchronizeReconnectKeyFromClient(const uint32_t reconnectKey);
   void RotateReconnectKey() const;
-  void Init(uint8_t UID, uint32_t version, uint16_t port, uint8_t emptyActions, bool supportsExtended, int64_t extendedWaitTicks, int64_t gameID);
+  void Init(uint8_t UID, uint32_t version, uint16_t port, uint8_t emptyActions, bool supportsExtended, int64_t extendedWaitTicks, uint64_t gameID);
   void Disable();
 
   void EventGameStart();

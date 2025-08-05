@@ -210,6 +210,10 @@ CNetConfig::CNetConfig(CConfig& CFG)
   }
 #endif
   m_DownloadTimeout              = CFG.GetUint32("hosting.map_downloads.timeout", 15000);
+  if (sizeof(int) <= sizeof(uint32_t) && signed_cast<uint32_t>(numeric_limits<int>::max()) < m_DownloadTimeout) {
+    Print("[CONFIG] warning - using <hosting.map_downloads.timeout = " + to_string(numeric_limits<int>::max()) + ">");
+    m_DownloadTimeout = signed_cast<uint32_t>(numeric_limits<int>::max());
+  }
   m_MapRepositories              = CFG.GetSet("hosting.map_downloads.repositories", ',', true, false, {"epicwar", "wc3maps"});
   m_AllowTransfers               = CFG.GetStringIndex("hosting.map_transfers.mode", {"never", "auto", "manual"}, MAP_TRANSFERS_AUTOMATIC);
   m_MaxDownloaders               = CFG.GetUint32("hosting.map_transfers.max_players", 3);

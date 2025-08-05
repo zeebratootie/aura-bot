@@ -357,7 +357,7 @@ namespace GameUser
     inline void SetSyncCounter(const size_t nSyncCounter) { m_SyncCounter = nSyncCounter; }
     inline void AddSyncCounterOffset(const size_t nOffset) { m_SyncCounterOffset += nOffset; }
     inline void ResetSyncCounterOffset() { m_SyncCounterOffset = 0; }
-    inline void SetHandicapTicks(uint64_t nHandicapTicks) { m_HandicapTicks = nHandicapTicks; }
+    inline void SetHandicapTicks(int64_t nHandicapTicks) { m_HandicapTicks = nHandicapTicks; }
     inline void SetStartedLaggingTicks(int64_t nStartedLaggingTicks) { m_StartedLaggingTicks = nStartedLaggingTicks; }
     inline void ClearStartedLaggingTicks() { m_StartedLaggingTicks.reset(); }
     inline void SetRealmVerified(bool nVerified) { m_Verified = nVerified; }

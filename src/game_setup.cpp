@@ -201,7 +201,7 @@ CGameSetup::CGameSetup(CAura* nAura, shared_ptr<CCommandContext> nCtx, CConfig* 
     m_IsStepDownloaded(false),
     m_MapDownloadSize(0),
     m_DownloadFileStream(nullptr),
-    m_DownloadTimeout(m_Aura->m_Net.m_Config.m_DownloadTimeout),
+    m_DownloadTimeout(signed_cast<int>(m_Aura->m_Net.m_Config.m_DownloadTimeout)),
     m_SuggestionsTimeout(SUGGESTIONS_TIMEOUT),
     m_AsyncStep(GAMESETUP_STEP_MAIN),
 
@@ -251,7 +251,7 @@ CGameSetup::CGameSetup(CAura* nAura, shared_ptr<CCommandContext> nCtx, const str
     m_IsStepDownloaded(false),
     m_MapDownloadSize(0),
     m_DownloadFileStream(nullptr),
-    m_DownloadTimeout(m_Aura->m_Net.m_Config.m_DownloadTimeout),
+    m_DownloadTimeout(signed_cast<int>(m_Aura->m_Net.m_Config.m_DownloadTimeout)),
     m_SuggestionsTimeout(SUGGESTIONS_TIMEOUT),
     m_AsyncStep(GAMESETUP_STEP_MAIN),
 
@@ -503,7 +503,7 @@ pair<uint8_t, filesystem::path> CGameSetup::SearchInputLocalFuzzy(vector<string>
   size_t resultCount = min(FILE_SEARCH_FUZZY_MAX_RESULTS, allResults.size());
   partial_sort(
     allResults.begin(),
-    allResults.begin() + resultCount,
+    allResults.begin() + signed_cast<ptrdiff_t>(resultCount),
     allResults.end(),
     [](const pair<string, int>& a, const pair<string, int>& b) {
         return (a.second & NOT_MAP_MATCH_TYPE_MAP) < (b.second & NOT_MAP_MATCH_TYPE_MAP);
@@ -1530,8 +1530,8 @@ void CGameSetup::OnGameCreate()
 {
   m_RestoredGame.reset();
   if (m_LobbyAutoRehosted) {
-    m_CreationCounter = (m_CreationCounter + 1) % 36;
-    if (m_CreationCounter == 0) ++m_CreationCounter;
+    m_CreationCounter = integer_cast_lossy<uint16_t>((integer_cast<uint32_t>(m_CreationCounter) + LONG_ONE) % LONG_36);
+    if (m_CreationCounter == 0u) ++m_CreationCounter;
   }
 }
 

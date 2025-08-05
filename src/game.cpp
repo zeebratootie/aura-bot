@@ -477,9 +477,9 @@ void CGame::InitSlots()
     } else {
       const uint8_t originalColor = slot.GetColor();
       if (usedColors.test(originalColor)) {
-        uint8_t testColor = originalColor;
+        uint32_t testColor = originalColor;
         do {
-          testColor = (testColor + 1) % m_Map->GetVersionMaxSlots();
+          testColor = (testColor + LONG_ONE) % integer_cast<uint32_t>(m_Map->GetVersionMaxSlots());
         } while (usedColors.test(testColor) && testColor != originalColor);
         slot.SetColor(testColor);
         usedColors.set(testColor);
@@ -4189,13 +4189,14 @@ CQueuedActionsFrame& CGame::GetLastActionFrame()
 vector<QueuedActionsFrameNode*> CGame::GetFrameNodesInRangeInclusive(const uint8_t startOffset, const uint8_t endOffset)
 {
   vector<QueuedActionsFrameNode*> frameNodes;
-  frameNodes.reserve(endOffset - startOffset + 1);
+  uint8_t nodeCount = ToBaseOne(MINUS_TINY(endOffset, startOffset));
+  frameNodes.reserve(nodeCount);
   QueuedActionsFrameNode* frameNode = GetFirstActionFrameNode();
   uint8_t offset = startOffset;
   while (offset--) {
     frameNode = frameNode->next;
   }
-  offset = endOffset - startOffset + 1;
+  offset = nodeCount;
   while (offset--) {
     frameNodes.push_back(frameNode);
     frameNode = frameNode->next;
@@ -5582,7 +5583,7 @@ JoinRequestResult CGame::EventRequestJoin(CConnection* connection, const CIncomi
   // note: this is not a replacement for spoof checking since it doesn't verify the user's name and it can be spoofed anyway
 
   string JoinedRealm;
-  uint8_t HostCounterID = joinRequest.GetHostCounter() >> 24;
+  uint8_t HostCounterID = integer_cast_lossy<uint8_t>(joinRequest.GetHostCounter() >> HOST_COUNTER_REALM_OFFSET);
   bool IsUnverifiedAdmin = false;
 
   shared_ptr<CRealm> matchingRealm = nullptr;
@@ -6975,7 +6976,7 @@ void CGame::AddProvisionalBannableUser(const GameUser::CGameUser* user)
     delete m_Bannables[matchIndex];
   } else if (matchedShrink) {
     delete m_Bannables[shrinkIndex];
-    m_Bannables.erase(m_Bannables.begin() + shrinkIndex);
+    m_Bannables.erase(m_Bannables.begin() + signed_cast<ptrdiff_t>(shrinkIndex));
   }
 
   CDBBan* bannable = new CDBBan(
@@ -7162,7 +7163,10 @@ void CGame::EventGameBeforeLoaded()
       // Cannot just send the whole m_LoadingVirtualBuffer, because, when load-in-game is disabled,
       // it will also contain load packets for real users who didn't actually load the game,
       // but these packets were already sent to real users
-      vector<uint8_t> onlyFakeUsersLoaded = vector<uint8_t>(m_GameHistory->m_LoadingVirtualBuffer.begin(), m_GameHistory->m_LoadingVirtualBuffer.begin() + (5 * m_FakeUsers.size()));
+      vector<uint8_t> onlyFakeUsersLoaded = vector<uint8_t>(
+        m_GameHistory->m_LoadingVirtualBuffer.begin(),
+        m_GameHistory->m_LoadingVirtualBuffer.begin() + signed_cast<ptrdiff_t>(5u * m_FakeUsers.size())
+      );
       SendAll(onlyFakeUsersLoaded);
     }
   }
@@ -8929,7 +8933,7 @@ void CGame::SetSlotTeamAndColorAuto(const uint8_t SID)
         // Streamline team selection for 1v1 maps
         slot->SetTeam(1 - otherTeam);
       } else {
-        slot->SetTeam((SID - numSkipped) % m_Map->GetMapNumTeams());
+        slot->SetTeam(MOD_TINY(MINUS_TINY(SID, numSkipped), m_Map->GetMapNumTeams()));
       }
       break;
     }
@@ -10875,15 +10879,18 @@ string CGame::GetCreationCounterText(shared_ptr<const CRealm> realm) const
 {
   if (m_CreationCounter == 0) return string();
 
+  // creation counter may be large, but we reduce it to a base-36 character
   // Base-36 suffix 0123456789abcdefghijklmnopqrstuvwxyz
-  char counter;
+  uint16_t creationCounter = m_CreationCounter % 36;
+
+  unsigned char counter;
   if (m_CreationCounter < 10) {
-    counter = static_cast<uint8_t>(48u + m_CreationCounter);
+    counter = integer_cast_lossy<uint8_t>(PLUS_SHORT(48u, creationCounter));
   } else {
-    counter = static_cast<uint8_t>(87u + m_CreationCounter);
+    counter = integer_cast_lossy<uint8_t>(PLUS_SHORT(87u, creationCounter));
   }
 
-  return GetCustomCreationCounterText(realm, counter);
+  return GetCustomCreationCounterText(realm, static_cast<char>(counter));
 }
 
 string CGame::GetNextCreationCounterText(shared_ptr<const CRealm> realm) const
@@ -10892,14 +10899,14 @@ string CGame::GetNextCreationCounterText(shared_ptr<const CRealm> realm) const
   ++creationCounter;
 
   // Base-36 suffix 0123456789abcdefghijklmnopqrstuvwxyz
-  char counter;
+  unsigned char counter;
   if (creationCounter < 10) {
-    counter = static_cast<uint8_t>(48u + creationCounter);
+    counter = integer_cast_lossy<uint8_t>(48u + creationCounter);
   } else {
-    counter = static_cast<uint8_t>(87u + creationCounter);
+    counter = integer_cast_lossy<uint8_t>(87u + creationCounter);
   }
 
-  return GetCustomCreationCounterText(realm, counter);
+  return GetCustomCreationCounterText(realm, static_cast<char>(counter));
 }
 
 string CGame::GetIndexHostName() const
@@ -11278,14 +11285,19 @@ void CGame::RunHCLEncoding()
       ++currentSlot;
 
     bool isVirtualPlayer = m_Slots[currentSlot].GetIsPlayerOrFake() && !GetIsRealPlayerSlot(currentSlot);
-    uint8_t handicapIndex = (m_Slots[currentSlot].GetHandicap() - 50) / 10;
-    uint8_t charIndex = static_cast<uint8_t>(HCLChars.find(character));
-    uint8_t slotInfo = handicapIndex;
+    uint32_t handicapIndex = (integer_cast<uint32_t>(m_Slots[currentSlot].GetHandicap()) - 50u) / 10u;
+    uint32_t charIndex = integer_cast<uint32_t>(HCLChars.find(character));
+    uint32_t slotInfo = handicapIndex;
     if (encodeVirtualPlayers && isVirtualPlayer) {
-      slotInfo += 6;
+      slotInfo += 6u;
     }
-    slotInfo += charIndex * (encodeVirtualPlayers ? 12 : 6);
+    slotInfo += charIndex * (encodeVirtualPlayers ? 12u : 6u);
     // max() = 7+5+40*6 = 252 | 7+11+19*12 = 246
+    if (encodeVirtualPlayers) {
+      assert((slotInfo <= 246) && "slotInfo should not be more than 246");
+    } else {
+      assert((slotInfo <= 252) && "slotInfo should not be more than 252");
+    }
     m_Slots[currentSlot++].SetHandicap(encodingMap[slotInfo]);
   }
 

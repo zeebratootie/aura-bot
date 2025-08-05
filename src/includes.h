@@ -299,9 +299,25 @@ constexpr uint16_t MINUS_SHORT(uint16_t a, uint16_t b) {
   return integer_cast_lossy<uint16_t>(integer_cast<uint32_t>(a) - integer_cast<uint32_t>(b));
 }
 
+constexpr uint8_t MOD_TINY(uint8_t a, uint8_t b) {
+  return integer_cast_lossy<uint8_t>(integer_cast<uint32_t>(a) % integer_cast<uint32_t>(b));
+}
+
+constexpr uint16_t MOD_SHORT(uint16_t a, uint16_t b) {
+  return integer_cast_lossy<uint16_t>(integer_cast<uint32_t>(a) % integer_cast<uint32_t>(b));
+}
+
 inline float DIVIDE(uint32_t a, uint32_t b) {
   if (b == 0) return 0.f;
   return static_cast<float>(static_cast<double>(a) / static_cast<double>(b));
+}
+
+inline uint8_t DIVIDE_TINY(uint8_t a, uint8_t b) {
+  return static_cast<uint8_t>(static_cast<uint32_t>(a) / static_cast<uint32_t>(b));
+}
+
+inline uint16_t DIVIDE_SHORT(uint16_t a, uint16_t b) {
+  return static_cast<uint16_t>(static_cast<uint32_t>(a) / static_cast<uint32_t>(b));
 }
 
 // time

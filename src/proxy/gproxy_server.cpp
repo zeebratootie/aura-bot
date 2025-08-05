@@ -74,7 +74,7 @@ void CGProxyServer::CheckSendAck()
   m_LastAckTicks = m_Aura->GetLoopTicks();
 }
 
-void CGProxyServer::Init(uint8_t UID, uint32_t version, uint16_t port, uint8_t emptyActions, bool supportsExtended, int64_t extendedWaitTicks, int64_t gameID)
+void CGProxyServer::Init(uint8_t UID, uint32_t version, uint16_t port, uint8_t emptyActions, bool supportsExtended, int64_t extendedWaitTicks, uint64_t gameID)
 {
   m_UID = UID;
   m_IsEnabled = true;
@@ -84,7 +84,7 @@ void CGProxyServer::Init(uint8_t UID, uint32_t version, uint16_t port, uint8_t e
   UpdateEmptyActions(emptyActions);
   if (m_Version >= 2 && supportsExtended) {
     m_SupportsExtended = supportsExtended;
-    StartExtendedHandShake(extendedWaitTicks, signed_cast_lossy<uint32_t>(gameID));
+    StartExtendedHandShake(extendedWaitTicks, integer_cast_lossy<uint32_t>(gameID));
   }
 }
 
