@@ -2325,6 +2325,19 @@ void NormalizeDirectory(filesystem::path& filePath)
   filePath = filePath.lexically_normal();
 }
 
+template <size_t SIZE>
+uint8_t FindNextAvailableBit(bitset<SIZE> usedBits, uint32_t originalBit, uint32_t maxSize)
+{
+  static_assert(SIZE <= 0x100, "Bitsets up to a size of 256 are allowed.");
+  uint32_t testBit = originalBit;
+  do {
+    testBit = (testBit + LONG_ONE) % maxSize;
+  } while (usedBits.test(testBit) && testBit != originalBit);
+  return integer_cast_lossy<uint8_t>(testBit);
+}
+
+template uint8_t FindNextAvailableBit(bitset<MAX_SLOTS_MODERN> usedBits, uint32_t originalBit, uint32_t maxSize);
+
 bool FindNextMissingElementBack(uint8_t& element, vector<uint8_t> counters)
 {
   if (element == 0) return false;

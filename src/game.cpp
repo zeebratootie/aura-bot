@@ -477,10 +477,7 @@ void CGame::InitSlots()
     } else {
       const uint8_t originalColor = slot.GetColor();
       if (usedColors.test(originalColor)) {
-        uint32_t testColor = originalColor;
-        do {
-          testColor = (testColor + LONG_ONE) % integer_cast<uint32_t>(m_Map->GetVersionMaxSlots());
-        } while (usedColors.test(testColor) && testColor != originalColor);
+        uint8_t testColor = FindNextAvailableBit(usedColors, originalColor, m_Map->GetVersionMaxSlots());
         slot.SetColor(testColor);
         usedColors.set(testColor);
       } else {
@@ -10881,7 +10878,7 @@ string CGame::GetCreationCounterText(shared_ptr<const CRealm> realm) const
 
   // creation counter may be large, but we reduce it to a base-36 character
   // Base-36 suffix 0123456789abcdefghijklmnopqrstuvwxyz
-  uint16_t creationCounter = m_CreationCounter % 36;
+  uint16_t creationCounter = MOD_SHORT(m_CreationCounter, 36);
 
   unsigned char counter;
   if (m_CreationCounter < 10) {
@@ -10895,7 +10892,7 @@ string CGame::GetCreationCounterText(shared_ptr<const CRealm> realm) const
 
 string CGame::GetNextCreationCounterText(shared_ptr<const CRealm> realm) const
 {
-  uint16_t creationCounter = (m_CreationCounter + 1) % 36;
+  uint16_t creationCounter = MOD_SHORT(PLUS_SHORT(m_CreationCounter, 1), 36);
   ++creationCounter;
 
   // Base-36 suffix 0123456789abcdefghijklmnopqrstuvwxyz
@@ -11286,7 +11283,7 @@ void CGame::RunHCLEncoding()
 
     bool isVirtualPlayer = m_Slots[currentSlot].GetIsPlayerOrFake() && !GetIsRealPlayerSlot(currentSlot);
     uint32_t handicapIndex = (integer_cast<uint32_t>(m_Slots[currentSlot].GetHandicap()) - 50u) / 10u;
-    uint32_t charIndex = integer_cast<uint32_t>(HCLChars.find(character));
+    uint32_t charIndex = integer_cast_lossy<uint32_t>(HCLChars.find(character));
     uint32_t slotInfo = handicapIndex;
     if (encodeVirtualPlayers && isVirtualPlayer) {
       slotInfo += 6u;

@@ -336,6 +336,8 @@ template<typename Container>
 [[nodiscard]] std::vector<std::string> ReadChatTemplate(const std::filesystem::path& filePath);
 [[nodiscard]] std::string GetNormalizedAlias(std::string_view alias);
 void NormalizeDirectory(std::filesystem::path& filePath);
+template <size_t SIZE>
+uint8_t FindNextAvailableBit(std::bitset<SIZE> usedBits, uint32_t originalBit, uint32_t maxSize);
 [[nodiscard]] bool FindNextMissingElementBack(uint8_t& element, std::vector<uint8_t> counters);
 [[nodiscard]] std::optional<uint32_t> ToUint32(std::string_view input);
 [[nodiscard]] std::optional<uint32_t> ToUint32(const std::string& input);
