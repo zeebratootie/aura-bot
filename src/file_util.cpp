@@ -293,7 +293,7 @@ bool FileReadPartial(const std::filesystem::path& filePath, Container& container
   IS.seekg(0, std::ios::end);
   *fileSize = static_cast<long unsigned int>(IS.tellg());
   if (start >= *fileSize) {
-    Print(Concat("[FILE] error - cannot read pos (", std::to_string(start), " >= ", std::to_string(*fileSize), ") from file ", SanitizeWrapUTF8(filePath)));
+    Print(Concat("[FILE] error - cannot read pos (", std::to_string(start), " >= ", std::to_string(*fileSize), ") from file ", SanitizeWrapUTF8Path(filePath)));
     return false;
   }
   if (maxReadSize > *fileSize - start) {
@@ -325,7 +325,7 @@ bool FileReadPartial(const std::filesystem::path& filePath, Container& container
     try {
       container.shrink_to_fit();
     } catch (...) {}
-    Print(Concat("[FILE] error - stream failed to read all data (", std::to_string(maxReadSize / 1024), " KB) from file ", SanitizeWrapUTF8(filePath)));
+    Print(Concat("[FILE] error - stream failed to read all data (", std::to_string(maxReadSize / 1024), " KB) from file ", SanitizeWrapUTF8Path(filePath)));
     return false;
   }
   return true;
