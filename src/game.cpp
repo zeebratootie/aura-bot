@@ -7228,7 +7228,7 @@ void CGame::EventGameLoaded()
   const uint32_t numDisconnectedPlayers = integer_cast<uint32_t>(m_StartPlayers) + integer_cast<uint32_t>(m_JoinedVirtualHosts) - integer_cast<uint32_t>(GetNumJoinedPlayersOrFakeUsers());
   if (0 < numDisconnectedPlayers) {
     SendAllChat(Concat(to_string(numDisconnectedPlayers), " user(s) disconnected during game load."));
-    LogRemote(Concat("Fully loaded. ", to_string(players.size()), " players - ", ToDecString(numDisconnectedPlayers), " user(s) disconnected"));
+    LogRemote(Concat("Fully loaded. ", to_string(players.size()), " players - ", to_string(numDisconnectedPlayers), " user(s) disconnected"));
   } else {
     LogRemote(Concat("Fully loaded. ", to_string(players.size()), " players"));
   }
