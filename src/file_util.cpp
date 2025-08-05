@@ -236,7 +236,7 @@ bool FileRead(const std::filesystem::path& filePath, Container& container, const
   IS.open(filePath.native().c_str(), std::ios::binary | std::ios::in);
 
   if (IS.fail())  {
-    Print("[FILE] warning - unable to read file [" + PathToString(filePath) + "]");
+    Print(Concat("[FILE] warning - unable to read file ", SanitizeWrapUTF8Path(filePath), "]"));
     return false;
   }
 
@@ -244,7 +244,7 @@ bool FileRead(const std::filesystem::path& filePath, Container& container, const
   IS.seekg(0, std::ios::end);
   size_t fileSize = static_cast<long unsigned int>(IS.tellg());
   if (fileSize > maxSize) {
-    Print("[FILE] error - refusing to load huge file [" + PathToString(filePath) + "]");
+    Print(Concat("[FILE] error - refusing to load huge file ", SanitizeWrapUTF8Path(filePath), "]"));
     return false;
   }
 
@@ -258,17 +258,17 @@ bool FileRead(const std::filesystem::path& filePath, Container& container, const
     try {
       container.shrink_to_fit();
     } catch (...) {}
-    Print("[FILE] error - insufficient memory for loading file [" + PathToString(filePath) + "]");
+    Print(Concat("[FILE] error - insufficient memory for loading file ", SanitizeWrapUTF8Path(filePath), "]"));
     return false;
   }
-  IS.read(reinterpret_cast<char*>(container.data()), fileSize);
+  IS.read(reinterpret_cast<char*>(container.data()), signed_cast<streamsize>(fileSize));
   std::streamsize gCount = IS.gcount();
   if (gCount < 0 || static_cast<size_t>(gCount) < fileSize) {
     container.clear();
     try {
       container.shrink_to_fit();
     } catch (...) {}
-    Print("[FILE] error - stream failed to read all data from file [" + PathToString(filePath) + "]");
+    Print(Concat("[FILE] error - stream failed to read all data from file ", SanitizeWrapUTF8Path(filePath), "]"));
     return false;
   }
   return true;
@@ -285,7 +285,7 @@ bool FileReadPartial(const std::filesystem::path& filePath, Container& container
   IS.open(filePath.native().c_str(), std::ios::binary | std::ios::in);
 
   if (IS.fail())  {
-    Print("[FILE] warning - unable to read file [" + PathToString(filePath) + "]");
+    Print(Concat("[FILE] warning - unable to read file ", SanitizeWrapUTF8Path(filePath), "]"));
     return false;
   }
 
@@ -293,7 +293,7 @@ bool FileReadPartial(const std::filesystem::path& filePath, Container& container
   IS.seekg(0, std::ios::end);
   *fileSize = static_cast<long unsigned int>(IS.tellg());
   if (start >= *fileSize) {
-    Print("[FILE] error - cannot read pos (" + std::to_string(start) + " >= " + std::to_string(*fileSize) + ") from file [" + PathToString(filePath) + "]");
+    Print(Concat("[FILE] error - cannot read pos (", std::to_string(start), " >= ", std::to_string(*fileSize), ") from file ", SanitizeWrapUTF8(filePath)));
     return false;
   }
   if (maxReadSize > *fileSize - start) {
@@ -301,7 +301,7 @@ bool FileReadPartial(const std::filesystem::path& filePath, Container& container
   }
 
   // read data
-  IS.seekg(start, std::ios::beg);
+  IS.seekg(signed_cast<streamsize>(start), std::ios::beg);
   try {
     container.reserve(maxReadSize);
     container.resize(maxReadSize);
@@ -310,10 +310,10 @@ bool FileReadPartial(const std::filesystem::path& filePath, Container& container
     try {
       container.shrink_to_fit();
     } catch (...) {}
-    Print("[FILE] error - insufficient memory for loading " + std::to_string(maxReadSize / 1024) + " KB chunk from file [" + PathToString(filePath) + "]");
+    Print(Concat("[FILE] error - insufficient memory for loading ", std::to_string(maxReadSize / 1024), " KB chunk from file ", SanitizeWrapUTF8Path(filePath)));
     return false;
   }
-  IS.read(reinterpret_cast<char*>(container.data()), maxReadSize);
+  IS.read(reinterpret_cast<char*>(container.data()), signed_cast<streamsize>(maxReadSize));
   std::streamsize gCount = IS.gcount();
   if (gCount < 0 ) {
     Print("[FILE] error - read stream internal error");
@@ -325,7 +325,7 @@ bool FileReadPartial(const std::filesystem::path& filePath, Container& container
     try {
       container.shrink_to_fit();
     } catch (...) {}
-    Print("[FILE] error - stream failed to read all data (" + std::to_string(maxReadSize / 1024) + " KB) from file [" + PathToString(filePath) + "]");
+    Print(Concat("[FILE] error - stream failed to read all data (", std::to_string(maxReadSize / 1024), " KB) from file ", SanitizeWrapUTF8(filePath)));
     return false;
   }
   return true;
@@ -334,38 +334,36 @@ bool FileReadPartial(const std::filesystem::path& filePath, Container& container
 template bool FileReadPartial(const std::filesystem::path& filePath, vector<uint8_t>& container, const size_t start, size_t maxReadSize, size_t* fileSize, size_t* actualReadSize) noexcept;
 template bool FileReadPartial(const std::filesystem::path& filePath, string& container, const size_t start, size_t maxReadSize, size_t* fileSize, size_t* actualReadSize) noexcept;
 
-bool FileWrite(const filesystem::path& file, const uint8_t* data, size_t length)
+bool FileWrite(const filesystem::path& filePath, const uint8_t* data, size_t length)
 {
   ofstream OS;
-  OS.open(file.native().c_str(), ios::binary);
+  OS.open(filePath.native().c_str(), ios::binary);
 
-  if (OS.fail())
-  {
-    Print("[UTIL] warning - unable to write file [" + PathToString(file) + "]");
+  if (OS.fail()) {
+    Print(Concat("[FILE] warning - unable to write file ", SanitizeWrapUTF8Path(filePath), "]"));
     return false;
   }
 
   // write data
 
-  OS.write(reinterpret_cast<const char*>(data), length);
+  OS.write(reinterpret_cast<const char*>(data), signed_cast<streamsize>(length));
   OS.close();
   return true;
 }
 
-bool FileAppend(const filesystem::path& file, const uint8_t* data, size_t length)
+bool FileAppend(const filesystem::path& filePath, const uint8_t* data, size_t length)
 {
   ofstream OS;
-  OS.open(file.native().c_str(), ios::binary | ios::app);
+  OS.open(filePath.native().c_str(), ios::binary | ios::app);
 
-  if (OS.fail())
-  {
-    Print("[UTIL] warning - unable to write file [" + PathToString(file) + "]");
+  if (OS.fail()) {
+    Print(Concat("[FILE] warning - unable to write file ", SanitizeWrapUTF8Path(filePath), "]"));
     return false;
   }
 
   // write data
 
-  OS.write(reinterpret_cast<const char*>(data), length);
+  OS.write(reinterpret_cast<const char*>(data), signed_cast<streamsize>(length));
   OS.close();
   return true;
 }
@@ -376,7 +374,7 @@ bool FileDelete(const filesystem::path& file)
   bool result = filesystem::remove(file, e);
   
   if (e) {
-    Print("[AURA] Cannot delete " + PathToString(file) + ". " + e.message());
+    Print(Concat("[AURA] Cannot delete ", SanitizeWrapUTF8Path(file), ". ", e.message()));
   }
 
   return result;
@@ -496,14 +494,14 @@ vector<pair<string, int>> FuzzySearchFiles(const filesystem::path& directory, co
   size_t resultCount = min(FILE_SEARCH_FUZZY_MAX_RESULTS, distances.size());
   partial_sort(
     distances.begin(),
-    distances.begin() + resultCount,
+    distances.begin() + signed_cast<ptrdiff_t>(resultCount),
     distances.end(),
     [](const pair<string, int>& a, const pair<string, int>& b) {
         return a.second < b.second;
     }
   );
 
-  vector<pair<string, int>> fuzzyMatches(distances.begin(), distances.begin() + resultCount);
+  vector<pair<string, int>> fuzzyMatches(distances.begin(), distances.begin() + signed_cast<ptrdiff_t>(resultCount));
   return fuzzyMatches;
 }
 
@@ -511,9 +509,9 @@ bool OpenMPQArchive(void** MPQ, const filesystem::path& filePath)
 {
   uint32_t locale = SFileGetLocale();
   if (locale == 0) {
-    Print("[AURA] loading MPQ archive [" + PathToString(filePath) + "]");
+    Print(Concat("[AURA] loading MPQ archive ", SanitizeWrapUTF8Path(filePath)));
   } else {
-    Print("[AURA] loading MPQ archive [" + PathToString(filePath) + "] using locale " + to_string(locale));
+    Print(Concat("[AURA] loading MPQ archive ", SanitizeWrapUTF8Path(filePath), " using locale ", to_string(locale)));
   }
   return SFileOpenArchive(filePath.native().c_str(), 0, MPQ_OPEN_FORCE_MPQ_V1 | STREAM_FLAG_READ_ONLY, MPQ);
 }
@@ -555,7 +553,7 @@ bool ReadMPQFile(void* MPQ, const char* packedFileName, Container& container, co
           container.shrink_to_fit();
         } catch (...) {}
         SFileCloseFile(subFile);
-        Print("[FILE] error - insufficient memory for loading from archive [" + std::string(packedFileName) + "]");
+        Print(Concat("[FILE] error - insufficient memory for loading from archive ", SanitizeWrapUTF8(packedFileName)));
         return false;
       }
 #ifdef _WIN32
@@ -566,7 +564,7 @@ bool ReadMPQFile(void* MPQ, const char* packedFileName, Container& container, co
 
       if (SFileReadFile(subFile, container.data(), fileLength, &bytesRead, nullptr)) {
         if (bytesRead < fileLength) {
-          Print("[FILE] error reading " + std::string(packedFileName) + " - bytes read is " + std::to_string(bytesRead) + "; file length is " + std::to_string(fileLength));
+          Print(Concat("[FILE] error reading ", SanitizeWrapUTF8(packedFileName), " - bytes read is ", to_string(bytesRead), "; file length is ", to_string(fileLength)));
           container.clear();
           try {
             container.shrink_to_fit();
@@ -590,13 +588,13 @@ bool ExtractMPQFile(void* MPQ, const char* packedFileName, const filesystem::pat
   vector<uint8_t> container;
   ReadMPQFile(MPQ, packedFileName, container, locale);
   if (container.empty()) {
-    Print("[AURA] warning - unable to extract " + string(packedFileName) + " from MPQ archive");
+    Print(Concat("[AURA] warning - unable to extract ", SanitizeWrapUTF8(packedFileName), " from MPQ archive"));
     return false;
   } else if (FileWrite(outPath, container.data(), container.size())) {
-    Print("[AURA] extracted " + string(packedFileName) + " to [" + PathToString(outPath) + "]");
+    Print(Concat("[AURA] extracted ", SanitizeWrapUTF8(packedFileName), " to ", SanitizeWrapUTF8Path(outPath)));
     return true;
   } else {
-    Print("[AURA] warning - unable to save extracted " + string(packedFileName) + " to [" + PathToString(outPath) + "]");
+    Print(Concat("[AURA] warning - unable to save extracted ", SanitizeWrapUTF8(packedFileName), " to ", SanitizeWrapUTF8Path(outPath)));
     return false;
   }
 }

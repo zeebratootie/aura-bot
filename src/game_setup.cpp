@@ -1635,7 +1635,7 @@ bool CGameSetup::AcquireCLIEarly(const CCLI* nCLI)
 {
   if (nCLI->m_GameSavedPath.has_value()) SetGameSavedFile(nCLI->m_GameSavedPath.value());
   // CPR timeouts are int32_t - signed!
-  if (nCLI->m_GameMapDownloadTimeout.has_value()) SetDownloadTimeout(nCLI->m_GameMapDownloadTimeout.value());
+  if (nCLI->m_GameMapDownloadTimeout.has_value()) SetDownloadTimeout(signed_cast_lossy<int>(nCLI->m_GameMapDownloadTimeout.value()));
   WriteOpt(m_GameIsExpansion) << nCLI->m_GameIsExpansion;
   WriteOpt(m_GameVersion) << nCLI->m_GameVersion;
   WriteOpt(m_GameLocaleMod) << nCLI->m_GameLocaleMod;

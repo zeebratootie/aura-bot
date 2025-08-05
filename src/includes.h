@@ -205,7 +205,14 @@ constexpr void validate_integral_same_signedness() {
 template <typename To, typename From>
 constexpr To signed_cast(From value) {
   validate_integral_opposite_signedness<To, From>();
-  static_assert(sizeof(To) >= sizeof(From), "Target type must be large enough to hold source value");
+  /*
+  if constexpr (std::is_signed_v<To>) {
+    static_assert(sizeof(To) > sizeof(From), "Signed target type must be larger than source value");
+  } else {
+    static_assert(sizeof(To) >= sizeof(From), "Target type must be large enough to hold source value");
+  }
+  */
+  static_assert(sizeof(To) >= sizeof(From), "Target type must be large enough to hold source value");/
   return static_cast<To>(value);
 }
 

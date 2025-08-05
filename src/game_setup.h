@@ -151,7 +151,7 @@ public:
 #ifndef DISABLE_CPR
   std::future<uint32_t>                           m_DownloadFuture;
 #endif
-  int32_t                                         m_DownloadTimeout;
+  int                                             m_DownloadTimeout; // for CPR / cURL
   int32_t                                         m_SuggestionsTimeout;
   std::optional<int64_t>                          m_ActiveTicks;
   std::string                                     m_ErrorMessage;
@@ -376,7 +376,7 @@ public:
   inline void SetLobbyReplaceable(const bool nReplaceable) { m_LobbyReplaceable = nReplaceable; }
   inline void SetLobbyAutoRehosted(const bool nRehosted) { m_LobbyAutoRehosted = nRehosted; }
 
-  inline void SetDownloadTimeout(const uint32_t nTimeout) { m_DownloadTimeout = nTimeout; }
+  inline void SetDownloadTimeout(const int nTimeout) { m_DownloadTimeout = nTimeout; }
 
   inline void SetSaveGameAllowed(const bool nSave) { m_SaveGameAllowed = nSave; }
 

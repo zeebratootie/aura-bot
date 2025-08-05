@@ -549,29 +549,28 @@ void CAuraDB::UpdateLatestHistoryGameId(uint64_t gameId)
   }
 }
 
-uint32_t CAuraDB::ModeratorCount(const string& server)
+optional<uint32_t> CAuraDB::ModeratorCount(const string& server)
 {
-  uint32_t      Count = 0;
   sqlite3_stmt* Statement = nullptr;
   m_DB->Prepare("SELECT COUNT(*) FROM moderators WHERE server=?", reinterpret_cast<void**>(&Statement));
 
-  if (Statement) {
-    sqlite3_bind_text(Statement, 1, server.c_str(), -1, SQLITE_TRANSIENT);
-
-    const int32_t RC = m_DB->Step(Statement);
-
-    if (RC == SQLITE_ROW) {
-      Count = sqlite3_column_int(Statement, 0);
-    } else if (RC == SQLITE_ERROR) {
-      PRINT_IF(LogLevel::kError, "[SQLITE3] error counting moderators [" + server + "] - " + m_DB->GetError());
-    }
-
-    m_DB->Finalize(Statement);
-  } else {
+  if (!Statement) {
     Print("[SQLITE3] prepare error counting moderators [" + server + "] - " + m_DB->GetError());
+    return nullopt;
   }
 
-  return Count;
+  sqlite3_bind_text(Statement, 1, server.c_str(), -1, SQLITE_TRANSIENT);
+  const int32_t RC = m_DB->Step(Statement);
+  switch (RC) {
+    case SQLITE_ROW:
+      return {signed_cast<uint32_t>(sqlite3_column_int(Statement, 0))};
+    case SQLITE_ERROR:
+      PRINT_IF(LogLevel::kError, "[SQLITE3] error counting moderators [" + server + "] - " + m_DB->GetError());
+      break;
+  }
+
+  m_DB->Finalize(Statement);
+  return nullopt;
 }
 
 bool CAuraDB::ModeratorCheck(const string& server, const string& rawName)
@@ -688,30 +687,28 @@ vector<string> CAuraDB::ListModerators(const string& server)
   return admins;
 }
 
-uint32_t CAuraDB::BanCount(const string& authserver)
+optional<uint32_t> CAuraDB::BanCount(const string& authserver)
 {
-  uint32_t      Count = 0;
   sqlite3_stmt* Statement = nullptr;
   m_DB->Prepare("SELECT COUNT(*) FROM bans WHERE authserver=?", reinterpret_cast<void**>(&Statement));
 
-  if (Statement)
-  {
-    sqlite3_bind_text(Statement, 1, authserver.c_str(), -1, SQLITE_TRANSIENT);
-
-    const int32_t RC = m_DB->Step(Statement);
-
-    if (RC == SQLITE_ROW) {
-      Count = sqlite3_column_int(Statement, 0);
-    } else if (RC == SQLITE_ERROR) {
-      PRINT_IF(LogLevel::kError, "[SQLITE3] error counting bans [" + authserver + "] - " + m_DB->GetError());
-    }
-
-    m_DB->Finalize(Statement);
-  }
-  else
+  if (!Statement) {
     Print("[SQLITE3] prepare error counting bans [" + authserver + "] - " + m_DB->GetError());
+    return nullopt;
+  }
 
-  return Count;
+  sqlite3_bind_text(Statement, 1, authserver.c_str(), -1, SQLITE_TRANSIENT);
+  const int32_t RC = m_DB->Step(Statement);
+  switch (RC) {
+    case SQLITE_ROW:
+      return {signed_cast<uint32_t>(sqlite3_column_int(Statement, 0))};
+    case SQLITE_ERROR:
+      PRINT_IF(LogLevel::kError, "[SQLITE3] error counting bans [" + authserver + "] - " + m_DB->GetError());
+      break;
+  }
+
+  m_DB->Finalize(Statement);
+  return nullopt;
 }
 
 CDBBan* CAuraDB::UserBanCheck(const string& rawName, const string& server, const string& authserver)
@@ -1715,7 +1712,7 @@ CDBBan::~CDBBan() = default;
 
 CDBGameSummary::CDBGameSummary(uint64_t nID, string playerNames, string playerIDs)
   : m_ID(nID),
-    m_PlayerNames(SplitArgs(playerNames, 1, 24))
+    m_PlayerNames(SplitArgs(playerNames, 1u, 24u))
 {
   size_t playerCount = m_PlayerNames.size();
   if (playerCount == 0) {
@@ -1725,9 +1722,9 @@ CDBGameSummary::CDBGameSummary(uint64_t nID, string playerNames, string playerID
   if (rawIDs.size() != playerCount * 3) {
     return;
   }
-  m_UIDs = vector<uint8_t>(rawIDs.begin(), rawIDs.begin() + playerCount);
-  m_SIDs = vector<uint8_t>(rawIDs.begin() + playerCount, rawIDs.begin() + 2 * playerCount);
-  m_Colors = vector<uint8_t>(rawIDs.begin() + 2 * playerCount, rawIDs.end());
+  m_UIDs = vector<uint8_t>(rawIDs.begin(), rawIDs.begin() + signed_cast<ptrdiff_t>(playerCount));
+  m_SIDs = vector<uint8_t>(rawIDs.begin() +  signed_cast<ptrdiff_t>(playerCount), rawIDs.begin() + 2 *  signed_cast<ptrdiff_t>(playerCount));
+  m_Colors = vector<uint8_t>(rawIDs.begin() + 2 *  signed_cast<ptrdiff_t>(playerCount), rawIDs.end());
 }
 
 CDBGameSummary::~CDBGameSummary() = default;

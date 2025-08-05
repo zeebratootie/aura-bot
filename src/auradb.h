@@ -304,14 +304,14 @@ public:
   [[nodiscard]] std::string                   AliasCheck(const std::string& alias);
 
   // Server moderators
-  [[nodiscard]] uint32_t                      ModeratorCount(const std::string& server);
+  [[nodiscard]] std::optional<uint32_t>       ModeratorCount(const std::string& server);
   [[nodiscard]] bool                          ModeratorCheck(const std::string& server, const std::string& user);
   [[nodiscard]] bool                          ModeratorAdd(const std::string& server, const std::string& user);
   [[nodiscard]] bool                          ModeratorRemove(const std::string& server, const std::string& user);
   [[nodiscard]] std::vector<std::string>      ListModerators(const std::string& server);
 
   // Bans
-  [[nodiscard]] uint32_t                      BanCount(const std::string& authserver);
+  [[nodiscard]] std::optional<uint32_t>       BanCount(const std::string& authserver);
   [[nodiscard]] CDBBan*                       UserBanCheck(const std::string& user, const std::string& server, const std::string& authserver);
   [[nodiscard]] CDBBan*                       IPBanCheck(std::string ip, const std::string& authserver);
   [[nodiscard]] bool                          GetIsUserBanned(const std::string& user, const std::string& server, const std::string& authserver);

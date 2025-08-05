@@ -1650,7 +1650,7 @@ void CGame::UpdateLoaded()
         if (laggingPlayers.size() == m_Users.size()) {
           // Avoid showing everyone as lagging
           m_Users[bestLaggerIndex]->SetLagging(false);
-          m_Users[bestLaggerIndex]->SetStartedLaggingTicks(0);
+          m_Users[bestLaggerIndex]->ClearStartedLaggingTicks();
           laggingPlayers.erase(laggingPlayers.begin() + static_cast<ptrdiff_t>(m_Users.size() - 1 - bestLaggerIndex));
         }
 
@@ -1729,7 +1729,7 @@ void CGame::UpdateLoaded()
 
       if (user->GetDisconnectedUnrecoverably()) {
         user->SetLagging(false);
-        user->SetStartedLaggingTicks(0);
+        user->ClearStartedLaggingTicks();
         DLOG_APP_IF(LogLevel::kTrace, Concat("global lagger update (-", user->GetName(), ")"));
         SendAll(GameProtocol::SEND_W3GS_STOP_LAG(user, m_Aura->GetLoopTicks()));
         LOG_APP_IF(LogLevel::kInfo, Concat("lagging user disconnected [", user->GetName(), "]"));
@@ -1739,7 +1739,7 @@ void CGame::UpdateLoaded()
         DLOG_APP_IF(LogLevel::kTrace, Concat("global lagger update (-", user->GetName(), ")"));
         SendAll(GameProtocol::SEND_W3GS_STOP_LAG(user, m_Aura->GetLoopTicks()));
         user->SetLagging(false);
-        user->SetStartedLaggingTicks(0);
+        user->ClearStartedLaggingTicks();
         LOG_APP_IF(LogLevel::kInfo, Concat("user no longer lagging [", user->GetName(), "] (", user->GetDelayText(true), ")"));
       }
     }
@@ -5930,7 +5930,7 @@ void CGame::EventUserLoaded(GameUser::CGameUser* user)
     }
 
     user->SetLagging(false);
-    user->SetStartedLaggingTicks(0);
+    user->ClearStartedLaggingTicks();
     RemoveFromLagScreens(user);
     user->SetStatus(USERSTATUS_PLAYING);
     UserList laggingPlayers = GetLaggingUsers();

@@ -911,6 +911,11 @@ CLIResult CCLI::Parse(const int argc, char** argv)
     }
   }
 
+  if (m_GameMapDownloadTimeout.has_value() && m_GameMapDownloadTimeout.value() >= signed_cast<int>(numeric_limits<int>::max())) {
+    Print("[AURA] --download-timeout too large.");
+    m_ParseResult = CLIResult::kError;
+  }
+
   // Loaded games
   ConditionalRequire("--load", m_GameSavedPath, "--check-reservation", m_GameCheckReservation, false);
 

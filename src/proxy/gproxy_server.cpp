@@ -32,6 +32,7 @@
 #include "../game_user.h"
 #include "../protocol/gps_protocol.h"
 #include "../socket.h"
+#include "../util.h"
 
 using namespace std;
 
@@ -48,7 +49,7 @@ CGProxyServer::CGProxyServer(CConnection* nConnection)
     m_CheckGameID(false),
     m_UID(0xFF),
     m_Port(0),
-    m_Key(rand()),
+    m_Key(GetRandomUInt32()),
     m_Version(0),
     m_BufferSize(0),
     m_TotalRecvPackets(0),
@@ -210,7 +211,7 @@ void CGProxyServer::SynchronizeReconnectKeyFromClient(const uint32_t key)
 
 void CGProxyServer::RotateReconnectKey() const
 {
-  GetSocket().PutBytes(GPSProtocol::SEND_GPSS_CHANGE_KEY(rand()));
+  GetSocket().PutBytes(GPSProtocol::SEND_GPSS_CHANGE_KEY(GetRandomUInt32()));
 }
 
 void CGProxyServer::SynchronizeFromBuffer()

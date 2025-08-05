@@ -119,7 +119,7 @@ namespace GameUser
     int64_t                          m_JoinTicks;                    // when the player joined the game (used to delay sending the /whois a few seconds to allow for some lag)
     int64_t                          m_FinishedLoadingTicks;         // when the player finished loading the game
     int64_t                          m_HandicapTicks;
-    int64_t                          m_StartedLaggingTicks;          // when the player started laggin
+    std::optional<int64_t>           m_StartedLaggingTicks;          // when the player started laggin
     std::optional<int64_t>           m_KickByTicks;
     uint8_t                          m_SID;                          // the player's SID - this is well defined only after the game starts loading
     uint8_t                          m_UID;                          // the player's UID
@@ -257,7 +257,7 @@ namespace GameUser
     [[nodiscard]] inline int64_t               GetFinishedLoadingTicks() const { return m_FinishedLoadingTicks; }
     [[nodiscard]] inline int64_t               GetHandicapTicks() const { return m_HandicapTicks; }
 
-    [[nodiscard]] inline int64_t               GetStartedLaggingTicks() const { return m_StartedLaggingTicks; }
+    [[nodiscard]] inline int64_t               GetStartedLaggingTicks() const { return *m_StartedLaggingTicks; }
 
     [[nodiscard]] inline bool                  GetDisconnected() const { return m_Disconnected; }
     bool                                       GetDisconnectedUnrecoverably() const;
@@ -358,7 +358,8 @@ namespace GameUser
     inline void AddSyncCounterOffset(const size_t nOffset) { m_SyncCounterOffset += nOffset; }
     inline void ResetSyncCounterOffset() { m_SyncCounterOffset = 0; }
     inline void SetHandicapTicks(uint64_t nHandicapTicks) { m_HandicapTicks = nHandicapTicks; }
-    inline void SetStartedLaggingTicks(uint64_t nStartedLaggingTicks) { m_StartedLaggingTicks = nStartedLaggingTicks; }
+    inline void SetStartedLaggingTicks(int64_t nStartedLaggingTicks) { m_StartedLaggingTicks = nStartedLaggingTicks; }
+    inline void ClearStartedLaggingTicks() { m_StartedLaggingTicks.reset(); }
     inline void SetRealmVerified(bool nVerified) { m_Verified = nVerified; }
     inline void SetOwner(bool nOwner) { m_Owner = nOwner; }
     inline void SetReserved(bool nReserved) { m_Reserved = nReserved; }
