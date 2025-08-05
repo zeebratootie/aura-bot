@@ -5899,7 +5899,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
         break;
       }
 
-      size_t maxAPM = parsedActions.value();
+      size_t maxAPM = signed_cast_lossy<size_t>(parsedActions.value());
 
       if (maxAPM < APM_RATE_LIMITER_MIN && !GetIsSudo()) {
         maxAPM = APM_RATE_LIMITER_MIN;

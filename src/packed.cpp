@@ -304,7 +304,7 @@ void CPacked::Compress(const bool TFT)
 		}
 
 		CompressedBlocks.push_back(string((char *)CompressedData, BlockCompressedLong));
-		CompressedSize += BlockCompressedLong;
+		CompressedSize += integer_cast_lossy<uint32_t>(BlockCompressedLong);
 		Position += 8192;
 	}
 

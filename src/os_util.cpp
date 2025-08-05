@@ -119,12 +119,11 @@ filesystem::path GetExePath()
   if (!Memoized.empty())
     return Memoized;
 
+  size_t length = 0;
 #ifdef _WIN32
   vector<wchar_t> buffer(2048);
-  DWORD length = 0;
 #else
   vector<char> buffer(2048);
-  vector<char>::size_type length = 0;
 #endif
 
   do {
@@ -132,9 +131,14 @@ filesystem::path GetExePath()
 #ifdef _WIN32
     length = GetModuleFileNameW(nullptr, buffer.data(), static_cast<DWORD>(buffer.size()));
 #else
-    length = readlink("/proc/self/exe", buffer.data(), buffer.size());
+    ssize_t lengthOrError = readlink("/proc/self/exe", buffer.data(), buffer.size());
+    if (lengthOrError < 0) {
+      length = 0;
+      break;
+    }
+    length = signed_cast<size_t>(lengthOrError);
 #endif
-  } while ((buffer.size() <= 0xFFFF) && (buffer.size() - 1 <= static_cast<size_t>(length)));
+  } while ((buffer.size() <= 0xFFFF) && (buffer.size() - 1 <= length));
 
   if (length == 0) {
     Print("[AURA] Failed to retrieve Aura's directory.");

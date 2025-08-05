@@ -7225,9 +7225,9 @@ void CGame::EventGameLoaded()
     SendAllChat(Concat("Shortest load by user [", Shortest->GetDisplayName(), "] was ", ToFormattedString(static_cast<double>(Shortest->GetFinishedLoadingTicks() - m_StartedLoadingTicks) / 1000.f), " seconds"));
     SendAllChat(Concat("Longest load by user [", Longest->GetDisplayName(), "] was ", ToFormattedString(static_cast<double>(Longest->GetFinishedLoadingTicks() - m_StartedLoadingTicks) / 1000.f), " seconds"));
   }
-  const uint8_t numDisconnectedPlayers = m_StartPlayers + m_JoinedVirtualHosts - GetNumJoinedPlayersOrFakeUsers();
+  const uint32_t numDisconnectedPlayers = integer_cast<uint32_t>(m_StartPlayers) + integer_cast<uint32_t>(m_JoinedVirtualHosts) - integer_cast<uint32_t>(GetNumJoinedPlayersOrFakeUsers());
   if (0 < numDisconnectedPlayers) {
-    SendAllChat(Concat(ToDecString(numDisconnectedPlayers), " user(s) disconnected during game load."));
+    SendAllChat(Concat(to_string(numDisconnectedPlayers), " user(s) disconnected during game load."));
     LogRemote(Concat("Fully loaded. ", to_string(players.size()), " players - ", ToDecString(numDisconnectedPlayers), " user(s) disconnected"));
   } else {
     LogRemote(Concat("Fully loaded. ", to_string(players.size()), " players"));
