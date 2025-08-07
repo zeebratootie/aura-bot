@@ -60,6 +60,8 @@
 
 using namespace std;
 
+// TODO: Remove 4-byte int requirement in next schema update if IPv4 addresses are migrated to int64_t
+// Or maybe as strings? (IPv6... Annoying ~.~)
 static_assert((sizeof(int) >= sizeof(int32_t)), "Expected int with size at least 4 bytes");
 
 //
@@ -480,6 +482,10 @@ void CAuraDB::PreCompileStatements()
     &(m_StmtCache[UPDATE_PLAYER_END_IDX]), true
   );
   m_DB->Prepare(
+    "SELECT dotas, wins, losses, kills, deaths, creepkills, creepdenies, assists, neutralkills, towerkills, raxkills, courierkills FROM players WHERE name=?",
+    &(m_StmtCache[DOTA_SUMMARY_IDX]), true
+  );
+  m_DB->Prepare(
     "INSERT INTO players (name, server, dotas, wins, losses, kills, deaths, creepkills, creepdenies, assists, neutralkills, towerkills, raxkills, courierkills) "
     "VALUES (?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
     "ON CONFLICT(name, server) "
@@ -498,6 +504,10 @@ void CAuraDB::PreCompileStatements()
     "courierkills = courierkills + excluded.courierkills;",
     &(m_StmtCache[UPDATE_DOTA_PLAYER_END_IDX]), true
   );
+  m_DB->Prepare("SELECT initialip FROM players WHERE name=? AND server=?", &(m_StmtCache[INITIAL_IP_IDX]), true);
+  m_DB->Prepare("SELECT latestip FROM players WHERE name=? AND server=?", &(m_StmtCache[LATEST_IP_IDX]), true);
+  m_DB->Prepare("SELECT initialip, latestip FROM players WHERE name=? AND server=?", &(m_StmtCache[IPS_CHECK_IDX]), true);
+  m_DB->Prepare("SELECT name, server FROM players WHERE initialip=? OR latestip=?", &(m_StmtCache[ALTS_CHECK_IDX]), true);
 }
 
 filesystem::path CAuraDB::GetFile() const
@@ -1075,7 +1085,7 @@ CDBGamePlayerSummary CAuraDB::GamePlayerSummaryCheck(const string& rawName, cons
         summary = CDBGamePlayerSummary(0, 0., 0);
       } else {
         float averageLoadingTime = 0.;
-        uint32_t averageLeftPercent = static_cast<uint32_t>(round(static_cast<double>(duration) / left * 100));
+        uint32_t averageLeftPercent = static_cast<uint32_t>(round(static_cast<double>(duration) / static_cast<double>(left) * 100));
         if (totalGames > 0) {
           averageLoadingTime = static_cast<float>(static_cast<double>(loadingTime) / totalGames / 1000);
         }
@@ -1143,6 +1153,8 @@ void CAuraDB::UpdateDotAPlayerOnEnd(const string& name, const string& server, Ga
     case GamePlayerResult::kLoser:
       deltaLosses = 1;
       break;
+    default:
+      break;
   }
 
   sqlite3_bind_text(m_StmtCache[UPDATE_DOTA_PLAYER_END_IDX], 1, lowerName.c_str(), -1, SQLITE_TRANSIENT);
@@ -1170,44 +1182,47 @@ void CAuraDB::UpdateDotAPlayerOnEnd(const string& name, const string& server, Ga
 
 CDBDotAPlayerSummary CAuraDB::DotAPlayerSummaryCheck(const string& rawName, const string& server)
 {
-  CDBDotAPlayerSummary summary;
-  sqlite3_stmt* Statement;
-  string name = ToLowerCase(rawName);
-  m_DB->Prepare("SELECT dotas, wins, losses, kills, deaths, creepkills, creepdenies, assists, neutralkills, towerkills, raxkills, courierkills FROM players WHERE name=?", reinterpret_cast<void**>(&Statement));
-
-  if (!Statement) {
-    Print("[SQLITE3] prepare error checking dotaplayersummary [" + name + "@" + server + "] - " + m_DB->GetError());
-    return summary;
+  if (!m_StmtCache[DOTA_SUMMARY_IDX]) {
+    m_DB->Prepare(
+      "SELECT dotas, wins, losses, kills, deaths, creepkills, creepdenies, assists, neutralkills, towerkills, raxkills, courierkills FROM players WHERE name=?",
+      &(m_StmtCache[DOTA_SUMMARY_IDX]), true
+    );
   }
 
-  sqlite3_bind_text(Statement, 1, name.c_str(), -1, SQLITE_TRANSIENT);
-  sqlite3_bind_text(Statement, 2, server.c_str(), -1, SQLITE_TRANSIENT);
+  sqlite3_stmt* stmt = m_StmtCache[DOTA_SUMMARY_IDX];
+  if (!stmt) {
+    PRINT_IF(LogLevel::kWarning, "[SQLITE3] prepare error dotaplayer summary");
+    return {};
+  }
 
-  const int32_t RC = m_DB->Step(Statement);
+  CDBDotAPlayerSummary summary;
+  string name = ToLowerCase(rawName);
+  sqlite3_bind_text(stmt, 1, name.c_str(), -1, SQLITE_TRANSIENT);
+  sqlite3_bind_text(stmt, 2, server.c_str(), -1, SQLITE_TRANSIENT);
 
-  switch (RC) {
+  switch (m_DB->Step(stmt)) {
     case SQLITE_ERROR: {
       PRINT_IF(LogLevel::kError, Concat("[SQLITE3] error checking dotaplayersummary [", name, "@", server, "] - ", m_DB->GetError()));
       break;
     }
     case SQLITE_ROW: {
-      if (sqlite3_column_count(Statement) != 12) {
+      if (sqlite3_column_count(stmt) != 12) {
         Print(Concat("[SQLITE3] error checking dotaplayersummary [", name, "@", server, "] - row doesn't have 12 columns"));
         break;
       }
 
-      const int totalGames = sqlite3_column_int(Statement, 0);
-      const int totalWins         = sqlite3_column_int(Statement, 1);
-      const int totalLosses       = sqlite3_column_int(Statement, 2);
-      const int totalKills        = sqlite3_column_int(Statement, 3);
-      const int totalDeaths       = sqlite3_column_int(Statement, 4);
-      const int totalCreepKills   = sqlite3_column_int(Statement, 5);
-      const int totalCreepDenies  = sqlite3_column_int(Statement, 6);
-      const int totalAssists      = sqlite3_column_int(Statement, 7);
-      const int totalNeutralKills = sqlite3_column_int(Statement, 8);
-      const int totalTowerKills   = sqlite3_column_int(Statement, 9);
-      const int totalRaxKills     = sqlite3_column_int(Statement, 10);
-      const int totalCourierKills = sqlite3_column_int(Statement, 11);
+      const int totalGames = sqlite3_column_int(stmt, 0);
+      const int totalWins         = sqlite3_column_int(stmt, 1);
+      const int totalLosses       = sqlite3_column_int(stmt, 2);
+      const int totalKills        = sqlite3_column_int(stmt, 3);
+      const int totalDeaths       = sqlite3_column_int(stmt, 4);
+      const int totalCreepKills   = sqlite3_column_int(stmt, 5);
+      const int totalCreepDenies  = sqlite3_column_int(stmt, 6);
+      const int totalAssists      = sqlite3_column_int(stmt, 7);
+      const int totalNeutralKills = sqlite3_column_int(stmt, 8);
+      const int totalTowerKills   = sqlite3_column_int(stmt, 9);
+      const int totalRaxKills     = sqlite3_column_int(stmt, 10);
+      const int totalCourierKills = sqlite3_column_int(stmt, 11);
 
       if (
         totalGames < 0 || totalWins < 0 || totalLosses < 0 || totalKills < 0 || totalDeaths < 0
@@ -1239,104 +1254,111 @@ CDBDotAPlayerSummary CAuraDB::DotAPlayerSummaryCheck(const string& rawName, cons
     }
   }
 
-  m_DB->Finalize(Statement);
+  m_DB->Reset(stmt);
 
   return summary;
 }
 
 string CAuraDB::GetInitialIP(const string& rawName, const string& server)
 {
-  sqlite3_stmt*         Statement;
-  string initialIP;
-  string name = ToLowerCase(rawName);
-  m_DB->Prepare("SELECT initialip FROM players WHERE name=? AND server=?", reinterpret_cast<void**>(&Statement));
-
-  if (Statement)
-  {
-    sqlite3_bind_text(Statement, 1, name.c_str(), -1, SQLITE_TRANSIENT);
-    sqlite3_bind_text(Statement, 2, server.c_str(), -1, SQLITE_TRANSIENT);
-
-    const int32_t RC = m_DB->Step(Statement);
-
-    if (RC == SQLITE_ROW) {
-      if (sqlite3_column_count(Statement) == 1) {
-        initialIP  = string((char*)sqlite3_column_text(Statement, 0));
-      } else {
-        Print("[SQLITE3] error checking initial ip [" + name + "@" + server + "] - row doesn't have 1 column");
-      }
-    } else if (RC == SQLITE_ERROR) {
-      PRINT_IF(LogLevel::kError, "[SQLITE3] error checking initial ip [" + name + "@" + server + "] - " + m_DB->GetError());
-    }
-    m_DB->Finalize(Statement);
-  } else {
-    Print("[SQLITE3] prepare error checking initial ip [" + name + "@" + server + "] - " + m_DB->GetError());
+  if (!m_StmtCache[INITIAL_IP_IDX]) {
+    m_DB->Prepare("SELECT initialip FROM players WHERE name=? AND server=?", &(m_StmtCache[INITIAL_IP_IDX]), true);
+  }
+  sqlite3_stmt* stmt = m_StmtCache[INITIAL_IP_IDX];
+  if (!stmt) {
+    PRINT_IF(LogLevel::kWarning, "[SQLITE3] prepare error initial IP");
+    return {};
   }
 
-  return initialIP;
+  string ip;
+  string name = ToLowerCase(rawName);
+  sqlite3_bind_text(stmt, 1, name.c_str(), -1, SQLITE_TRANSIENT);
+  sqlite3_bind_text(stmt, 2, server.c_str(), -1, SQLITE_TRANSIENT);
+  switch (m_DB->Step(stmt)) {
+    case SQLITE_ERROR: {
+      PRINT_IF(LogLevel::kError, Concat("[SQLITE3] error checking initial ip [", name, "@", server, "] - ", m_DB->GetError()));
+      break;
+    }
+    case SQLITE_ROW: {
+      if (sqlite3_column_count(stmt) != 1) {
+        Print(Concat("[SQLITE3] error checking initial ip [", name, "@", server, "] - row doesn't have 1 column"));
+        break;
+      }
+      ip = string((char*)sqlite3_column_text(stmt, 0));
+    }
+  }
+
+  m_DB->Reset(stmt);
+  return ip;
 }
 
 string CAuraDB::GetLatestIP(const string& rawName, const string& server)
 {
-  sqlite3_stmt*         Statement;
-  string latestIP;
-  string name = ToLowerCase(rawName);
-  m_DB->Prepare("SELECT latestip FROM players WHERE name=? AND server=?", reinterpret_cast<void**>(&Statement));
-
-  if (Statement)
-  {
-    sqlite3_bind_text(Statement, 1, name.c_str(), -1, SQLITE_TRANSIENT);
-    sqlite3_bind_text(Statement, 2, server.c_str(), -1, SQLITE_TRANSIENT);
-
-    const int32_t RC = m_DB->Step(Statement);
-
-    if (RC == SQLITE_ROW) {
-      if (sqlite3_column_count(Statement) == 1) {
-        latestIP  = string((char*)sqlite3_column_text(Statement, 0));
-      } else {
-        Print("[SQLITE3] error checking latest ip [" + name + "@" + server + "] - row doesn't have 1 column");
-      }
-    } else if (RC == SQLITE_ERROR) {
-      PRINT_IF(LogLevel::kError, "[SQLITE3] error checking latest ip [" + name + "@" + server + "] - " + m_DB->GetError());
-    }
-    m_DB->Finalize(Statement);
-  } else {
-    Print("[SQLITE3] prepare error checking latest ip [" + name + "@" + server + "] - " + m_DB->GetError());
+  if (!m_StmtCache[LATEST_IP_IDX]) {
+    m_DB->Prepare("SELECT latestip FROM players WHERE name=? AND server=?", &(m_StmtCache[LATEST_IP_IDX]), true);
+  }
+  sqlite3_stmt* stmt = m_StmtCache[LATEST_IP_IDX];
+  if (!stmt) {
+    PRINT_IF(LogLevel::kWarning, "[SQLITE3] prepare error latest IP");
+    return {};
   }
 
-  return latestIP;
+  string ip;
+  string name = ToLowerCase(rawName);
+  sqlite3_bind_text(stmt, 1, name.c_str(), -1, SQLITE_TRANSIENT);
+  sqlite3_bind_text(stmt, 2, server.c_str(), -1, SQLITE_TRANSIENT);
+  switch (m_DB->Step(stmt)) {
+    case SQLITE_ERROR: {
+      PRINT_IF(LogLevel::kError, Concat("[SQLITE3] error checking latest ip [", name, "@", server, "] - ", m_DB->GetError()));
+      break;
+    }
+    case SQLITE_ROW: {
+      if (sqlite3_column_count(stmt) != 1) {
+        Print(Concat("[SQLITE3] error checking latest ip [", name, "@", server, "] - row doesn't have 1 column"));
+        break;
+      }
+      ip = string((char*)sqlite3_column_text(stmt, 0));
+    }
+  }
+
+  m_DB->Reset(stmt);
+  return ip;
 }
 
 vector<string> CAuraDB::GetIPs(const string& rawName, const string& server)
 {
-  vector<string> addresses;
-
-  sqlite3_stmt*         Statement;
   string initialIP, latestIP;
   string name = ToLowerCase(rawName);
-  m_DB->Prepare("SELECT initialip, latestip FROM players WHERE name=? AND server=?", reinterpret_cast<void**>(&Statement));
+  if (!m_StmtCache[IPS_CHECK_IDX]) {
+    m_DB->Prepare("SELECT initialip, latestip FROM players WHERE name=? AND server=?", &(m_StmtCache[IPS_CHECK_IDX]), true);
+  }
+  sqlite3_stmt* stmt = m_StmtCache[IPS_CHECK_IDX];
+  if (!stmt) {
+    PRINT_IF(LogLevel::kWarning, "[SQLITE3] prepare error fetching IPs");
+    return {};
+  }
+  
+  sqlite3_bind_text(stmt, 1, name.c_str(), -1, SQLITE_TRANSIENT);
+  sqlite3_bind_text(stmt, 2, server.c_str(), -1, SQLITE_TRANSIENT);
 
-  if (Statement)
-  {
-    sqlite3_bind_text(Statement, 1, name.c_str(), -1, SQLITE_TRANSIENT);
-    sqlite3_bind_text(Statement, 2, server.c_str(), -1, SQLITE_TRANSIENT);
-
-    const int32_t RC = m_DB->Step(Statement);
-
-    if (RC == SQLITE_ROW) {
-      if (sqlite3_column_count(Statement) == 2) {
-        initialIP  = string((char*)sqlite3_column_text(Statement, 1));
-        latestIP  = string((char*)sqlite3_column_text(Statement, 1));
-      } else {
-        Print("[SQLITE3] error checking ips [" + name + "@" + server + "] - row doesn't have 1 column");
+  switch (m_DB->Step(stmt)) {
+    case SQLITE_ERROR:
+      PRINT_IF(LogLevel::kError, Concat("[SQLITE3] error checking ips [", name, "@", server, "] - ", m_DB->GetError()));
+      break;
+    case SQLITE_ROW: {
+      if (sqlite3_column_count(stmt) != 2) {
+        Print(Concat("[SQLITE3] error checking ips [", name, "@", server, "] - row doesn't have 1 column"));
+        break;
       }
-    } else if (RC == SQLITE_ERROR) {
-      PRINT_IF(LogLevel::kError, "[SQLITE3] error checking ips [" + name + "@" + server + "] - " + m_DB->GetError());
+      initialIP  = string((char*)sqlite3_column_text(stmt, 1));
+      latestIP  = string((char*)sqlite3_column_text(stmt, 1));
+      break;
     }
-    m_DB->Finalize(Statement);
-  } else {
-    Print("[SQLITE3] prepare error checking ips [" + name + "@" + server + "] - " + m_DB->GetError());
   }
 
+  m_DB->Reset(stmt);
+
+  vector<string> addresses;
   if (!initialIP.empty()) {
     addresses.push_back(initialIP);
   }
@@ -1348,44 +1370,42 @@ vector<string> CAuraDB::GetIPs(const string& rawName, const string& server)
 
 vector<string> CAuraDB::GetAlts(const string& addressLiteral)
 {
-  vector<string> altAccounts;
   if (addressLiteral.empty()) {
-    return altAccounts;
+    return {};
   }
   optional<sockaddr_storage> maybeAddress = CNet::ParseAddress(addressLiteral);
   if (!maybeAddress.has_value() || isLoopbackAddress(&(maybeAddress.value()))) {
-    return altAccounts;
+    return {};
   }
 
-  sqlite3_stmt*         Statement;
-  m_DB->Prepare("SELECT name, server FROM players WHERE initialip=? OR latestip=?", reinterpret_cast<void**>(&Statement));
+  if (!m_StmtCache[ALTS_CHECK_IDX]) {
+    m_DB->Prepare("SELECT name, server FROM players WHERE initialip=? OR latestip=?", &(m_StmtCache[ALTS_CHECK_IDX]), true);
+  }
+  sqlite3_stmt* stmt = m_StmtCache[ALTS_CHECK_IDX];
+  if (!stmt) {
+    PRINT_IF(LogLevel::kWarning, "[SQLITE3] prepare error checking alts");
+    return {};
+  }
 
-  if (Statement)
-  {
-    sqlite3_bind_text(Statement, 1, addressLiteral.c_str(), -1, SQLITE_TRANSIENT);
+  vector<string> altAccounts;
 
-    const int32_t RC = m_DB->Step(Statement);
+  sqlite3_bind_text(stmt, 1, addressLiteral.c_str(), -1, SQLITE_TRANSIENT);
 
-    if (RC == SQLITE_ROW) {
-      if (sqlite3_column_count(Statement) == 2) {
-        string altName  = string((char*)sqlite3_column_text(Statement, 0));
-        string altServer  = string((char*)sqlite3_column_text(Statement, 1));
-        if (altServer.empty()) {
-          altAccounts.push_back(altName + "@@@LAN/VPN");
-        } else {
-          altAccounts.push_back(altName + "@" + altServer);
-        }
-      } else {
-        Print("[SQLITE3] error checking alts [" + addressLiteral + "] - row doesn't have 2 columns");
-      }
-    } else if (RC == SQLITE_ERROR) {
-      PRINT_IF(LogLevel::kError, "[SQLITE3] error checking alts [" + addressLiteral + "] - " + m_DB->GetError());
+  int rc = SQLITE_ERROR;
+  while ((rc = m_DB->Step(stmt)) == SQLITE_ROW) {
+    if (sqlite3_column_count(stmt) != 2) {
+      Print(Concat("[SQLITE3] error checking alts [", addressLiteral, "] - row doesn't have 2 columns"));
+      rc = SQLITE_ERROR;
+      break;
     }
-    m_DB->Finalize(Statement);
-  } else {
-    Print("[SQLITE3] prepare error checking alts [" + addressLiteral + "] - " + m_DB->GetError());
+    string altName = string((char*)sqlite3_column_text(stmt, 0));
+    string altServer = string((char*)sqlite3_column_text(stmt, 1));
+    altAccounts.push_back(Concat(altName, "@", ToFormattedRealm(altServer)));
   }
-
+  if (rc == SQLITE_ERROR) {
+    PRINT_IF(LogLevel::kError, Concat("[SQLITE3] error checking alts [", addressLiteral, "] - ", m_DB->GetError()));
+  }
+  m_DB->Reset(stmt);
   return altAccounts;
 }
 

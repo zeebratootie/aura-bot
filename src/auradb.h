@@ -79,10 +79,11 @@ constexpr size_t UPDATE_PLAYER_START_IDX = 10u;
 constexpr size_t UPDATE_PLAYER_END_IDX = 11u;
 constexpr size_t DOTA_SUMMARY_IDX = 12u;
 constexpr size_t UPDATE_DOTA_PLAYER_END_IDX = 13u;
-constexpr size_t LATEST_IP_IDX = 14u;
-constexpr size_t IPS_CHECK_IDX = 15u;
-constexpr size_t ALTS_CHECK_IDX = 16u;
-constexpr size_t STMT_CACHE_SIZE = 17u;
+constexpr size_t INITIAL_IP_IDX = 14u;
+constexpr size_t LATEST_IP_IDX = 15u;
+constexpr size_t IPS_CHECK_IDX = 16u;
+constexpr size_t ALTS_CHECK_IDX = 17u;
+constexpr size_t STMT_CACHE_SIZE = 18u;
 
 /**************
  *** SCHEMA ***
