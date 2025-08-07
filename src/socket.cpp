@@ -975,7 +975,7 @@ UDPPkt* CUDPServer::Accept(fd_set* fd) {
     delete address;
     return nullptr;
   }
-  if (bytesRead < W3GS_UDP_MIN_PACKET_SIZE) {
+  if (bytesRead < W3GS_UDP_MIN_PACKET_SSIZE) {
     delete address;
     return nullptr;
   }

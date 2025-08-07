@@ -348,8 +348,8 @@ uint8_t FindNextAvailableBit(std::bitset<SIZE> usedBits, uint32_t originalBit, u
 bool ReplaceText(std::string& input, const std::string& fragment, const std::string& replacement);
 [[nodiscard]] std::optional<size_t> CountTemplateFixedChars(const std::string& input);
 [[nodiscard]] std::multiset<std::string> GetTemplateTokens(const std::string& input);
-[[nodiscard]] std::string ReplaceTemplate(const std::string& input, const FlatMap<int64_t, bool>* boolCache, const FlatMap<int64_t, std::string>* textCache, const FlatMap<int64_t, std::function<bool()>>* boolFuncsMap, const FlatMap<int64_t, std::function<std::string()>>* textFuncsMap, bool tolerant = false);
-[[nodiscard]] std::string ReplaceTemplate(const std::string& input, std::unordered_map<int64_t, bool>* boolCache, std::unordered_map<int64_t, std::string>* textCache, const FlatMap<int64_t, std::function<bool()>>* boolFuncsMap, const FlatMap<int64_t, std::function<std::string()>>* textFuncsMap, bool tolerant = false);
+[[nodiscard]] std::string ReplaceTemplate(const std::string& input, const FlatMap<uint64_t, bool>* boolCache, const FlatMap<uint64_t, std::string>* textCache, const FlatMap<uint64_t, std::function<bool()>>* boolFuncsMap, const FlatMap<uint64_t, std::function<std::string()>>* textFuncsMap, bool tolerant = false);
+[[nodiscard]] std::string ReplaceTemplate(const std::string& input, std::unordered_map<uint64_t, bool>* boolCache, std::unordered_map<uint64_t, std::string>* textCache, const FlatMap<uint64_t, std::function<bool()>>* boolFuncsMap, const FlatMap<uint64_t, std::function<std::string()>>* textFuncsMap, bool tolerant = false);
 [[nodiscard]] float LinearInterpolation(const float x, const float x1, const float x2, const float y1, const float y2);
 [[nodiscard]] size_t DoubleToSize(double x);
 [[nodiscard]] uint64_t DoubleToUnsigned(double x);

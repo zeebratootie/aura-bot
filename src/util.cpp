@@ -2459,7 +2459,7 @@ multiset<string> GetTemplateTokens(const string& input)
   return tokens;
 }
 
-string ReplaceTemplate(const string& input, const FlatMap<int64_t, bool>* boolCache, const FlatMap<int64_t, string>* textCache, const FlatMap<int64_t, function<bool()>>* boolFuncsMap, const FlatMap<int64_t, function<string()>>* textFuncsMap, bool tolerant)
+string ReplaceTemplate(const string& input, const FlatMap<uint64_t, bool>* boolCache, const FlatMap<uint64_t, string>* textCache, const FlatMap<uint64_t, function<bool()>>* boolFuncsMap, const FlatMap<uint64_t, function<string()>>* textFuncsMap, bool tolerant)
 {
   string result;
   string::size_type pos = 0;
@@ -2484,7 +2484,7 @@ string ReplaceTemplate(const string& input, const FlatMap<int64_t, bool>* boolCa
     if (isCondition) {
       token = token.substr(1);
     }
-    int64_t cacheKey = HashCode(token);
+    uint64_t cacheKey = HashCode(token);
 
     if (isCondition) {
       bool checkResult = false;
@@ -2520,13 +2520,13 @@ string ReplaceTemplate(const string& input, const FlatMap<int64_t, bool>* boolCa
   return result;
 }
 
-string ReplaceTemplate(const string& input, unordered_map<int64_t, bool>* boolCache, unordered_map<int64_t, string>* textCache, const FlatMap<int64_t, function<bool()>>* boolFuncsMap, const FlatMap<int64_t, function<string()>>* textFuncsMap, bool tolerant)
+string ReplaceTemplate(const string& input, unordered_map<uint64_t, bool>* boolCache, unordered_map<uint64_t, string>* textCache, const FlatMap<uint64_t, function<bool()>>* boolFuncsMap, const FlatMap<uint64_t, function<string()>>* textFuncsMap, bool tolerant)
 {
   string result;
   string::size_type pos = 0;
   string::size_type start = 0;
-  unordered_map<int64_t, bool>::iterator boolCacheMatch;
-  unordered_map<int64_t, string>::iterator textCacheMatch;
+  unordered_map<uint64_t, bool>::iterator boolCacheMatch;
+  unordered_map<uint64_t, string>::iterator textCacheMatch;
   const function<bool()>* boolFuncMatch = nullptr;
   const function<string()>* textFuncMatch = nullptr;
 
@@ -2545,7 +2545,7 @@ string ReplaceTemplate(const string& input, unordered_map<int64_t, bool>* boolCa
     if (isCondition) {
       token = token.substr(1);
     }
-    int64_t cacheKey = HashCode(token);
+    uint64_t cacheKey = HashCode(token);
 
     if (isCondition) {
       bool checkResult = false;

@@ -917,8 +917,10 @@ constexpr int64_t GAMESETUP_STALE_TICKS = 180000;
 
 // game_protocol.h
 
-constexpr ssize_t W3GS_UDP_MIN_PACKET_SIZE = 4;
+constexpr size_t W3GS_UDP_MIN_PACKET_SIZE = 4;
 constexpr size_t W3GS_ACTION_MAX_PACKET_SIZE = 1024;
+constexpr ptrdiff_t W3GS_UDP_MIN_PACKET_SSIZE = signed_cast<ptrdiff_t>(W3GS_UDP_MIN_PACKET_SIZE);
+constexpr ptrdiff_t W3GS_ACTION_MAX_PACKET_SSIZE = signed_cast<ptrdiff_t>(W3GS_ACTION_MAX_PACKET_SIZE);
 
 constexpr uint8_t GAME_DISPLAY_NONE = 0; // this case isn't part of the protocol, it's for internal use only
 constexpr uint8_t GAME_DISPLAY_FULL = 2;
@@ -1721,7 +1723,7 @@ constexpr int64_t MMD_PROCESSING_INITIAL_DELAY = 60000;
 constexpr int64_t MMD_PROCESSING_STREAM_DEF_DELAY = 60000;
 constexpr int64_t MMD_PROCESSING_STREAM_ACTION_DELAY = 180000;
 
-constexpr uint32_t MMD_MAX_ARITY = 64;
+constexpr uint32_t MMD_MAX_ARITY = 64u;
 
 template<typename T>
 constexpr auto operator<(T lhs, T rhs)

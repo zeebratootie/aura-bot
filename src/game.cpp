@@ -3988,16 +3988,16 @@ std::string CGame::GetCustomGameName(shared_ptr<const CRealm> realm, bool forceL
 {
   string nameTemplate = GetCustomGameNameTemplate(realm, forceLobby);
 
-  const FlatMap<int64_t, string> textCache;
+  const FlatMap<uint64_t, string> textCache;
 
-  vector<pair<int64_t, function<string()>>> textFuncs;
+  vector<pair<uint64_t, function<string()>>> textFuncs;
   textFuncs.reserve(3);
   textFuncs.emplace_back(HashCode("MODE"),    [this] () { return this->GetHCLCommandString(); });
   textFuncs.emplace_back(HashCode("NAME"),    [this] () { return this->GetGameName(); });
   textFuncs.emplace_back(HashCode("COUNTER"), [this, realm]() { return this->GetCreationCounterText(realm); });
   static_assert(HashCode("MODE") < HashCode("NAME"), "Hash for MODE is not before NAME");
   static_assert(HashCode("NAME") < HashCode("COUNTER"), "Hash for NAME is not before COUNTER");
-  const FlatMap<int64_t, function<string()>> textFuncMap(move(textFuncs));
+  const FlatMap<uint64_t, function<string()>> textFuncMap(move(textFuncs));
 
   string replaced = ReplaceTemplate(nameTemplate, nullptr, &textCache, nullptr, &textFuncMap);
   return TrimString(RemoveDuplicateWhiteSpace(replaced));
@@ -4007,16 +4007,16 @@ std::string CGame::GetNextCustomGameName(shared_ptr<const CRealm> realm, bool fo
 {
   string nameTemplate = GetCustomGameNameTemplate(realm, forceLobby);
 
-  const FlatMap<int64_t, string> textCache;
+  const FlatMap<uint64_t, string> textCache;
 
-  vector<pair<int64_t, function<string()>>> textFuncs;
+  vector<pair<uint64_t, function<string()>>> textFuncs;
   textFuncs.reserve(3);
   textFuncs.emplace_back(HashCode("MODE"),    [this] () { return this->GetHCLCommandString(); });
   textFuncs.emplace_back(HashCode("NAME"),    [this] () { return this->GetGameName(); });
   textFuncs.emplace_back(HashCode("COUNTER"), [this, realm]() { return this->GetNextCreationCounterText(realm); });
   static_assert(HashCode("MODE") < HashCode("NAME"), "Hash for MODE is not before NAME");
   static_assert(HashCode("NAME") < HashCode("COUNTER"), "Hash for NAME is not before COUNTER");
-  const FlatMap<int64_t, function<string()>> textFuncMap(move(textFuncs));
+  const FlatMap<uint64_t, function<string()>> textFuncMap(move(textFuncs));
 
   string replaced = ReplaceTemplate(nameTemplate, nullptr, &textCache, nullptr, &textFuncMap);
   return TrimString(RemoveDuplicateWhiteSpace(replaced));
