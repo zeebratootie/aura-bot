@@ -170,8 +170,8 @@ public:
   void SendLoopback(const std::vector<uint8_t>& packet);
   void SendArbitraryUnicast(const std::string& addressLiteral, const uint16_t port, const std::vector<uint8_t>& packet);
   void SendGameDiscovery(const std::vector<uint8_t>& packet, const std::vector<sockaddr_storage>& clientIps);
-  void HandleUDP(UDPPkt* pkt);
-  void RelayUDPPacket(const UDPPkt* pkt, const std::string& fromAddress, const uint16_t fromPort) const;
+  void HandleUDP(UDPPkt pkt);
+  void RelayUDPPacket(const UDPPkt pkt, const std::string& fromAddress, const uint16_t fromPort) const;
 
   [[nodiscard]] sockaddr_storage*               GetPublicIPv4();
   [[nodiscard]] sockaddr_storage*               GetPublicIPv6();

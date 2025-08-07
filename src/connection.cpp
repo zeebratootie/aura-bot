@@ -204,10 +204,10 @@ IncomingConnectionStatus CConnection::Update(fd_set* fd, fd_set* send_fd, int64_
             }
             struct UDPPkt pkt;
             pkt.socket = m_Socket;
-            pkt.sender = &(m_Socket->m_RemoteHost);
+            pkt.sender = m_Socket->m_RemoteHost;
             memcpy(pkt.buf, packet.data(), packetSize);
             pkt.length = packetSize;
-            m_Aura->m_Net.HandleUDP(&pkt);
+            m_Aura->m_Net.HandleUDP(pkt);
           } else {
             Abort = true;
             break;

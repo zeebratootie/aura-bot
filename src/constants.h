@@ -1527,6 +1527,8 @@ constexpr int64_t GAME_USER_TIMEOUT_RECONNECTABLE = 20000;
 
 constexpr uint16_t GAME_DEFAULT_UDP_PORT = 6112u;
 constexpr uint8_t UDP_DISCOVERY_MAX_EXTRA_ADDRESSES = 30u;
+constexpr size_t MAX_UDP_ACCEPT_PER_TURN = 100u;
+constexpr size_t MAX_TCP_ACCEPT_PER_TURN = 10u;
 
 enum class NetProtocol : uint8_t {
   kTCP = 0,

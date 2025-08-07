@@ -10872,11 +10872,11 @@ string CGame::GetCustomCreationCounterText(shared_ptr<const CRealm> realm, char 
     counterTemplate = m_Aura->m_Config.m_LANReHostCounterTemplate;
   }
 
-  vector<pair<int64_t, string>> texts;
+  vector<pair<uint64_t, string>> texts;
   texts.reserve(1);
   texts.emplace_back(HashCode("COUNT"), string(static_cast<string::size_type>(1u), counter));
-  const FlatMap<int64_t, string> textCache(move(texts));
-  const FlatMap<int64_t, function<string()>> textFuncMap;
+  const FlatMap<uint64_t, string> textCache(move(texts));
+  const FlatMap<uint64_t, function<string()>> textFuncMap;
 
   return ReplaceTemplate(counterTemplate, nullptr, &textCache, nullptr, &textFuncMap);
 }

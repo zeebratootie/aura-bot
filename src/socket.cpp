@@ -738,23 +738,26 @@ CStreamIOSocket* CTCPServer::Accept(fd_set* fd)
   return nullptr;
 }
 
-void CTCPServer::Discard(fd_set* fd)
+bool CTCPServer::Discard(fd_set* fd)
 {
-  if (m_Socket == INVALID_SOCKET || m_HasError)
-    return;
-
-  if (FD_ISSET(m_Socket, fd)) {
-    // a connection is waiting, accept it
-
-    sockaddr_storage         address;
-    ADDRESS_LENGTH_TYPE      addressLength = GetAddressLength();
-    SOCKET                   NewSocket;
-    memset(&address, 0, addressLength);
-
-    if ((NewSocket = accept(m_Socket, reinterpret_cast<struct sockaddr*>(&address), &addressLength)) != INVALID_SOCKET) {
-      closesocket(NewSocket);
-    }
+  if (m_Socket == INVALID_SOCKET || m_HasError) {
+    return false;
   }
+
+  if (!FD_ISSET(m_Socket, fd)) {
+    return false;
+  }
+  // a connection is waiting, accept it
+
+  sockaddr_storage         address;
+  ADDRESS_LENGTH_TYPE      addressLength = GetAddressLength();
+  SOCKET                   NewSocket;
+  memset(&address, 0, addressLength);
+
+  if ((NewSocket = accept(m_Socket, reinterpret_cast<struct sockaddr*>(&address), &addressLength)) != INVALID_SOCKET) {
+    closesocket(NewSocket);
+  }
+  return true;
 }
 
 //
@@ -950,20 +953,19 @@ bool CUDPServer::Listen(sockaddr_storage& address, const uint16_t port, bool ret
   return true;
 }
 
-UDPPkt* CUDPServer::Accept(fd_set* fd) {
+UDPPkt CUDPServer::Accept(fd_set* fd) {
   if (m_Socket == INVALID_SOCKET || m_HasError) {
-    return nullptr;
+    return {};
   }
 
   if (!FD_ISSET(m_Socket, fd)) {
-    return nullptr;
+    return {};
   }
 
-  char buffer[1024];
-  sockaddr_storage* address = new sockaddr_storage(); // It's the responsibility of the caller to delete this.
+  UDPPkt pkt;
   ADDRESS_LENGTH_TYPE addressLength = sizeof(sockaddr_storage);
 
-  auto bytesRead = recvfrom(m_Socket, buffer, sizeof(buffer), 0, reinterpret_cast<struct sockaddr*>(address), &addressLength);
+  auto bytesRead = recvfrom(m_Socket, pkt.buf, sizeof(pkt.buf), 0, reinterpret_cast<struct sockaddr*>(&(pkt.sender)), &addressLength);
 #ifdef _WIN32
   if (bytesRead == SOCKET_ERROR) {
     //int error = WSAGetLastError();
@@ -972,34 +974,27 @@ UDPPkt* CUDPServer::Accept(fd_set* fd) {
     //int error = errno;
 #endif
     //Print("Error code " + to_string(error) + " receiving data from " + AddressToString(*pkt.sender));
-    delete address;
-    return nullptr;
+    return pkt;
   }
   if (bytesRead < W3GS_UDP_MIN_PACKET_SSIZE) {
-    delete address;
-    return nullptr;
+    return pkt;
   }
 
-  UDPPkt* pkt = new UDPPkt();
-  if (pkt == nullptr)
-    return nullptr;
-
-  pkt->socket = this;
-  pkt->sender = address;
-  pkt->length = integer_cast_lossy<int>(bytesRead);
-  memcpy(pkt->buf, buffer, signed_cast<size_t>(bytesRead));
+  pkt.socket = this;
+  pkt.length = integer_cast_lossy<int>(bytesRead);
   return pkt;
 }
 
-void CUDPServer::Discard(fd_set* fd) {
+bool CUDPServer::Discard(fd_set* fd) {
   if (m_Socket == INVALID_SOCKET || m_HasError) {
-    return;
+    return false;
   }
 
   if (!FD_ISSET(m_Socket, fd)){
-    return;
+    return false;
   }
   
   char buffer[1024];
   recv(m_Socket, buffer, sizeof(buffer), 0);
+  return true;
 }

@@ -196,10 +196,18 @@ typedef int32_t SOCKET;
 
 struct UDPPkt
 {
-  sockaddr_storage* sender;
+  sockaddr_storage sender;
   int length;
   char buf[1024];
   CSocket* socket;
+
+  UDPPkt()
+  : length(0),
+    socket(nullptr)
+  {
+  }
+
+  ~UDPPkt() = default;
 };
 
 [[nodiscard]] inline bool isIPv4MappedAddress(const sockaddr_in6* addr6) {
@@ -539,7 +547,7 @@ public:
   [[nodiscard]] std::string       GetName() const;
   bool                            Listen(sockaddr_storage& address, const uint16_t port, bool retry);
   [[nodiscard]] CStreamIOSocket*  Accept(fd_set* fd);
-  void                            Discard(fd_set* fd);
+  bool                            Discard(fd_set* fd);
 };
 
 //
@@ -570,8 +578,8 @@ public:
 
   [[nodiscard]] std::string   GetName() const;
   bool                        Listen(sockaddr_storage& address, const uint16_t port, bool retry);
-  [[nodiscard]] UDPPkt*       Accept(fd_set* fd);
-  void                        Discard(fd_set* fd);
+  [[nodiscard]] UDPPkt        Accept(fd_set* fd);
+  bool                        Discard(fd_set* fd);
 };
 
 #endif // AURA_SOCKET_H_

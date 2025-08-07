@@ -582,19 +582,27 @@ void CNet::UpdateBeforeGames(fd_set* fd, fd_set* send_fd)
 {
   // if hosting a lobby, accept new connections to its game server
 
+  size_t remainingTurnQuota = MAX_TCP_ACCEPT_PER_TURN;
   for (const auto& entry : m_GameServers) {
     if (auto server = entry.second) {
       if (m_Aura->m_ExitingSoon) {
-        server->Discard(fd);
+        while (remainingTurnQuota > 0) {
+          if (!server->Discard(fd)) break;
+          remainingTurnQuota--;
+        }
         continue;
       }
       uint16_t localPort = entry.first;
       if (m_IncomingConnections[localPort].size() >= MAX_INCOMING_CONNECTIONS) {
-        server->Discard(fd);
+        while (remainingTurnQuota > 0) {
+          if (!server->Discard(fd)) break;
+          remainingTurnQuota--;
+        }
         continue;
       }
-      CStreamIOSocket* socket = server->Accept(fd);
-      if (socket) {
+      while (remainingTurnQuota > 0) {
+        CStreamIOSocket* socket = server->Accept(fd);
+        if (!socket) break;
         if (m_Config.m_ProxyReconnect > 0) {
           CConnection* incomingConnection = new CConnection(m_Aura, localPort, socket);
           DPRINT_IF(LogLevel::kTrace2, "[AURA] incoming connection from " + incomingConnection->GetIPString());
@@ -610,8 +618,8 @@ void CNet::UpdateBeforeGames(fd_set* fd, fd_set* send_fd)
         if (m_IncomingConnections[localPort].size() >= MAX_INCOMING_CONNECTIONS) {
           PRINT_IF(LogLevel::kWarning, "[AURA] " + to_string(m_IncomingConnections[localPort].size()) + " connections at port " + to_string(localPort) + " - rejecting further connections");
         }
+        remainingTurnQuota--;
       }
-
       if (server->HasError()) {
         m_Aura->m_Exiting = true;
       }
@@ -713,19 +721,25 @@ void CNet::UpdateAfterGames(fd_set* fd, fd_set* send_fd)
     }
   }
 
+  size_t remainingTurnQuota = MAX_UDP_ACCEPT_PER_TURN;
   if (m_UDPMainServerEnabled) {
     if (m_Aura->m_ExitingSoon) {
-      m_UDPMainServer->Discard(fd);
+      while (remainingTurnQuota--) {
+        if (!m_UDPMainServer->Discard(fd)) break;
+        remainingTurnQuota--;
+      }
     } else {
-      UDPPkt* pkt = m_UDPMainServer->Accept(fd);
-      if (pkt != nullptr) {
+      while (remainingTurnQuota--) {
+        UDPPkt pkt = m_UDPMainServer->Accept(fd);
+        if (pkt.length == 0) break;
         HandleUDP(pkt);
-        delete pkt->sender;
-        delete pkt;
       }
     }
   } else if (m_UDPDeafSocket) {
-    m_UDPDeafSocket->Discard(fd);
+    while (remainingTurnQuota--) {
+      if (!m_UDPDeafSocket->Discard(fd)) break;
+      remainingTurnQuota--;
+    }
   }
 
   UpdateMapTransfers();
@@ -1020,16 +1034,16 @@ GameUser::CGameUser* CNet::GetReconnectTargetUserLegacy(const uint8_t UID, const
   return matchUser;
 }
 
-void CNet::HandleUDP(UDPPkt* pkt)
+void CNet::HandleUDP(UDPPkt pkt)
 {
-  // pkt->buf->length at least W3GS_UDP_MIN_PACKET_SIZE
+  // pkt.buf->length at least W3GS_UDP_MIN_PACKET_SIZE
 
-  if (pkt->sender->ss_family != AF_INET && pkt->sender->ss_family != AF_INET6) {
+  if (pkt.sender.ss_family != AF_INET && pkt.sender.ss_family != AF_INET6) {
     return;
   }
 
-  uint16_t remotePort = GetAddressPort(pkt->sender);
-  string ipAddress = AddressToString(*(pkt->sender));
+  uint16_t remotePort = GetAddressPort(&pkt.sender);
+  string ipAddress = AddressToString(pkt.sender);
 
   if (IsIgnoredDatagramSource(ipAddress)) {
     return;
@@ -1039,12 +1053,12 @@ void CNet::HandleUDP(UDPPkt* pkt)
     RelayUDPPacket(pkt, ipAddress, remotePort);
   }
 
-  string_view data(pkt->buf, (size_t)pkt->length);
+  string_view data(pkt.buf, (size_t)pkt.length);
   if (GetByteAt(data, 0) != GameProtocol::Magic::W3GS_HEADER) {
     return;
   }
 
-  if (!(pkt->length >= 16 && GetByteAt(data, 1) == GameProtocol::Magic::SEARCHGAME)) {
+  if (!(pkt.length >= 16 && GetByteAt(data, 1) == GameProtocol::Magic::SEARCHGAME)) {
     return;
   }
 
@@ -1067,26 +1081,26 @@ void CNet::HandleUDP(UDPPkt* pkt)
     }
     if (requestVersion.second == 0 || game->GetIsSupportedGameVersion(requestVersion)) {
       DPRINT_IF(LogLevel::kTrace3, "[NET] Sent game info to " + ipAddress + ":" + to_string(remotePort) + "...");
-      game->ReplySearch(pkt->sender, pkt->socket, requestVersion);
+      game->ReplySearch(&pkt.sender, pkt.socket, requestVersion);
 
       // When we get GAME_SEARCH from a remote port other than 6112, we still announce to port 6112.
-      if (remotePort != m_UDP4TargetPort && GetInnerIPVersion(pkt->sender) == AF_INET) {
+      if (remotePort != m_UDP4TargetPort && GetInnerIPVersion(&pkt.sender) == AF_INET) {
         game->AnnounceToAddress(ipAddress, requestVersion);
       }
     }
   }
 }
 
-void CNet::RelayUDPPacket(const UDPPkt* pkt, const string& fromAddress, const uint16_t fromPort) const
+void CNet::RelayUDPPacket(const UDPPkt pkt, const string& fromAddress, const uint16_t fromPort) const
 {
   vector<uint8_t> relayPacket = {GameProtocol::Magic::W3FW_HEADER, 0, 0, 0};
   AppendByteArrayString(relayPacket, fromAddress, true);
   size_t portOffset = relayPacket.size();
-  relayPacket.resize(portOffset + 6u + signed_cast<size_t>(pkt->length));
+  relayPacket.resize(portOffset + 6u + signed_cast<size_t>(pkt.length));
   relayPacket[portOffset] = static_cast<uint8_t>(fromPort >> 8); // Network-byte-order (Big-endian)
   relayPacket[portOffset + 1] = static_cast<uint8_t>(fromPort);
   memset(relayPacket.data() + signed_cast<ptrdiff_t>(portOffset) + 2, 0, 4); // Game version unknown at this layer.
-  memcpy(relayPacket.data() + signed_cast<ptrdiff_t>(portOffset) + 6, &(pkt->buf), signed_cast<size_t>(pkt->length));
+  memcpy(relayPacket.data() + signed_cast<ptrdiff_t>(portOffset) + 6, &(pkt.buf), signed_cast<size_t>(pkt.length));
   AssignLength(relayPacket);
   Send(&(m_Config.m_UDPForwardAddress), relayPacket);
 }
