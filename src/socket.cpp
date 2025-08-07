@@ -381,11 +381,11 @@ bool CStreamIOSocket::DoRecv(fd_set* fd)
 
   // data is waiting, receive it
   char buffer[1024];
-  int32_t c = recv(m_Socket, buffer, 1024, 0);
+  auto c = recv(m_Socket, buffer, 1024, 0);
 
   if (c > 0) {
     // success! add the received data to the buffer
-    m_RecvBuffer += string(buffer, c);
+    m_RecvBuffer += string(buffer, static_cast<string::size_type>(c));
     m_LastRecv = GetTicks();
     return true;
   }
@@ -445,16 +445,13 @@ void CStreamIOSocket::DoSend(fd_set* send_fd)
   {
     // socket is ready, send it
 
-    int32_t s = send(m_Socket, m_SendBuffer.c_str(), static_cast<int32_t>(m_SendBuffer.size()), MSG_NOSIGNAL);
+    auto s = send(m_Socket, m_SendBuffer.c_str(), m_SendBuffer.size(), MSG_NOSIGNAL);
 
-    if (s > 0)
-    {
+    if (s > 0) {
       // success! only some of the data may have been sent, remove it from the buffer
 
-      m_SendBuffer = m_SendBuffer.substr(s);
-    }
-    else if (s == SOCKET_ERROR && GetLastOSError() != EWOULDBLOCK)
-    {
+      m_SendBuffer = m_SendBuffer.substr(static_cast<string::size_type>(s));
+    } else if (s == SOCKET_ERROR && GetLastOSError() != EWOULDBLOCK) {
       // send error
 
       m_HasError = true;
@@ -472,7 +469,7 @@ void CStreamIOSocket::Flush()
   if (m_Socket == INVALID_SOCKET || m_HasError || m_HasFin || !m_Connected || m_SendBuffer.empty())
     return;
 
-  send(m_Socket, m_SendBuffer.c_str(), static_cast<int32_t>(m_SendBuffer.size()), MSG_NOSIGNAL);
+  send(m_Socket, m_SendBuffer.c_str(), m_SendBuffer.size(), MSG_NOSIGNAL);
   m_SendBuffer.clear();
 }
 
@@ -786,7 +783,7 @@ bool CUDPSocket::SendTo(const sockaddr_storage* address, const vector<uint8_t>& 
 
   if (m_Family == address->ss_family) {
     const string MessageString = string(begin(message), end(message));
-    return -1 != sendto(m_Socket, MessageString.c_str(), static_cast<int>(MessageString.size()), 0, reinterpret_cast<const struct sockaddr*>(address), sizeof(sockaddr_storage));
+    return -1 != sendto(m_Socket, MessageString.c_str(), MessageString.size(), 0, reinterpret_cast<const struct sockaddr*>(address), sizeof(sockaddr_storage));
   }
   if (m_Family == AF_INET && address->ss_family == AF_INET6) {
     Print("Error - Attempt to send UDP6 message from UDP4 socket: " + ByteArrayToDecString(message));
@@ -795,7 +792,7 @@ bool CUDPSocket::SendTo(const sockaddr_storage* address, const vector<uint8_t>& 
   if (m_Family == AF_INET6 && address->ss_family == AF_INET) {
     sockaddr_storage addr6 = IPv4ToIPv6(address);
     const string MessageString = string(begin(message), end(message));
-    return -1 != sendto(m_Socket, MessageString.c_str(), static_cast<int>(MessageString.size()), 0, reinterpret_cast<const struct sockaddr*>(&addr6), sizeof(addr6));
+    return -1 != sendto(m_Socket, MessageString.c_str(), MessageString.size(), 0, reinterpret_cast<const struct sockaddr*>(&addr6), sizeof(addr6));
   }
   return false;
 }

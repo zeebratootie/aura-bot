@@ -1082,11 +1082,11 @@ void CNet::RelayUDPPacket(const UDPPkt* pkt, const string& fromAddress, const ui
   vector<uint8_t> relayPacket = {GameProtocol::Magic::W3FW_HEADER, 0, 0, 0};
   AppendByteArrayString(relayPacket, fromAddress, true);
   size_t portOffset = relayPacket.size();
-  relayPacket.resize(portOffset + 6 + pkt->length);
+  relayPacket.resize(portOffset + 6u + signed_cast<size_t>(pkt->length));
   relayPacket[portOffset] = static_cast<uint8_t>(fromPort >> 8); // Network-byte-order (Big-endian)
   relayPacket[portOffset + 1] = static_cast<uint8_t>(fromPort);
-  memset(relayPacket.data() + portOffset + 2, 0, 4); // Game version unknown at this layer.
-  memcpy(relayPacket.data() + portOffset + 6, &(pkt->buf), pkt->length);
+  memset(relayPacket.data() + signed_cast<ptrdiff_t>(portOffset) + 2, 0, 4); // Game version unknown at this layer.
+  memcpy(relayPacket.data() + signed_cast<ptrdiff_t>(portOffset) + 6, &(pkt->buf), signed_cast<size_t>(pkt->length));
   AssignLength(relayPacket);
   Send(&(m_Config.m_UDPForwardAddress), relayPacket);
 }
