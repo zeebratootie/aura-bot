@@ -919,8 +919,8 @@ constexpr int64_t GAMESETUP_STALE_TICKS = 180000;
 
 constexpr size_t W3GS_UDP_MIN_PACKET_SIZE = 4;
 constexpr size_t W3GS_ACTION_MAX_PACKET_SIZE = 1024;
-constexpr ptrdiff_t W3GS_UDP_MIN_PACKET_SSIZE = signed_cast<ptrdiff_t>(W3GS_UDP_MIN_PACKET_SIZE);
-constexpr ptrdiff_t W3GS_ACTION_MAX_PACKET_SSIZE = signed_cast<ptrdiff_t>(W3GS_ACTION_MAX_PACKET_SIZE);
+constexpr ptrdiff_t W3GS_UDP_MIN_PACKET_SSIZE = static_cast<ptrdiff_t>(W3GS_UDP_MIN_PACKET_SIZE);
+constexpr ptrdiff_t W3GS_ACTION_MAX_PACKET_SSIZE = static_cast<ptrdiff_t>(W3GS_ACTION_MAX_PACKET_SIZE);
 
 constexpr uint8_t GAME_DISPLAY_NONE = 0; // this case isn't part of the protocol, it's for internal use only
 constexpr uint8_t GAME_DISPLAY_FULL = 2;
