@@ -455,6 +455,7 @@ public:
   CTCPServer*                m_Server;
   uint16_t                   m_Counter;
   bool                       m_LogErrors;
+  uint64_t                   m_SegmentationStats[5];
 
   CStreamIOSocket(uint8_t nFamily, std::string nName);
   CStreamIOSocket(SOCKET nSocket, sockaddr_storage& remoteAddress, CTCPServer* nServer, const uint16_t nCounter);

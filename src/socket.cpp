@@ -258,6 +258,12 @@ CStreamIOSocket::CStreamIOSocket(uint8_t nFamily, string nName)
 
   // disable delayed acks
   SetQuickAck(true);
+
+  m_SegmentationStats[0] = 0;
+  m_SegmentationStats[1] = 0;
+  m_SegmentationStats[2] = 0;
+  m_SegmentationStats[3] = 0;
+  m_SegmentationStats[4] = 0;
 }
 
 CStreamIOSocket::CStreamIOSocket(SOCKET nSocket, sockaddr_storage& nAddress, CTCPServer* nServer, const uint16_t nCounter)
@@ -276,6 +282,12 @@ CStreamIOSocket::CStreamIOSocket(SOCKET nSocket, sockaddr_storage& nAddress, CTC
 #else
   fcntl(m_Socket, F_SETFL, fcntl(m_Socket, F_GETFL) | O_NONBLOCK);
 #endif
+
+  m_SegmentationStats[0] = 0;
+  m_SegmentationStats[1] = 0;
+  m_SegmentationStats[2] = 0;
+  m_SegmentationStats[3] = 0;
+  m_SegmentationStats[4] = 0;
 }
 
 string CStreamIOSocket::GetName() const
@@ -373,21 +385,25 @@ void CStreamIOSocket::Reset()
 
 bool CStreamIOSocket::DoRecv(fd_set* fd)
 {
+  bool success = false;
   if (m_Socket == INVALID_SOCKET || m_HasError || !m_Connected)
-    return false;
+    return success;
 
   if (!FD_ISSET(m_Socket, fd))
-    return false;
+    return success;
 
   // data is waiting, receive it
   char buffer[1024];
-  auto c = recv(m_Socket, buffer, 1024, 0);
-
-  if (c > 0) {
+  int c;
+  size_t segmentCount = 0;
+  while ((c = recv(m_Socket, buffer, 1024, 0)) > 0) {
     // success! add the received data to the buffer
     m_RecvBuffer += string(buffer, static_cast<string::size_type>(c));
-    m_LastRecv = GetTicks();
-    return true;
+    if (!success) {
+      m_LastRecv = GetTicks();
+      success = true;
+    }
+    segmentCount++;
   }
 
   if (c == SOCKET_ERROR && GetLastOSError() != EWOULDBLOCK) {
@@ -405,7 +421,12 @@ bool CStreamIOSocket::DoRecv(fd_set* fd)
     m_HasFin = true;
     m_LogErrors = false;
   }
-  return false;
+  if (success) {
+    size_t group = segmentCount - 1;
+    if (group >= 4) group = 4;
+    m_SegmentationStats[group]++;
+  }
+  return success;
 }
 
 void CStreamIOSocket::Discard(fd_set* fd)

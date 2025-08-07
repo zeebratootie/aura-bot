@@ -1665,6 +1665,9 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
       if (isOwner || isAdminSelf || isRootAdminSelf) {
         SendReply("[" + targetPlayer->GetName() + "]. Owner: " + (isOwner ? "Yes" : "No") + ", Admin: " + (isAdminSelf ? (isCreatorRealm ? "Yes" : (mainRealm ? "Main" : "Foreign")) : "No") + ", Root Admin: " + (isRootAdminSelf ? (isCreatorRealm ? "Yes" : (mainRealm ? "Main" : "Foreign")) : "No"));
       }
+
+      CStreamIOSocket* socket = targetPlayer->GetSocket();
+      SendReply("Segmentation: " + to_string(m_SegmentationStats[0]) + ", " + to_string(m_SegmentationStats[1]) + ", " + to_string(m_SegmentationStats[2]) + ", " + to_string(m_SegmentationStats[3]) + ", " + to_string(m_SegmentationStats[4]));
       break;
     }
 
