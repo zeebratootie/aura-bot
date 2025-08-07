@@ -791,7 +791,7 @@ bool CUDPSocket::SendTo(const sockaddr_storage* address, const vector<uint8_t>& 
      );
   }
   if (m_Family == AF_INET && address->ss_family == AF_INET6) {
-    Print("Error - Attempt to send UDP6 message from UDP4 socket: " + ByteArrayToDecString(data));
+    Print(Concat("Error - Attempt to send UDP6 message from UDP4 socket: ", ByteArrayToDecString(message)));
     return false;
   }
   if (m_Family == AF_INET6 && address->ss_family == AF_INET) {
@@ -986,7 +986,7 @@ UDPPkt* CUDPServer::Accept(fd_set* fd) {
 
   pkt->socket = this;
   pkt->sender = address;
-  pkt->length = bytesRead;
+  pkt->length = integer_cast_lossy<int>(bytesRead);
   memcpy(pkt->buf, buffer, signed_cast<size_t>(bytesRead));
   return pkt;
 }
