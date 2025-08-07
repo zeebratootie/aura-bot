@@ -987,7 +987,7 @@ UDPPkt* CUDPServer::Accept(fd_set* fd) {
   pkt->socket = this;
   pkt->sender = address;
   pkt->length = bytesRead;
-  memcpy(pkt->buf, buffer, bytesRead);
+  memcpy(pkt->buf, buffer, signed_cast<size_t>(bytesRead));
   return pkt;
 }
 
