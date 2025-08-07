@@ -778,21 +778,30 @@ CUDPSocket::~CUDPSocket()
 
 bool CUDPSocket::SendTo(const sockaddr_storage* address, const vector<uint8_t>& message)
 {
-  if (m_Socket == INVALID_SOCKET || m_HasError)
+  if (m_Socket == INVALID_SOCKET || m_HasError) {
     return false;
+  }
 
   if (m_Family == address->ss_family) {
-    const string MessageString = string(begin(message), end(message));
-    return -1 != sendto(m_Socket, MessageString.c_str(), MessageString.size(), 0, reinterpret_cast<const struct sockaddr*>(address), sizeof(sockaddr_storage));
+    return -1 != sendto(
+      m_Socket,
+      reinterpret_cast<const char*>(message.data()), message.size(),
+      0,
+      reinterpret_cast<const struct sockaddr*>(address), sizeof(sockaddr_storage)
+     );
   }
   if (m_Family == AF_INET && address->ss_family == AF_INET6) {
-    Print("Error - Attempt to send UDP6 message from UDP4 socket: " + ByteArrayToDecString(message));
+    Print("Error - Attempt to send UDP6 message from UDP4 socket: " + ByteArrayToDecString(data));
     return false;
   }
   if (m_Family == AF_INET6 && address->ss_family == AF_INET) {
     sockaddr_storage addr6 = IPv4ToIPv6(address);
-    const string MessageString = string(begin(message), end(message));
-    return -1 != sendto(m_Socket, MessageString.c_str(), MessageString.size(), 0, reinterpret_cast<const struct sockaddr*>(&addr6), sizeof(addr6));
+    return -1 != sendto(
+      m_Socket,
+      reinterpret_cast<const char*>(message.data()), message.size(),
+      0,
+      reinterpret_cast<const struct sockaddr*>(&addr6), sizeof(addr6)
+    );
   }
   return false;
 }
