@@ -832,8 +832,12 @@ bool CUDPSocket::Broadcast(const sockaddr_storage* addr4, const vector<uint8_t>&
     return false;
   }
 
-  const string MessageString = string(begin(message), end(message));
-  int result = sendto(m_Socket, MessageString.c_str(), static_cast<int>(MessageString.size()), 0, reinterpret_cast<const struct sockaddr*>(addr4), sizeof(sockaddr_in));
+  auto result = sendto(
+    m_Socket,
+    reinterpret_cast<const char*>(message.data()), message.size(),
+    0,
+    reinterpret_cast<const struct sockaddr*>(addr4), sizeof(sockaddr_in)
+  );
 
   if (result == -1) {
     return false;
@@ -959,7 +963,7 @@ UDPPkt* CUDPServer::Accept(fd_set* fd) {
   sockaddr_storage* address = new sockaddr_storage(); // It's the responsibility of the caller to delete this.
   ADDRESS_LENGTH_TYPE addressLength = sizeof(sockaddr_storage);
 
-  int bytesRead = recvfrom(m_Socket, buffer, sizeof(buffer), 0, reinterpret_cast<struct sockaddr*>(address), &addressLength);
+  auto bytesRead = recvfrom(m_Socket, buffer, sizeof(buffer), 0, reinterpret_cast<struct sockaddr*>(address), &addressLength);
 #ifdef _WIN32
   if (bytesRead == SOCKET_ERROR) {
     //int error = WSAGetLastError();
