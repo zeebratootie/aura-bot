@@ -1721,7 +1721,7 @@ constexpr int64_t MMD_PROCESSING_INITIAL_DELAY = 60000;
 constexpr int64_t MMD_PROCESSING_STREAM_DEF_DELAY = 60000;
 constexpr int64_t MMD_PROCESSING_STREAM_ACTION_DELAY = 180000;
 
-constexpr uint32_t MMD_MAX_ARITY = 64u;
+constexpr uint32_t MMD_MAX_ARITY = 64;
 
 template<typename T>
 constexpr auto operator<(T lhs, T rhs)
