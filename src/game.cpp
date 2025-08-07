@@ -796,8 +796,11 @@ void CGame::TrySaveStats() const
     const int64_t hiResTicks = GetTicks();
     LOG_APP_IF(LogLevel::kDebug, "[STATS] saving game end player data to database");
     if (m_Aura->m_DB->Begin()) {
+      const uint64_t gameTime = signed_cast<uint64_t>(m_EffectiveTicks / 1000);
+      // FIXME: Max game time should be ensured elsewhere.
+      assert(gameTime <= integer_cast<uint64_t>(numeric_limits<uint32_t>::max()) && "Game time limited to 1193 hours");
       for (auto& controllerData : m_GameControllers) {
-        m_Aura->m_DB->UpdateGamePlayerOnEnd(m_PersistentId, controllerData, signed_cast<uint64_t>(m_EffectiveTicks / 1000));
+        m_Aura->m_DB->UpdateGamePlayerOnEnd(m_PersistentId, controllerData, integer_cast_lossy<uint32_t>(gameTime));
       }
       if (!m_Aura->m_DB->Commit()) {
         LOG_APP_IF(LogLevel::kWarning, "[STATS] failed to commit game end player data");
@@ -4674,7 +4677,10 @@ void CGame::EventUserDeleted(GameUser::CGameUser* user, fd_set* /*fd*/, fd_set* 
     CGameController* controllerData = GetGameControllerFromColor(slot->GetColor());
     if (controllerData) {
       controllerData->SetServerLeftCode(static_cast<uint8_t>(user->GetLeftCode()));
-      controllerData->SetLeftGameTime(signed_cast<uint64_t>(m_EffectiveTicks / 1000));
+	  // FIXME: Max game time should be ensured elsewhere.
+	  uint64_t leftGameTime = m_EffectiveTicks / 1000;
+	  assert(leftGameTime <= integer_cast<uint64_t>(numeric_limits<uint32_t>::max()) && "Game time limited to 1193 hours");
+      controllerData->SetLeftGameTime(integer_cast_lossy<uint32_t>(leftGameTime));
     }
 
     // keep track of the last user to leave for the !banlast command
@@ -5903,7 +5909,10 @@ void CGame::EventUserLoaded(GameUser::CGameUser* user)
   const CGameSlot* slot = InspectSlot(GetSIDFromUID(user->GetUID()));
   CGameController* controllerData = GetGameControllerFromColor(slot->GetColor());
   if (controllerData) {
-    controllerData->SetLoadingTime(signed_cast<uint64_t>((user->GetFinishedLoadingTicks() - m_StartedLoadingTicks) / 1000));
+	uint64_t loadingTime = signed_cast<uint64_t>((user->GetFinishedLoadingTicks() - m_StartedLoadingTicks) / 1000);
+	// FIXME: Max loading time should be ensured elsewhere.
+	assert((loadingTime <= integer_cast<uint64_t>(numeric_limits<uint32_t>::max())) && "Loading time limited to 1193 hours");
+    controllerData->SetLoadingTime(integer_cast_lossy<uint32_t>(loadingTime));
   }
 
   if (!m_Config.m_LoadInGame) {

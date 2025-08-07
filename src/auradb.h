@@ -65,19 +65,24 @@ constexpr uint8_t MAP_DATA_TYPE_DESTRUCTABLE = 3u;
 // ... Others
 constexpr uint8_t MAP_DATA_TYPE_ANY = 255u;
 
-constexpr uint8_t FROM_ADD_IDX = 0u;
-constexpr uint8_t FROM_CHECK_IDX = 1u;
-constexpr uint8_t LATEST_GAME_IDX = 2u;
-constexpr uint8_t ALIAS_ADD_IDX = 3u;
-constexpr uint8_t ALIAS_CHECK_IDX = 4u;
-constexpr uint8_t USER_BAN_CHECK_IDX = 5u;
-constexpr uint8_t IP_BAN_CHECK_IDX = 6u;
-constexpr uint8_t MODERATOR_CHECK_IDX = 7u;
-constexpr uint8_t GAME_ADD_IDX = 8u;
-constexpr uint8_t PLAYER_SUMMARY_IDX = 9u;
-constexpr uint8_t UPDATE_PLAYER_START_IDX = 10u;
-constexpr uint8_t UPDATE_PLAYER_END_IDX = 11u;
-constexpr uint8_t STMT_CACHE_SIZE = 12u;
+constexpr size_t FROM_ADD_IDX = 0u;
+constexpr size_t FROM_CHECK_IDX = 1u;
+constexpr size_t LATEST_GAME_IDX = 2u;
+constexpr size_t ALIAS_ADD_IDX = 3u;
+constexpr size_t ALIAS_CHECK_IDX = 4u;
+constexpr size_t USER_BAN_CHECK_IDX = 5u;
+constexpr size_t IP_BAN_CHECK_IDX = 6u;
+constexpr size_t MODERATOR_CHECK_IDX = 7u;
+constexpr size_t GAME_ADD_IDX = 8u;
+constexpr size_t PLAYER_SUMMARY_IDX = 9u;
+constexpr size_t UPDATE_PLAYER_START_IDX = 10u;
+constexpr size_t UPDATE_PLAYER_END_IDX = 11u;
+constexpr size_t DOTA_SUMMARY_IDX = 12u;
+constexpr size_t UPDATE_DOTA_PLAYER_END_IDX = 13u;
+constexpr size_t LATEST_IP_IDX = 14u;
+constexpr size_t IPS_CHECK_IDX = 15u;
+constexpr size_t ALTS_CHECK_IDX = 16u;
+constexpr size_t STMT_CACHE_SIZE = 17u;
 
 /**************
  *** SCHEMA ***
@@ -238,7 +243,7 @@ public:
 // CAuraDB
 //
 
-constexpr int64_t SchemaNumber = 3;
+constexpr int64_t CURRENT_SCHEMA_NUMBER = 3;
 
 #define SCHEMA_CHECK_OK 0u
 #define SCHEMA_CHECK_NONE 1u
@@ -326,7 +331,7 @@ public:
 
   // Players
   void                                        UpdateGamePlayerOnStart(const uint64_t gamePersistentId, const CGameController* controllerData);
-  void                                        UpdateGamePlayerOnEnd(const uint64_t gamePersistentId, const CGameController* controllerData, const uint64_t durationSeconds);
+  void                                        UpdateGamePlayerOnEnd(const uint64_t gamePersistentId, const CGameController* controllerData, const uint32_t durationSeconds);
   [[nodiscard]] CDBGamePlayerSummary          GamePlayerSummaryCheck(const std::string& name, const std::string& server);
   void                                        UpdateDotAPlayerOnEnd(const std::string& name, const std::string& server, GamePlayerResult result, const CDBDotAPlayer* dotaPlayer);
   [[nodiscard]] CDBDotAPlayerSummary          DotAPlayerSummaryCheck(const std::string& name, const std::string& server);

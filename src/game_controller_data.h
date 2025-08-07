@@ -68,11 +68,11 @@ private:
   std::string                           m_Server;
   std::string                           m_IP;
  
-  std::optional<uint64_t>               m_LoadingTime;
+  std::optional<uint32_t>               m_LoadingTime;
 
   uint8_t                               m_ServerLeftCode;
   std::optional<uint8_t>                m_ClientLeftCode;
-  std::optional<uint64_t>               m_LeftGameTime;
+  std::optional<uint32_t>               m_LeftGameTime;
 
 public:
   CGameController(const IndexedGameSlot& idxSlot);
@@ -94,21 +94,21 @@ public:
   [[nodiscard]] inline std::string                                        GetIP() const { return m_IP; }
 
   [[nodiscard]] inline bool                                               GetHasLoadedGame() const { return m_LoadingTime.has_value(); }
-  [[nodiscard]] inline uint64_t                                           GetLoadingGameTime() const { return m_LoadingTime.value(); }
+  [[nodiscard]] inline uint32_t                                           GetLoadingGameTime() const { return m_LoadingTime.value(); }
 
   [[nodiscard]] inline uint8_t                                            GetServerLeftCode() const { return m_ServerLeftCode; }
   [[nodiscard]] inline bool                                               GetHasClientLeftCode() const { return m_ClientLeftCode.has_value(); }
   [[nodiscard]] inline uint8_t                                            GetClientLeftCode() const { return m_ClientLeftCode.value(); }
   [[nodiscard]] inline bool                                               GetHasLeftGame() const { return m_LeftGameTime.has_value(); }
-  [[nodiscard]] inline uint64_t                                           GetLeftGameTime() const { return m_LeftGameTime.value(); }
+  [[nodiscard]] inline uint32_t                                           GetLeftGameTime() const { return m_LeftGameTime.value(); }
 
   inline void SetGameResult(GamePlayerResult nGameResult) { m_GameResult = nGameResult; }
 
-  inline void SetLoadingTime(uint64_t nLoadingTime) { m_LoadingTime = nLoadingTime; }
+  inline void SetLoadingTime(uint32_t nLoadingTime) { m_LoadingTime = nLoadingTime; }
 
   inline void SetServerLeftCode(uint8_t nServerLeftCode) { m_ServerLeftCode = nServerLeftCode; }
   inline void SetClientLeftCode(uint8_t nClientLeftCode) { m_ClientLeftCode = nClientLeftCode; }
-  inline void SetLeftGameTime(uint64_t nGameTime) { m_LeftGameTime = nGameTime; }
+  inline void SetLeftGameTime(uint32_t nGameTime) { m_LeftGameTime = nGameTime; }
 
   [[nodiscard]] std::string GetShortName() const;
 

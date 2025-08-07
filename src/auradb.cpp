@@ -60,6 +60,8 @@
 
 using namespace std;
 
+static_assert((sizeof(int) >= sizeof(int32_t)), "Expected int with size at least 4 bytes");
+
 //
 // CQSLITE3 (wrapper class)
 //
@@ -219,7 +221,7 @@ CAuraDB::CAuraDB(CAura* nAura, CDataBaseConfig* dbConfig)
     m_LatestGameId(0)
 {
   m_StmtCache.reserve(STMT_CACHE_SIZE);
-  uint8_t i = STMT_CACHE_SIZE;
+  size_t i = STMT_CACHE_SIZE;
   while (i--) m_StmtCache[i] = nullptr;
 
   InitMapData();
@@ -245,7 +247,7 @@ CAuraDB::CAuraDB(CAura* nAura, CDataBaseConfig* dbConfig)
       break;
     case SchemaStatus::kIncompatible:
     case SchemaStatus::kLegacyIncompatible:
-      PRINT_IF(LogLevel::kError, "[SQLITE3] legacy database format found ([aura.db] schema_number is " + to_string(schemaNumber) + ", expected " + to_string(SchemaNumber) + ")");
+      PRINT_IF(LogLevel::kError, "[SQLITE3] legacy database format found ([aura.db] schema_number is " + to_string(schemaNumber) + ", expected " + to_string(CURRENT_SCHEMA_NUMBER) + ")");
       PRINT_IF(LogLevel::kNotice, "[SQLITE3] please start over with a clean [aura.db] file to run this Aura version");
       PRINT_IF(LogLevel::kNotice, "[SQLITE3] you SHOULD backup your old [aura.db] file to another folder");
       m_HasError = true;
@@ -314,7 +316,7 @@ CAuraDB::~CAuraDB()
 {
   PRINT_IF(LogLevel::kInfo, "[SQLITE3] closing database [" + PathToString(m_Config.m_File.filename()) + "]");
 
-  uint8_t i = STMT_CACHE_SIZE;
+  size_t i = STMT_CACHE_SIZE;
   while (i--) {
     if (m_StmtCache[i]) m_DB->Finalize(m_StmtCache[i]);
   }
@@ -353,7 +355,7 @@ CAuraDB::SchemaStatus CAuraDB::GetSchemaStatus(int64_t& schemaNumber)
   m_DB->Finalize(Statement);
 
   // I am using 3 as int64.
-  if (schemaNumber == SchemaNumber) {
+  if (schemaNumber == CURRENT_SCHEMA_NUMBER) {
     return SchemaStatus::kOk;
   }
 
@@ -367,9 +369,9 @@ CAuraDB::SchemaStatus CAuraDB::GetSchemaStatus(int64_t& schemaNumber)
   return SchemaStatus::kNone;
 }
 
-void CAuraDB::UpdateSchema(int64_t oldSchemaNumber)
+void CAuraDB::UpdateSchema(int64_t oldCURRENT_SCHEMA_NUMBER)
 {
-  if (oldSchemaNumber > 2) {
+  if (oldCURRENT_SCHEMA_NUMBER > 2) {
     /*
     Print("[AURA] Updating database schema...");
 
@@ -434,10 +436,10 @@ void CAuraDB::Initialize()
   sqlite3_stmt* Statement = nullptr;
   m_DB->Prepare(R"(INSERT INTO config VALUES ( 'schema_number', ? ))", reinterpret_cast<void**>(&Statement));
   if (Statement) {
-    sqlite3_bind_int64(Statement, 1, SchemaNumber);
+    sqlite3_bind_int64(Statement, 1, CURRENT_SCHEMA_NUMBER);
     const int32_t RC = m_DB->Step(Statement);
     if (RC == SQLITE_ERROR) {
-      PRINT_IF(LogLevel::kError, "[SQLITE3] error inserting schema number [" + to_string(SchemaNumber) + "] - " + m_DB->GetError());
+      PRINT_IF(LogLevel::kError, "[SQLITE3] error inserting schema number [" + to_string(CURRENT_SCHEMA_NUMBER) + "] - " + m_DB->GetError());
     }
     m_DB->Finalize(Statement);
   }
@@ -471,11 +473,30 @@ void CAuraDB::PreCompileStatements()
     "ON CONFLICT(name, server) "
     "DO UPDATE SET "
     "latestip = excluded.latestip, "
-    "games = games + 1, "
+    "games = games + excluded.games, "
     "loadingtime = loadingtime + excluded.loadingtime, "
     "duration = duration + excluded.duration, "
     "left = left + excluded.left;",
     &(m_StmtCache[UPDATE_PLAYER_END_IDX]), true
+  );
+  m_DB->Prepare(
+    "INSERT INTO players (name, server, dotas, wins, losses, kills, deaths, creepkills, creepdenies, assists, neutralkills, towerkills, raxkills, courierkills) "
+    "VALUES (?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
+    "ON CONFLICT(name, server) "
+    "DO UPDATE SET "
+    "dotas = dotas + excluded.dotas, "
+    "wins = wins + excluded.wins, "
+    "losses = losses + excluded.losses, "
+    "kills = kills + excluded.kills, "
+    "deaths = deaths + excluded.deaths, "
+    "creepkills = creepkills + excluded.creepkills, "
+    "creepdenies = creepdenies + excluded.creepdenies, "
+    "assists = assists + excluded.assists, "
+    "neutralkills = neutralkills + excluded.neutralkills, "
+    "towerkills = towerkills + excluded.towerkills, "
+    "raxkills = raxkills + excluded.raxkills, "
+    "courierkills = courierkills + excluded.courierkills;",
+    &(m_StmtCache[UPDATE_DOTA_PLAYER_END_IDX]), true
   );
 }
 
@@ -514,10 +535,10 @@ uint64_t CAuraDB::GetLatestHistoryGameId()
   }
 }
 
-void CAuraDB::UpdateLatestHistoryGameId(uint64_t gameId)
+void CAuraDB::UpdateLatestHistoryGameId(uint64_t gamePersistentId)
 {
-  if (gameId < m_LatestGameId) {
-    //PRINT_IF(LogLevel::kDebug, "[SQLITE3] game ID " + to_string(gameId) + " skipped (" + to_string(m_LatestGameId) + " already started)");
+  if (gamePersistentId < m_LatestGameId) {
+    //PRINT_IF(LogLevel::kDebug, "[SQLITE3] game ID " + to_string(gamePersistentId) + " skipped (" + to_string(m_LatestGameId) + " already started)");
     return;
   }
 
@@ -526,26 +547,26 @@ void CAuraDB::UpdateLatestHistoryGameId(uint64_t gameId)
   }
 
   if (!m_StmtCache[LATEST_GAME_IDX]) {
-    //Print("[SQLITE3] prepare error updating latest game id [" + to_string(gameId) + "] - " + m_DB->GetError());
+    //Print("[SQLITE3] prepare error updating latest game id [" + to_string(gamePersistentId) + "] - " + m_DB->GetError());
     return;
   }
 
   bool Success = false;
-  sqlite3_bind_text(static_cast<sqlite3_stmt*>(m_StmtCache[LATEST_GAME_IDX]), 1, "latest_game_id", -1, SQLITE_TRANSIENT);
-  sqlite3_bind_int64(static_cast<sqlite3_stmt*>(m_StmtCache[LATEST_GAME_IDX]), 2, unsigned_to_signed_64(gameId));
+  sqlite3_bind_text(m_StmtCache[LATEST_GAME_IDX], 1, "latest_game_id", -1, SQLITE_TRANSIENT);
+  sqlite3_bind_int64(m_StmtCache[LATEST_GAME_IDX], 2, unsigned_to_signed_64(gamePersistentId));
 
   int32_t RC = m_DB->Step(m_StmtCache[LATEST_GAME_IDX]);
 
   if (RC == SQLITE_DONE) {
     Success = true;
   } else if (RC == SQLITE_ERROR) {
-    PRINT_IF(LogLevel::kError, "[SQLITE3] error updating latest game id [" + to_string(gameId) + "] - " + m_DB->GetError());
+    PRINT_IF(LogLevel::kError, "[SQLITE3] error updating latest game id [" + to_string(gamePersistentId) + "] - " + m_DB->GetError());
   }
 
   m_DB->Reset(m_StmtCache[LATEST_GAME_IDX]);
 
   if (Success) {
-    m_LatestGameId = gameId;
+    m_LatestGameId = gamePersistentId;
   }
 }
 
@@ -584,8 +605,8 @@ bool CAuraDB::ModeratorCheck(const string& server, const string& rawName)
 
   if (m_StmtCache[MODERATOR_CHECK_IDX])
   {
-    sqlite3_bind_text(static_cast<sqlite3_stmt*>(m_StmtCache[MODERATOR_CHECK_IDX]), 1, server.c_str(), -1, SQLITE_TRANSIENT);
-    sqlite3_bind_text(static_cast<sqlite3_stmt*>(m_StmtCache[MODERATOR_CHECK_IDX]), 2, user.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(m_StmtCache[MODERATOR_CHECK_IDX], 1, server.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(m_StmtCache[MODERATOR_CHECK_IDX], 2, user.c_str(), -1, SQLITE_TRANSIENT);
 
     const int32_t RC = m_DB->Step(m_StmtCache[MODERATOR_CHECK_IDX]);
 
@@ -722,24 +743,24 @@ CDBBan* CAuraDB::UserBanCheck(const string& rawName, const string& server, const
 
   if (m_StmtCache[USER_BAN_CHECK_IDX])
   {
-    sqlite3_bind_text(static_cast<sqlite3_stmt*>(m_StmtCache[USER_BAN_CHECK_IDX]), 1, user.c_str(), -1, SQLITE_TRANSIENT);
-    sqlite3_bind_text(static_cast<sqlite3_stmt*>(m_StmtCache[USER_BAN_CHECK_IDX]), 2, server.c_str(), -1, SQLITE_TRANSIENT);
-    sqlite3_bind_text(static_cast<sqlite3_stmt*>(m_StmtCache[USER_BAN_CHECK_IDX]), 3, authserver.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(m_StmtCache[USER_BAN_CHECK_IDX], 1, user.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(m_StmtCache[USER_BAN_CHECK_IDX], 2, server.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(m_StmtCache[USER_BAN_CHECK_IDX], 3, authserver.c_str(), -1, SQLITE_TRANSIENT);
 
     const int32_t RC = m_DB->Step(m_StmtCache[USER_BAN_CHECK_IDX]);
 
     if (RC == SQLITE_ROW) {
-      if (sqlite3_column_count(static_cast<sqlite3_stmt*>(m_StmtCache[USER_BAN_CHECK_IDX])) == 9)
+      if (sqlite3_column_count(m_StmtCache[USER_BAN_CHECK_IDX]) == 9)
       {
-        string Name       = string((char*)sqlite3_column_text(static_cast<sqlite3_stmt*>(m_StmtCache[USER_BAN_CHECK_IDX]), 0));
-        string Server     = string((char*)sqlite3_column_text(static_cast<sqlite3_stmt*>(m_StmtCache[USER_BAN_CHECK_IDX]), 1));
-        string AuthServer = string((char*)sqlite3_column_text(static_cast<sqlite3_stmt*>(m_StmtCache[USER_BAN_CHECK_IDX]), 2));
-        string IP         = string((char*)sqlite3_column_text(static_cast<sqlite3_stmt*>(m_StmtCache[USER_BAN_CHECK_IDX]), 3));
-        string Date       = string((char*)sqlite3_column_text(static_cast<sqlite3_stmt*>(m_StmtCache[USER_BAN_CHECK_IDX]), 4));
-        string Expiry     = string((char*)sqlite3_column_text(static_cast<sqlite3_stmt*>(m_StmtCache[USER_BAN_CHECK_IDX]), 5));
-        int64_t Permanent = sqlite3_column_int(static_cast<sqlite3_stmt*>(m_StmtCache[USER_BAN_CHECK_IDX]), 6);
-        string Moderator  = string((char*)sqlite3_column_text(static_cast<sqlite3_stmt*>(m_StmtCache[USER_BAN_CHECK_IDX]), 7));
-        string Reason     = string((char*)sqlite3_column_text(static_cast<sqlite3_stmt*>(m_StmtCache[USER_BAN_CHECK_IDX]), 8));
+        string Name       = string((char*)sqlite3_column_text(m_StmtCache[USER_BAN_CHECK_IDX], 0));
+        string Server     = string((char*)sqlite3_column_text(m_StmtCache[USER_BAN_CHECK_IDX], 1));
+        string AuthServer = string((char*)sqlite3_column_text(m_StmtCache[USER_BAN_CHECK_IDX], 2));
+        string IP         = string((char*)sqlite3_column_text(m_StmtCache[USER_BAN_CHECK_IDX], 3));
+        string Date       = string((char*)sqlite3_column_text(m_StmtCache[USER_BAN_CHECK_IDX], 4));
+        string Expiry     = string((char*)sqlite3_column_text(m_StmtCache[USER_BAN_CHECK_IDX], 5));
+        int64_t Permanent = sqlite3_column_int(m_StmtCache[USER_BAN_CHECK_IDX], 6);
+        string Moderator  = string((char*)sqlite3_column_text(m_StmtCache[USER_BAN_CHECK_IDX], 7));
+        string Reason     = string((char*)sqlite3_column_text(m_StmtCache[USER_BAN_CHECK_IDX], 8));
 
         Ban = new CDBBan(Name, Server, AuthServer, IP, Date, Expiry, static_cast<bool>(Permanent), Moderator, Reason);
       }
@@ -767,23 +788,23 @@ CDBBan* CAuraDB::IPBanCheck(string ip, const string& authserver)
 
   if (m_StmtCache[IP_BAN_CHECK_IDX])
   {
-    sqlite3_bind_text(static_cast<sqlite3_stmt*>(m_StmtCache[IP_BAN_CHECK_IDX]), 1, ip.c_str(), -1, SQLITE_TRANSIENT);
-    sqlite3_bind_text(static_cast<sqlite3_stmt*>(m_StmtCache[IP_BAN_CHECK_IDX]), 2, authserver.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(m_StmtCache[IP_BAN_CHECK_IDX], 1, ip.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(m_StmtCache[IP_BAN_CHECK_IDX], 2, authserver.c_str(), -1, SQLITE_TRANSIENT);
 
     const int32_t RC = m_DB->Step(m_StmtCache[IP_BAN_CHECK_IDX]);
 
     if (RC == SQLITE_ROW) {
-      if (sqlite3_column_count(static_cast<sqlite3_stmt*>(m_StmtCache[IP_BAN_CHECK_IDX])) == 9)
+      if (sqlite3_column_count(m_StmtCache[IP_BAN_CHECK_IDX]) == 9)
       {
-        string Name       = string((char*)sqlite3_column_text(static_cast<sqlite3_stmt*>(m_StmtCache[IP_BAN_CHECK_IDX]), 0));
-        string Server     = string((char*)sqlite3_column_text(static_cast<sqlite3_stmt*>(m_StmtCache[IP_BAN_CHECK_IDX]), 1));
-        string AuthServer = string((char*)sqlite3_column_text(static_cast<sqlite3_stmt*>(m_StmtCache[IP_BAN_CHECK_IDX]), 2));
-        string IP         = string((char*)sqlite3_column_text(static_cast<sqlite3_stmt*>(m_StmtCache[IP_BAN_CHECK_IDX]), 3));
-        string Date       = string((char*)sqlite3_column_text(static_cast<sqlite3_stmt*>(m_StmtCache[IP_BAN_CHECK_IDX]), 4));
-        string Expiry     = string((char*)sqlite3_column_text(static_cast<sqlite3_stmt*>(m_StmtCache[IP_BAN_CHECK_IDX]), 5));
-        int64_t Permanent = sqlite3_column_int(static_cast<sqlite3_stmt*>(m_StmtCache[IP_BAN_CHECK_IDX]), 6);
-        string Moderator  = string((char*)sqlite3_column_text(static_cast<sqlite3_stmt*>(m_StmtCache[IP_BAN_CHECK_IDX]), 7));
-        string Reason     = string((char*)sqlite3_column_text(static_cast<sqlite3_stmt*>(m_StmtCache[IP_BAN_CHECK_IDX]), 8));
+        string Name       = string((char*)sqlite3_column_text(m_StmtCache[IP_BAN_CHECK_IDX], 0));
+        string Server     = string((char*)sqlite3_column_text(m_StmtCache[IP_BAN_CHECK_IDX], 1));
+        string AuthServer = string((char*)sqlite3_column_text(m_StmtCache[IP_BAN_CHECK_IDX], 2));
+        string IP         = string((char*)sqlite3_column_text(m_StmtCache[IP_BAN_CHECK_IDX], 3));
+        string Date       = string((char*)sqlite3_column_text(m_StmtCache[IP_BAN_CHECK_IDX], 4));
+        string Expiry     = string((char*)sqlite3_column_text(m_StmtCache[IP_BAN_CHECK_IDX], 5));
+        int64_t Permanent = sqlite3_column_int(m_StmtCache[IP_BAN_CHECK_IDX], 6);
+        string Moderator  = string((char*)sqlite3_column_text(m_StmtCache[IP_BAN_CHECK_IDX], 7));
+        string Reason     = string((char*)sqlite3_column_text(m_StmtCache[IP_BAN_CHECK_IDX], 8));
 
         Ban = new CDBBan(Name, Server, AuthServer, IP, Date, Expiry, static_cast<bool>(Permanent), Moderator, Reason);
       }
@@ -949,11 +970,11 @@ void CAuraDB::UpdateGamePlayerOnStart(const uint64_t gamePersistentId, const CGa
     return;
   }
 
-  sqlite3_bind_text(static_cast<sqlite3_stmt*>(m_StmtCache[UPDATE_PLAYER_START_IDX]), 1, lowerName.c_str(), -1, SQLITE_TRANSIENT);
-  sqlite3_bind_text(static_cast<sqlite3_stmt*>(m_StmtCache[UPDATE_PLAYER_START_IDX]), 2, server.c_str(), -1, SQLITE_TRANSIENT);
-  sqlite3_bind_text(static_cast<sqlite3_stmt*>(m_StmtCache[UPDATE_PLAYER_START_IDX]), 3, ip.c_str(), -1, SQLITE_TRANSIENT);
-  sqlite3_bind_text(static_cast<sqlite3_stmt*>(m_StmtCache[UPDATE_PLAYER_START_IDX]), 4, ip.c_str(), -1, SQLITE_TRANSIENT);
-  sqlite3_bind_int64(static_cast<sqlite3_stmt*>(m_StmtCache[UPDATE_PLAYER_START_IDX]), 5, unsigned_to_signed_64(gamePersistentId));
+  sqlite3_bind_text(m_StmtCache[UPDATE_PLAYER_START_IDX], 1, lowerName.c_str(), -1, SQLITE_TRANSIENT);
+  sqlite3_bind_text(m_StmtCache[UPDATE_PLAYER_START_IDX], 2, server.c_str(), -1, SQLITE_TRANSIENT);
+  sqlite3_bind_text(m_StmtCache[UPDATE_PLAYER_START_IDX], 3, ip.c_str(), -1, SQLITE_TRANSIENT);
+  sqlite3_bind_text(m_StmtCache[UPDATE_PLAYER_START_IDX], 4, ip.c_str(), -1, SQLITE_TRANSIENT);
+  sqlite3_bind_int64(m_StmtCache[UPDATE_PLAYER_START_IDX], 5, unsigned_to_signed_64(gamePersistentId));
 
   const int32_t RC = m_DB->Step(m_StmtCache[UPDATE_PLAYER_START_IDX]);
 
@@ -964,7 +985,7 @@ void CAuraDB::UpdateGamePlayerOnStart(const uint64_t gamePersistentId, const CGa
   m_DB->Reset(m_StmtCache[UPDATE_PLAYER_START_IDX]);
 }
 
-void CAuraDB::UpdateGamePlayerOnEnd(const uint64_t /*gamePersistentId*/, const CGameController* controllerData, const uint64_t durationSeconds)
+void CAuraDB::UpdateGamePlayerOnEnd(const uint64_t /*gamePersistentId*/, const CGameController* controllerData, const uint32_t durationSeconds)
 {
   if (!controllerData || controllerData->GetType() != GameControllerType::kUser || controllerData->GetIsObserver()) {
     return;
@@ -972,8 +993,9 @@ void CAuraDB::UpdateGamePlayerOnEnd(const uint64_t /*gamePersistentId*/, const C
   const string lowerName = ToLowerCase(controllerData->GetName());
   const string server = controllerData->GetServer();
   const string ip = controllerData->GetIP();
-  const uint64_t loadingTimeSeconds = controllerData->GetLoadingGameTime();
-  const uint64_t leftTimeSeconds = controllerData->GetLeftGameTime();
+  const int64_t storedLoadingSeconds = signed_cast<int64_t>(controllerData->GetLoadingGameTime());
+  const int64_t storedLeftSeconds = signed_cast<int64_t>(controllerData->GetLeftGameTime());
+  const int64_t storedDurationSeconds = signed_cast<int64_t>(durationSeconds / 1000);
 
   if (!m_StmtCache[UPDATE_PLAYER_END_IDX]) {
     m_DB->Prepare(
@@ -982,7 +1004,7 @@ void CAuraDB::UpdateGamePlayerOnEnd(const uint64_t /*gamePersistentId*/, const C
       "ON CONFLICT(name, server) "
       "DO UPDATE SET "
       "latestip = excluded.latestip, "
-      "games = games + 1, "
+      "games = games + excluded.games, "
       "loadingtime = loadingtime + excluded.loadingtime, "
       "duration = duration + excluded.duration, "
       "left = left + excluded.left;",
@@ -996,18 +1018,18 @@ void CAuraDB::UpdateGamePlayerOnEnd(const uint64_t /*gamePersistentId*/, const C
     return;
   }
 
-  sqlite3_bind_text(static_cast<sqlite3_stmt*>(m_StmtCache[UPDATE_PLAYER_END_IDX]), 1, lowerName.c_str(), -1, SQLITE_TRANSIENT);
-  sqlite3_bind_text(static_cast<sqlite3_stmt*>(m_StmtCache[UPDATE_PLAYER_END_IDX]), 2, server.c_str(), -1, SQLITE_TRANSIENT);
-  sqlite3_bind_text(static_cast<sqlite3_stmt*>(m_StmtCache[UPDATE_PLAYER_END_IDX]), 3, ip.c_str(), -1, SQLITE_TRANSIENT);
-  sqlite3_bind_text(static_cast<sqlite3_stmt*>(m_StmtCache[UPDATE_PLAYER_END_IDX]), 4, ip.c_str(), -1, SQLITE_TRANSIENT);
-  sqlite3_bind_int64(static_cast<sqlite3_stmt*>(m_StmtCache[UPDATE_PLAYER_END_IDX]), 5, loadingTimeSeconds);
-  sqlite3_bind_int64(static_cast<sqlite3_stmt*>(m_StmtCache[UPDATE_PLAYER_END_IDX]), 6, durationSeconds);
-  sqlite3_bind_int64(static_cast<sqlite3_stmt*>(m_StmtCache[UPDATE_PLAYER_END_IDX]), 7, leftTimeSeconds);
+  sqlite3_bind_text(m_StmtCache[UPDATE_PLAYER_END_IDX], 1, lowerName.c_str(), -1, SQLITE_TRANSIENT);
+  sqlite3_bind_text(m_StmtCache[UPDATE_PLAYER_END_IDX], 2, server.c_str(), -1, SQLITE_TRANSIENT);
+  sqlite3_bind_text(m_StmtCache[UPDATE_PLAYER_END_IDX], 3, ip.c_str(), -1, SQLITE_TRANSIENT);
+  sqlite3_bind_text(m_StmtCache[UPDATE_PLAYER_END_IDX], 4, ip.c_str(), -1, SQLITE_TRANSIENT);
+  sqlite3_bind_int64(m_StmtCache[UPDATE_PLAYER_END_IDX], 5, storedLoadingSeconds);
+  sqlite3_bind_int64(m_StmtCache[UPDATE_PLAYER_END_IDX], 6, storedDurationSeconds);
+  sqlite3_bind_int64(m_StmtCache[UPDATE_PLAYER_END_IDX], 7, storedLeftSeconds);
 
   const int32_t RC = m_DB->Step(m_StmtCache[UPDATE_PLAYER_END_IDX]);
 
   if (RC != SQLITE_DONE) {
-    PRINT_IF(LogLevel::kError, "[SQLITE3] error updating gameuser on end [" + lowerName + "@" + server + "] - " + m_DB->GetError());
+    PRINT_IF(LogLevel::kError, Concat("[SQLITE3] error updating gameuser on end [", lowerName, "@", server, "] - ", m_DB->GetError()));
   }
 
   m_DB->Reset(m_StmtCache[UPDATE_PLAYER_END_IDX]);
@@ -1058,7 +1080,7 @@ CDBGamePlayerSummary CAuraDB::GamePlayerSummaryCheck(const string& rawName, cons
           averageLoadingTime = static_cast<float>(static_cast<double>(loadingTime) / totalGames / 1000);
         }
         summary = CDBGamePlayerSummary(
-          signed_cast<uint64_t>(totalGames),
+          signed_cast<uint32_t>(totalGames),
           averageLoadingTime,
           averageLeftPercent
         );
@@ -1072,101 +1094,78 @@ CDBGamePlayerSummary CAuraDB::GamePlayerSummaryCheck(const string& rawName, cons
 
 void CAuraDB::UpdateDotAPlayerOnEnd(const string& name, const string& server, GamePlayerResult gameResult, const CDBDotAPlayer* dotaPlayer)
 {
-  uint32_t kills = dotaPlayer->GetKills();
-  uint32_t deaths = dotaPlayer->GetDeaths();
-  uint32_t assists = dotaPlayer->GetAssists();
-  //uint32_t gold = dotaPlayer->GetGold();
-  uint32_t creepkills = dotaPlayer->GetCreepKills();
-  uint32_t creepdenies = dotaPlayer->GetCreepDenies();
-  uint32_t neutralkills = dotaPlayer->GetNeutralKills();
-  uint32_t towerkills = dotaPlayer->GetTowerKills();
-  uint32_t raxkills = dotaPlayer->GetRaxKills();
-  uint32_t courierkills = dotaPlayer->GetCourierKills();
+  int64_t kills = signed_cast<int64_t>(dotaPlayer->GetKills());
+  int64_t deaths = signed_cast<int64_t>(dotaPlayer->GetDeaths());
+  int64_t assists = signed_cast<int64_t>(dotaPlayer->GetAssists());
+  //uint64_t gold = signed_cast<int64_t>(dotaPlayer->GetGold());
+  int64_t creepkills = signed_cast<int64_t>(dotaPlayer->GetCreepKills());
+  int64_t creepdenies = signed_cast<int64_t>(dotaPlayer->GetCreepDenies());
+  int64_t neutralkills = signed_cast<int64_t>(dotaPlayer->GetNeutralKills());
+  int64_t towerkills = signed_cast<int64_t>(dotaPlayer->GetTowerKills());
+  int64_t raxkills = signed_cast<int64_t>(dotaPlayer->GetRaxKills());
+  int64_t courierkills = signed_cast<int64_t>(dotaPlayer->GetCourierKills());
 
-  bool          Success = false;
-  sqlite3_stmt* Statement = nullptr;
   string lowerName = ToLowerCase(name);
-  m_DB->Prepare("SELECT dotas, wins, losses, kills, deaths, creepkills, creepdenies, assists, neutralkills, towerkills, raxkills, courierkills FROM players WHERE name=? AND server=?", reinterpret_cast<void**>(&Statement));
 
-  int32_t  RC;
-  uint32_t Dotas  = 1;
-  uint32_t Wins   = 0;
-  uint32_t Losses = 0;
+  if (!m_StmtCache[UPDATE_DOTA_PLAYER_END_IDX]) {
+    m_DB->Prepare(
+      "INSERT INTO players (name, server, dotas, wins, losses, kills, deaths, creepkills, creepdenies, assists, neutralkills, towerkills, raxkills, courierkills) "
+      "VALUES (?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
+      "ON CONFLICT(name, server) "
+      "DO UPDATE SET "
+      "dotas = dotas + excluded.dotas, "
+      "wins = wins + excluded.wins, "
+      "losses = losses + excluded.losses, "
+      "kills = kills + excluded.kills, "
+      "deaths = deaths + excluded.deaths, "
+      "creepkills = creepkills + excluded.creepkills, "
+      "creepdenies = creepdenies + excluded.creepdenies, "
+      "assists = assists + excluded.assists, "
+      "neutralkills = neutralkills + excluded.neutralkills, "
+      "towerkills = towerkills + excluded.towerkills, "
+      "raxkills = raxkills + excluded.raxkills, "
+      "courierkills = courierkills + excluded.courierkills;",
+      &(m_StmtCache[UPDATE_DOTA_PLAYER_END_IDX]), true
+    );
+  }
 
-  if (gameResult == GamePlayerResult::kWinner)
-    ++Wins;
-  else if (gameResult == GamePlayerResult::kLoser)
-    ++Losses;
-
-  if (Statement == nullptr)
-  {
-    Print("[SQLITE3] prepare error adding dotaplayer [" + lowerName + "@" + server + "] - " + m_DB->GetError());
+  if (m_StmtCache[UPDATE_DOTA_PLAYER_END_IDX] == nullptr) {
+    PRINT_IF(LogLevel::kWarning, Concat("[SQLITE3] prepare error updating dotaplayer [", lowerName, "@", server, "] - ", m_DB->GetError()));
     return;
   }
 
-  sqlite3_bind_text(Statement, 1, lowerName.c_str(), -1, SQLITE_TRANSIENT);
-  sqlite3_bind_text(Statement, 2, server.c_str(), -1, SQLITE_TRANSIENT);
-
-  RC = m_DB->Step(Statement);
-
-  if (RC == SQLITE_ROW)
-  {
-    Dotas += static_cast<uint32_t>(sqlite3_column_int(Statement, 0));
-    Wins += static_cast<uint32_t>(sqlite3_column_int(Statement, 1));
-    Losses += static_cast<uint32_t>(sqlite3_column_int(Statement, 2));
-    kills += static_cast<uint32_t>(sqlite3_column_int(Statement, 3));
-    deaths += static_cast<uint32_t>(sqlite3_column_int(Statement, 4));
-    creepkills += static_cast<uint32_t>(sqlite3_column_int(Statement, 5));
-    creepdenies += static_cast<uint32_t>(sqlite3_column_int(Statement, 6));
-    assists += static_cast<uint32_t>(sqlite3_column_int(Statement, 7));
-    neutralkills += static_cast<uint32_t>(sqlite3_column_int(Statement, 8));
-    towerkills += static_cast<uint32_t>(sqlite3_column_int(Statement, 9));
-    raxkills += static_cast<uint32_t>(sqlite3_column_int(Statement, 10));
-    courierkills += static_cast<uint32_t>(sqlite3_column_int(Statement, 11));
-
-    Success = true;
+  int64_t deltaWins = 0;
+  int64_t deltaLosses = 0;
+  switch (gameResult) {
+    case GamePlayerResult::kWinner:
+      deltaWins = 1;
+      break;
+    case GamePlayerResult::kLoser:
+      deltaLosses = 1;
+      break;
   }
 
-  m_DB->Finalize(Statement);
+  sqlite3_bind_text(m_StmtCache[UPDATE_DOTA_PLAYER_END_IDX], 1, lowerName.c_str(), -1, SQLITE_TRANSIENT);
+  sqlite3_bind_text(m_StmtCache[UPDATE_DOTA_PLAYER_END_IDX], 2, server.c_str(), -1, SQLITE_TRANSIENT);
+  sqlite3_bind_int64(m_StmtCache[UPDATE_DOTA_PLAYER_END_IDX], 3, deltaWins);
+  sqlite3_bind_int64(m_StmtCache[UPDATE_DOTA_PLAYER_END_IDX], 4, deltaLosses);
+  sqlite3_bind_int64(m_StmtCache[UPDATE_DOTA_PLAYER_END_IDX], 5, kills);
+  sqlite3_bind_int64(m_StmtCache[UPDATE_DOTA_PLAYER_END_IDX], 6, deaths);
+  sqlite3_bind_int64(m_StmtCache[UPDATE_DOTA_PLAYER_END_IDX], 7, creepkills);
+  sqlite3_bind_int64(m_StmtCache[UPDATE_DOTA_PLAYER_END_IDX], 8, creepdenies);
+  sqlite3_bind_int64(m_StmtCache[UPDATE_DOTA_PLAYER_END_IDX], 9, assists);
+  sqlite3_bind_int64(m_StmtCache[UPDATE_DOTA_PLAYER_END_IDX], 10, neutralkills);
+  sqlite3_bind_int64(m_StmtCache[UPDATE_DOTA_PLAYER_END_IDX], 11, towerkills);
+  sqlite3_bind_int64(m_StmtCache[UPDATE_DOTA_PLAYER_END_IDX], 12, raxkills);
+  sqlite3_bind_int64(m_StmtCache[UPDATE_DOTA_PLAYER_END_IDX], 13, courierkills);
 
-  // there must be a row already because we add one, if not present, in UpdateGamePlayerOnStart( ) before the call to UpdateDotAPlayerOnEnd( )
-
-  if (Success == false)
-  {
-    PRINT_IF(LogLevel::kError, "[SQLITE3] error adding dotaplayer [" + lowerName + "@" + server + "] - no existing row");
-    return;
-  }
-
-  m_DB->Prepare("UPDATE players SET dotas=?, wins=?, losses=?, kills=?, deaths=?, creepkills=?, creepdenies=?, assists=?, neutralkills=?, towerkills=?, raxkills=?, courierkills=? WHERE name=? AND server=?", reinterpret_cast<void**>(&Statement));
-
-  if (Statement == nullptr)
-  {
-    Print("[SQLITE3] prepare error updating dotaplayer [" + lowerName + "@" + server + "] - " + m_DB->GetError());
-    return;
-  }
-
-  sqlite3_bind_int(Statement, 1, Dotas);
-  sqlite3_bind_int(Statement, 2, Wins);
-  sqlite3_bind_int(Statement, 3, Losses);
-  sqlite3_bind_int(Statement, 4, kills);
-  sqlite3_bind_int(Statement, 5, deaths);
-  sqlite3_bind_int(Statement, 6, creepkills);
-  sqlite3_bind_int(Statement, 7, creepdenies);
-  sqlite3_bind_int(Statement, 8, assists);
-  sqlite3_bind_int(Statement, 9, neutralkills);
-  sqlite3_bind_int(Statement, 10, towerkills);
-  sqlite3_bind_int(Statement, 11, raxkills);
-  sqlite3_bind_int(Statement, 12, courierkills);
-  sqlite3_bind_text(Statement, 13, lowerName.c_str(), -1, SQLITE_TRANSIENT);
-  sqlite3_bind_text(Statement, 14, server.c_str(), -1, SQLITE_TRANSIENT);
-
-  RC = m_DB->Step(Statement);
+  const int32_t RC = m_DB->Step(m_StmtCache[UPDATE_DOTA_PLAYER_END_IDX]);
 
   if (RC != SQLITE_DONE) {
-    PRINT_IF(LogLevel::kError, "[SQLITE3] error adding dotaplayer [" + lowerName + "@" + server + "] - " + m_DB->GetError());
+    PRINT_IF(LogLevel::kError, Concat("[SQLITE3] error updating dotaplayer on end [", lowerName, "@", server, "] - ", m_DB->GetError()));
   }
 
-  m_DB->Finalize(Statement);
+  m_DB->Reset(m_StmtCache[UPDATE_DOTA_PLAYER_END_IDX]);
 }
 
 CDBDotAPlayerSummary CAuraDB::DotAPlayerSummaryCheck(const string& rawName, const string& server)
@@ -1390,7 +1389,7 @@ vector<string> CAuraDB::GetAlts(const string& addressLiteral)
   return altAccounts;
 }
 
-bool CAuraDB::GameAdd(const uint64_t gameId, const string& creator, const string& mapClientPath, const string& mapServerPath, const array<uint8_t, 4>& mapCRC32, const vector<string>& playerNames, const vector<uint8_t>& playerIDs, const vector<uint8_t>& slotIDs, const vector<uint8_t>& colorIDs)
+bool CAuraDB::GameAdd(const uint64_t gamePersistentId, const string& creator, const string& mapClientPath, const string& mapServerPath, const array<uint8_t, 4>& mapCRC32, const vector<string>& playerNames, const vector<uint8_t>& playerIDs, const vector<uint8_t>& slotIDs, const vector<uint8_t>& colorIDs)
 {
   string storageCRC32 = ByteArrayToDecString(mapCRC32);
   string storagePlayerNames = JoinStrings(playerNames);
@@ -1407,12 +1406,12 @@ bool CAuraDB::GameAdd(const uint64_t gameId, const string& creator, const string
   }
 
   if (!m_StmtCache[GAME_ADD_IDX]) {
-    Print("[SQLITE3] prepare error adding game [" + to_string(gameId) + ", created by " + creator + "] - " + m_DB->GetError());
+    PRINT_IF(LogLevel::kWarning, "[SQLITE3] prepare error adding game [" + to_string(gamePersistentId) + ", created by " + creator + "] - " + m_DB->GetError());
     return false;
   }
 
   bool Success = false;
-  sqlite3_bind_int64(m_StmtCache[GAME_ADD_IDX], 1, unsigned_to_signed_64(gameId));
+  sqlite3_bind_int64(m_StmtCache[GAME_ADD_IDX], 1, unsigned_to_signed_64(gamePersistentId));
   sqlite3_bind_text(m_StmtCache[GAME_ADD_IDX], 2, creator.c_str(), -1, SQLITE_TRANSIENT);
   sqlite3_bind_text(m_StmtCache[GAME_ADD_IDX], 3, mapClientPath.c_str(), -1, SQLITE_TRANSIENT); // !! do not change mapClientPath to std::string_view
   sqlite3_bind_text(m_StmtCache[GAME_ADD_IDX], 4, mapServerPath.c_str(), -1, SQLITE_TRANSIENT);
@@ -1425,7 +1424,7 @@ bool CAuraDB::GameAdd(const uint64_t gameId, const string& creator, const string
   if (RC == SQLITE_DONE) {
     Success = true;
   } else if (RC == SQLITE_ERROR) {
-    PRINT_IF(LogLevel::kError, "[SQLITE3] error adding game [" + to_string(gameId) + ", created by " + creator + "] - " + m_DB->GetError());
+    PRINT_IF(LogLevel::kError, "[SQLITE3] error adding game [" + to_string(gamePersistentId) + ", created by " + creator + "] - " + m_DB->GetError());
   }
 
   m_DB->Reset(m_StmtCache[GAME_ADD_IDX]);
@@ -1505,7 +1504,7 @@ void CAuraDB::SaveDotAStats(Dota::CDotaStats* dotaStats)
     Print(dotaStats->GetLogPrefix() + "unable to begin database transaction, data not saved");
 }
 
-CDBGameSummary* CAuraDB::GameCheck(const uint64_t gameId)
+CDBGameSummary* CAuraDB::GameCheck(const uint64_t gamePersistentId)
 {
   string playerNames;
   string playerIDs;
@@ -1514,7 +1513,7 @@ CDBGameSummary* CAuraDB::GameCheck(const uint64_t gameId)
   sqlite3_stmt* Statement = nullptr;
   m_DB->Prepare(R"(SELECT playernames, playerids FROM games WHERE id=?)", reinterpret_cast<void**>(&Statement));
   if (Statement) {
-    sqlite3_bind_int64(Statement, 1, unsigned_to_signed_64(gameId));
+    sqlite3_bind_int64(Statement, 1, unsigned_to_signed_64(gamePersistentId));
     const int32_t RC = m_DB->Step(Statement);
 
     if (RC == SQLITE_ROW) {
@@ -1523,10 +1522,10 @@ CDBGameSummary* CAuraDB::GameCheck(const uint64_t gameId)
         playerIDs = string((char*)sqlite3_column_text(Statement, 1));
         success = true;
       } else {
-        Print("[SQLITE3] error checking game [" + to_string(gameId) + "] - row doesn't have 2 columns");
+        Print("[SQLITE3] error checking game [" + to_string(gamePersistentId) + "] - row doesn't have 2 columns");
       }
     } else if (RC == SQLITE_ERROR) {
-      PRINT_IF(LogLevel::kError, "[SQLITE3] error checking game [" + to_string(gameId) + "] " + m_DB->GetError());
+      PRINT_IF(LogLevel::kError, "[SQLITE3] error checking game [" + to_string(gamePersistentId) + "] " + m_DB->GetError());
     } else {
       Print("[SQLITE3] error checking game return code " + to_string(RC));
     }
@@ -1535,7 +1534,7 @@ CDBGameSummary* CAuraDB::GameCheck(const uint64_t gameId)
   }
 
   if (success) {
-    return new CDBGameSummary(gameId, playerNames, playerIDs);
+    return new CDBGameSummary(gamePersistentId, playerNames, playerIDs);
   } else {
     return nullptr;
   }
@@ -1552,19 +1551,19 @@ string CAuraDB::FromCheck(uint32_t ip)
   }
 
   if (!m_StmtCache[FROM_CHECK_IDX]) {
-    Print("[SQLITE3] prepare error checking iptocountry [" + to_string(ip) + "] - " + m_DB->GetError());
+    PRINT_IF(LogLevel::kWarning, "[SQLITE3] prepare error checking iptocountry [" + to_string(ip) + "] - " + m_DB->GetError());
     return From;
   }
 
-  sqlite3_bind_int(static_cast<sqlite3_stmt*>(m_StmtCache[FROM_CHECK_IDX]), 1, unsigned_to_signed_32(ip));
-  sqlite3_bind_int(static_cast<sqlite3_stmt*>(m_StmtCache[FROM_CHECK_IDX]), 2, unsigned_to_signed_32(ip));
+  sqlite3_bind_int(m_StmtCache[FROM_CHECK_IDX], 1, unsigned_to_signed_32(ip));
+  sqlite3_bind_int(m_StmtCache[FROM_CHECK_IDX], 2, unsigned_to_signed_32(ip));
 
   const int32_t RC = m_DB->Step(m_StmtCache[FROM_CHECK_IDX]);
 
   if (RC == SQLITE_ROW)
   {
-    if (sqlite3_column_count(static_cast<sqlite3_stmt*>(m_StmtCache[FROM_CHECK_IDX])) == 1)
-      From = string((char*)sqlite3_column_text(static_cast<sqlite3_stmt*>(m_StmtCache[FROM_CHECK_IDX]), 0));
+    if (sqlite3_column_count(m_StmtCache[FROM_CHECK_IDX]) == 1)
+      From = string((char*)sqlite3_column_text(m_StmtCache[FROM_CHECK_IDX], 0));
     else
       Print("[SQLITE3] error checking iptocountry [" + to_string(ip) + "] - row doesn't have 1 column");
   }
@@ -1588,16 +1587,16 @@ bool CAuraDB::FromAdd(uint32_t ip1, uint32_t ip2, const string& country)
   }
 
   if (!m_StmtCache[FROM_ADD_IDX]) {
-    Print("[SQLITE3] prepare error adding iptocountry [" + to_string(ip1) + " : " + to_string(ip2) + " : " + country + "] - " + m_DB->GetError());
+    PRINT_IF(LogLevel::kWarning, "[SQLITE3] prepare error adding iptocountry [" + to_string(ip1) + " : " + to_string(ip2) + " : " + country + "] - " + m_DB->GetError());
     return false;
   }
 
   // Losslessly converting IPs to signed 32-bits integers rather than to same-value 64-bits integers
   // This saves ~400 KB in initial database size, down from 3.6 MB to just about 3.17 MB
   // (for reference, ip-to-country.csv is 5.92 MB)
-  sqlite3_bind_int(static_cast<sqlite3_stmt*>(m_StmtCache[FROM_ADD_IDX]), 1, unsigned_to_signed_32(ip1));
-  sqlite3_bind_int(static_cast<sqlite3_stmt*>(m_StmtCache[FROM_ADD_IDX]), 2, unsigned_to_signed_32(ip2));
-  sqlite3_bind_text(static_cast<sqlite3_stmt*>(m_StmtCache[FROM_ADD_IDX]), 3, country.c_str(), -1, SQLITE_TRANSIENT);
+  sqlite3_bind_int(m_StmtCache[FROM_ADD_IDX], 1, unsigned_to_signed_32(ip1));
+  sqlite3_bind_int(m_StmtCache[FROM_ADD_IDX], 2, unsigned_to_signed_32(ip2));
+  sqlite3_bind_text(m_StmtCache[FROM_ADD_IDX], 3, country.c_str(), -1, SQLITE_TRANSIENT);
 
   int32_t RC = m_DB->Step(m_StmtCache[FROM_ADD_IDX]);
 
@@ -1624,12 +1623,12 @@ bool CAuraDB::AliasAdd(const string& alias, const string& target)
   }
 
   if (!m_StmtCache[ALIAS_ADD_IDX]) {
-    Print("[SQLITE3] prepare error adding alias [" + alias + ": " + target + "] - " + m_DB->GetError());
+    PRINT_IF(LogLevel::kWarning, "[SQLITE3] prepare error adding alias [" + alias + ": " + target + "] - " + m_DB->GetError());
     return false;
   }
 
-  sqlite3_bind_text(static_cast<sqlite3_stmt*>(m_StmtCache[ALIAS_ADD_IDX]), 1, alias.c_str(), -1, SQLITE_TRANSIENT);
-  sqlite3_bind_text(static_cast<sqlite3_stmt*>(m_StmtCache[ALIAS_ADD_IDX]), 2, target.c_str(), -1, SQLITE_TRANSIENT);
+  sqlite3_bind_text(m_StmtCache[ALIAS_ADD_IDX], 1, alias.c_str(), -1, SQLITE_TRANSIENT);
+  sqlite3_bind_text(m_StmtCache[ALIAS_ADD_IDX], 2, target.c_str(), -1, SQLITE_TRANSIENT);
 
   int32_t RC = m_DB->Step(m_StmtCache[ALIAS_ADD_IDX]);
 
@@ -1656,11 +1655,11 @@ string CAuraDB::AliasCheck(const string& alias)
   }
 
   if (!m_StmtCache[ALIAS_CHECK_IDX]) {
-    Print("[SQLITE3] prepare error checking alias [" + alias + "] - " + m_DB->GetError());
+    PRINT_IF(LogLevel::kWarning, "[SQLITE3] prepare error checking alias [" + alias + "] - " + m_DB->GetError());
     return value;
   }
 
-  sqlite3_bind_text(static_cast<sqlite3_stmt*>(m_StmtCache[ALIAS_CHECK_IDX]), 1, alias.c_str(), -1, SQLITE_TRANSIENT);
+  sqlite3_bind_text(m_StmtCache[ALIAS_CHECK_IDX], 1, alias.c_str(), -1, SQLITE_TRANSIENT);
 
   const int32_t RC = m_DB->Step(m_StmtCache[ALIAS_CHECK_IDX]);
 
@@ -1670,8 +1669,8 @@ string CAuraDB::AliasCheck(const string& alias)
   }
 
   if (RC == SQLITE_ROW) {
-    if (sqlite3_column_count(static_cast<sqlite3_stmt*>(m_StmtCache[ALIAS_CHECK_IDX])) == 1) {
-      value = string((char*)sqlite3_column_text(static_cast<sqlite3_stmt*>(m_StmtCache[ALIAS_CHECK_IDX]), 0));
+    if (sqlite3_column_count(m_StmtCache[ALIAS_CHECK_IDX]) == 1) {
+      value = string((char*)sqlite3_column_text(m_StmtCache[ALIAS_CHECK_IDX], 0));
     } else {
       Print("[SQLITE3] error checking alias [" + alias + "] - row doesn't have 1 column");
     }
