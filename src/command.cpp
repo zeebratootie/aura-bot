@@ -1667,7 +1667,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
       }
 
       CStreamIOSocket* socket = targetPlayer->GetSocket();
-      SendReply("Segmentation: " + to_string(m_SegmentationStats[0]) + ", " + to_string(m_SegmentationStats[1]) + ", " + to_string(m_SegmentationStats[2]) + ", " + to_string(m_SegmentationStats[3]) + ", " + to_string(m_SegmentationStats[4]));
+      SendReply("Segmentation: " + to_string(socket->m_SegmentationStats[0]) + ", " + to_string(socket->m_SegmentationStats[1]) + ", " + to_string(socket->m_SegmentationStats[2]) + ", " + to_string(socket->m_SegmentationStats[3]) + ", " + to_string(socket->m_SegmentationStats[4]));
       break;
     }
 
