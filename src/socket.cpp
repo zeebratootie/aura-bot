@@ -180,7 +180,7 @@ string CSocket::GetErrorString() const
       return "Connection reset by peer";
   }
 
-  return "UNKNOWN ERROR (" + to_string(m_Error) + ")";
+  return Concat("UNKNOWN ERROR (", to_string(m_Error), ")");
 }
 
 void CSocket::SetFD(fd_set* fd, fd_set* send_fd, int* nfds)
@@ -258,12 +258,6 @@ CStreamIOSocket::CStreamIOSocket(uint8_t nFamily, string nName)
 
   // disable delayed acks
   SetQuickAck(true);
-
-  m_SegmentationStats[0] = 0;
-  m_SegmentationStats[1] = 0;
-  m_SegmentationStats[2] = 0;
-  m_SegmentationStats[3] = 0;
-  m_SegmentationStats[4] = 0;
 }
 
 CStreamIOSocket::CStreamIOSocket(SOCKET nSocket, sockaddr_storage& nAddress, CTCPServer* nServer, const uint16_t nCounter)
@@ -283,26 +277,12 @@ CStreamIOSocket::CStreamIOSocket(SOCKET nSocket, sockaddr_storage& nAddress, CTC
   fcntl(m_Socket, F_SETFL, fcntl(m_Socket, F_GETFL) | O_NONBLOCK);
 #endif
 
-  m_SegmentationStats[0] = 0;
-  m_SegmentationStats[1] = 0;
-  m_SegmentationStats[2] = 0;
-  m_SegmentationStats[3] = 0;
-  m_SegmentationStats[4] = 0;
-}
-
-string CStreamIOSocket::GetName() const
-{
-  string name = CSocket::GetName();
-  if (name.empty() && m_Server != nullptr) {
-    return m_Server->GetName() + "-C" + to_string(m_Counter);
-  }
-  return name;
+  m_Name = Concat(m_Server->GetName(), "-C", to_string(m_Counter));
 }
 
 CStreamIOSocket::~CStreamIOSocket()
 {
   m_Server = nullptr;
-  Print("[TCPSOCKET] (" + GetName() +") segmentation - " + to_string(m_SegmentationStats[0]) + ", " + to_string(m_SegmentationStats[1]) + ", " + to_string(m_SegmentationStats[2]) + ", " + to_string(m_SegmentationStats[3]) + ", " + to_string(m_SegmentationStats[4]));
 }
 
 void CStreamIOSocket::SetNoDelay(const bool noDelay)
@@ -394,17 +374,27 @@ bool CStreamIOSocket::DoRecv(fd_set* fd)
     return success;
 
   // data is waiting, receive it
-  char buffer[1024];
-  int c;
+  char buffer[TCP_BUFFER_SIZE];
   size_t segmentCount = 0;
-  while ((c = recv(m_Socket, buffer, 1024, 0)) > 0) {
-    // success! add the received data to the buffer
-    m_RecvBuffer += string(buffer, static_cast<string::size_type>(c));
+  auto c = recv(m_Socket, buffer, sizeof(buffer), 0);
+  if (c > 0) {
+    m_RecvBuffer.append(buffer, static_cast<string::size_type>(c));
     if (!success) {
       m_LastRecv = GetTicks();
       success = true;
     }
     segmentCount++;
+
+    // Segmentation mainly happens when receiving game lists from PvPGN connections.
+    // W3GS packets may also be segmented just as the game loads.
+    if (c >= TCP_LOOP_SEGMENTS_THRESHOLD) { // for size of 4096, threshold is 2905 = 4096 / sqrt(2)
+      while ((c = recv(m_Socket, buffer, sizeof(buffer), 0)) > 0) {
+        m_RecvBuffer.append(buffer, static_cast<string::size_type>(c));
+        // Limit to TCP_MAX_SEGMENTS_PER_READABLE=3 segments per loop iteration to
+        // prevent a single busy socket from monopolizing the event loop and starving other connections.
+        if (++segmentCount >= TCP_MAX_SEGMENTS_PER_READABLE) break;
+      }
+    }
   }
 
   if (c == SOCKET_ERROR && !GetIsWouldBlock(GetLastOSError())) {
@@ -412,20 +402,15 @@ bool CStreamIOSocket::DoRecv(fd_set* fd)
     m_HasError = true;
     m_Error = GetLastOSError();
     if (m_LogErrors) {
-      Print("[TCPSOCKET] (" + GetName() +") error (recv) - " + GetErrorString());
+      Print(Concat("[TCPSOCKET] (", GetName(), ") error (recv) - ", GetErrorString()));
     }
   } else if (c == 0) {
     // the other end closed the connection
     if (m_LogErrors) {
-      Print("[TCPSOCKET] (" + GetName() +") remote terminated the connection");
+      Print(Concat("[TCPSOCKET] (", GetName(), ") remote terminated the connection"));
     }
     m_HasFin = true;
     m_LogErrors = false;
-  }
-  if (success) {
-    size_t group = segmentCount - 1;
-    if (group >= 4) group = 4;
-    m_SegmentationStats[group]++;
   }
   return success;
 }
@@ -438,8 +423,8 @@ void CStreamIOSocket::Discard(fd_set* fd)
   if (!FD_ISSET(m_Socket, fd))
     return;
 
-  char buffer[1024];
-  recv(m_Socket, buffer, 1024, 0);
+  char buffer[TCP_BUFFER_SIZE];
+  recv(m_Socket, buffer, sizeof(buffer), 0);
 }
 
 optional<uint32_t> CStreamIOSocket::GetRTT() const
@@ -479,7 +464,7 @@ void CStreamIOSocket::DoSend(fd_set* send_fd)
       m_HasError = true;
       m_Error = GetLastOSError();
       if (m_LogErrors) {
-        Print("[TCPSOCKET] (" + GetName() +") error (send) - " + GetErrorString());
+        Print(Concat("[TCPSOCKET] (", GetName(), ") error (send) - ", GetErrorString()));
       }
       return;
     }
@@ -547,14 +532,14 @@ void CTCPClient::Connect(const optional<sockaddr_storage>& localAddress, const s
   if (localAddress.has_value()) {
     if (localAddress.value().ss_family != remoteHost.ss_family) {
       m_HasError = true;
-      Print("[TCP] Cannot connect to " + AddressToString(remoteHost) + " from bind address " + AddressToString(localAddress.value()));
+      Print(Concat("[TCP] Cannot connect to ", AddressToString(remoteHost), " from bind address ", AddressToString(localAddress.value())));
       return;
     }
 
     if (::bind(m_Socket, reinterpret_cast<const struct sockaddr*>(&localAddress), sizeof(sockaddr_storage)) == SOCKET_ERROR) {
       m_HasError = true;
       m_Error = GetLastOSError();
-      Print("[TCPCLIENT] (" + GetName() +") error (bind) - " + GetErrorString());
+      Print(Concat("[TCPCLIENT] (", GetName(), ") error (bind) - ", GetErrorString()));
       return;
     }
   }
@@ -570,7 +555,7 @@ void CTCPClient::Connect(const optional<sockaddr_storage>& localAddress, const s
 
       m_HasError = true;
       m_Error = GetLastOSError();
-      Print("[TCPCLIENT] (" + GetName() +") error (connect) - " + GetErrorString());
+      Print(Concat("[TCPCLIENT] (", GetName(), ") error (connect) - ", GetErrorString()));
       return;
     }
   }
@@ -602,7 +587,7 @@ bool CTCPClient::CheckConnect()
   {
     m_HasError = true;
     m_Error = GetLastOSError();
-    Print("[TCPCLIENT] (" + GetName() +") error (connect) - " + GetErrorString());
+    Print(Concat("[TCPCLIENT] (", GetName(), ") error (connect) - ", GetErrorString()));
     return false;
   }
 
@@ -688,7 +673,7 @@ bool CTCPServer::Listen(sockaddr_storage& address, const uint16_t port, bool ret
   }
 
   if (m_HasError && !retry) {
-    Print("[TCP] Failed to listen TCP at port " + to_string(port) + ". Error " + to_string(m_Error));
+    Print(Concat("[TCP] Failed to listen TCP at port ", to_string(port), ". Error ", to_string(m_Error)));
     return false;
   }
 
@@ -729,9 +714,9 @@ bool CTCPServer::Listen(sockaddr_storage& address, const uint16_t port, bool ret
   }
 
   if (m_Family == AF_INET6) {
-    Print("[TCP] IPv6 listening on port " + to_string(m_Port) + " (IPv4 too)");
+    Print(Concat("[TCP] IPv6 listening on port ", to_string(m_Port), " (IPv4 too)"));
   } else {
-    Print("[TCP] IPv4 listening on port " + to_string(m_Port));
+    Print(Concat("[TCP] IPv4 listening on port ", to_string(m_Port)));
   }
   return true;
 }
@@ -936,7 +921,7 @@ bool CUDPServer::Listen(sockaddr_storage& address, const uint16_t port, bool ret
   }
 
   if (m_HasError && !retry) {
-    Print("[UDPServer] Failed to listen UDP at port " + to_string(port) + ". Error " + to_string(m_Error));
+    Print(Concat("[UDPServer] Failed to listen UDP at port ", to_string(port), ". Error ", to_string(m_Error)));
     return false;
   }  
 
@@ -995,7 +980,7 @@ UDPPkt CUDPServer::Accept(fd_set* fd) {
   if (bytesRead < 0) {
     //int error = errno;
 #endif
-    //Print("Error code " + to_string(error) + " receiving data from " + AddressToString(*pkt.sender));
+    //Print(Concat("Error code ", to_string(error), " receiving data from ", AddressToString(*pkt.sender)));
     return pkt;
   }
   if (bytesRead < W3GS_UDP_MIN_PACKET_SSIZE) {
@@ -1016,7 +1001,7 @@ bool CUDPServer::Discard(fd_set* fd) {
     return false;
   }
   
-  char buffer[1024];
+  char buffer[2048];
   recv(m_Socket, buffer, sizeof(buffer), 0);
   return true;
 }

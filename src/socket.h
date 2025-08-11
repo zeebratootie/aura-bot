@@ -472,7 +472,6 @@ public:
   virtual ~CStreamIOSocket();
 
   [[nodiscard]] inline int64_t                    GetLastRecv() const { return m_LastRecv; }
-  [[nodiscard]] std::string                       GetName() const;
 
   [[nodiscard]] inline bool                       GetIsInnerIPv4() const { return GetInnerIPVersion(&m_RemoteHost) == AF_INET; }
   [[nodiscard]] inline bool                       GetIsInnerIPv6() const { return GetInnerIPVersion(&m_RemoteHost) == AF_INET6; }
@@ -500,7 +499,7 @@ public:
     return bytes.size();
   }
   inline size_t                                 PutBytes(const std::vector<uint8_t>& bytes) {
-    m_SendBuffer += std::string(begin(bytes), end(bytes));
+    m_SendBuffer.append(reinterpret_cast<const char*>(bytes.data()), bytes.size());
     return bytes.size();
   }
   [[nodiscard]] inline std::string::size_type   GetSendBufferSize() { return m_SendBuffer.size(); }

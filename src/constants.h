@@ -919,6 +919,9 @@ constexpr int64_t GAMESETUP_STALE_TICKS = 180000;
 
 constexpr size_t W3GS_UDP_MIN_PACKET_SIZE = 4;
 constexpr size_t W3GS_ACTION_MAX_PACKET_SIZE = 1024;
+constexpr size_t TCP_BUFFER_SIZE = 4096;
+constexpr size_t TCP_LOOP_SEGMENTS_THRESHOLD = 2905; // TCP_BUFFER_SIZE/sqrt(2)
+constexpr size_t TCP_MAX_SEGMENTS_PER_READABLE = 3;
 constexpr ptrdiff_t W3GS_UDP_MIN_PACKET_SSIZE = static_cast<ptrdiff_t>(W3GS_UDP_MIN_PACKET_SIZE);
 constexpr ptrdiff_t W3GS_ACTION_MAX_PACKET_SSIZE = static_cast<ptrdiff_t>(W3GS_ACTION_MAX_PACKET_SIZE);
 
