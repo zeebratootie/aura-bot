@@ -68,6 +68,8 @@
 #define EINVAL WSAEINVAL
 #undef EWOULDBLOCK /* override definition in errno.h */
 #define EWOULDBLOCK WSAEWOULDBLOCK
+#undef EAGAIN /* override definition in errno.h */
+#define EAGAIN WSAEWOULDBLOCK
 #undef EINPROGRESS /* override definition in errno.h */
 #define EINPROGRESS WSAEINPROGRESS
 #undef EALREADY /* override definition in errno.h */
@@ -392,6 +394,14 @@ inline void SetAddressPort(sockaddr_storage* address, const uint16_t port)
   sockaddr_in* addr4 = reinterpret_cast<sockaddr_in*>(&address);
   memcpy(&(addr4->sin_addr.s_addr), ipBytes, 4);
   return address;
+}
+
+[[nodiscard]] inline bool GetIsWouldBlock(int32_t err) {
+  if constexpr (EAGAIN == EWOULDBLOCK) {
+    return err == EAGAIN;
+  } else {
+    return err == EAGAIN || err == EWOULDBLOCK;
+  }
 }
 
 //

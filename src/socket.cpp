@@ -406,7 +406,7 @@ bool CStreamIOSocket::DoRecv(fd_set* fd)
     segmentCount++;
   }
 
-  if (c == SOCKET_ERROR && GetLastOSError() != EWOULDBLOCK) {
+  if (c == SOCKET_ERROR && !GetIsWouldBlock(GetLastOSError())) {
     // receive error
     m_HasError = true;
     m_Error = GetLastOSError();
@@ -472,7 +472,7 @@ void CStreamIOSocket::DoSend(fd_set* send_fd)
       // success! only some of the data may have been sent, remove it from the buffer
 
       m_SendBuffer = m_SendBuffer.substr(static_cast<string::size_type>(s));
-    } else if (s == SOCKET_ERROR && GetLastOSError() != EWOULDBLOCK) {
+    } else if (s == SOCKET_ERROR && !GetIsWouldBlock(GetLastOSError())) {
       // send error
 
       m_HasError = true;
@@ -563,7 +563,7 @@ void CTCPClient::Connect(const optional<sockaddr_storage>& localAddress, const s
   // connect
   if (connect(m_Socket, reinterpret_cast<struct sockaddr*>(&m_RemoteHost), sizeof(sockaddr_storage)) == SOCKET_ERROR)
   {
-    if (GetLastOSError() != EINPROGRESS && GetLastOSError() != EWOULDBLOCK)
+    if (GetLastOSError() != EINPROGRESS && !GetIsWouldBlock(GetLastOSError()))
     {
       // connect error
 
