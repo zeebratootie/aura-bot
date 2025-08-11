@@ -250,6 +250,8 @@ protected:
   std::optional<CGameVirtualUserReference>               m_InertVirtualUser; // all interactions with this virtual user are forbidden, except maybe chat
   std::optional<CGameVirtualUserReference>               m_JoinInProgressVirtualUser; // must never send actions, otherwise CAsyncObserver desyncs
 
+  uint64_t                                               m_FrameDrifts[30];
+
 public:
   CGame(CAura* nAura, std::shared_ptr<CGameSetup> nGameSetup);
   ~CGame();
@@ -446,6 +448,7 @@ public:
 
   inline int64_t                                         GetCreationTime() const { return m_CreationTime; }
   [[nodiscard]] uint32_t                                 GetUptime() const;
+  [[nodiscard]] size_t                                   GetFrameDriftBucket(int64_t actionLateBy) const;
 
   // processing functions
 
@@ -469,6 +472,7 @@ public:
   void                                                   UpdateLogs();
   void                                                   FlushLogs();
   void                                                   LogSlots();
+  void                                                   LogFrameDrifts();
 
   // generic functions to send packets to players
 

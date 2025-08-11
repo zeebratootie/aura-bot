@@ -900,6 +900,40 @@ void CGame::StartGameOverTimer(bool isMMD)
   m_Aura->UntrackGameJoinInProgress(shared_from_this());
 }
 
+void CGame::LogFrameDrifts()
+{
+  vector<string> frameDriftReport;
+  vector<double> percents;
+  frameDriftReport.reserve(30);
+  percents.reserve(30);
+  uint64_t sum = 0;
+  for (size_t i = 0; i < 30; i++) {
+    sum += m_FrameDrifts[i];
+  }
+  if (sum == 0) return;
+  for (size_t i = 0; i < 30; i++) {
+    percents.push_back(static_cast<double>(100.) * static_cast<double>(m_FrameDrifts[i]) / static_cast<double>(sum));
+  }
+  uint64_t minRange = 0, maxRange = 5;
+  frameDriftReport.push_back(Concat("0-5,", to_string(m_FrameDrifts[0]), ",", ToFormattedString(percents[0]), "%"));
+  for (size_t i = 1; i < 30; i++) {
+    if (i >= 20) {
+      minRange += 20;
+      maxRange += 20;
+    } else if (i >= 10) {
+      minRange += 10;
+      maxRange += 10;
+    } else {
+      minRange += 5;
+      maxRange += 5;
+    }
+    frameDriftReport.push_back(Concat(to_string(minRange), "-", to_string(maxRange), ",", to_string(m_FrameDrifts[i]), ",", ToFormattedString(percents[i]), "%"));
+  }
+  for (const auto& line : frameDriftReport) {
+    LogApp(line, LOG_C | LOG_P);
+  }
+}
+
 CGame::~CGame()
 {
   Reset();
@@ -915,6 +949,8 @@ CGame::~CGame()
   if (GetIsBeingReplaced()) {
     --m_Aura->m_ReplacingLobbiesCounter;
   }
+
+  LogFrameDrifts();
 }
 
 template <typename T>
@@ -1454,6 +1490,20 @@ uint32_t CGame::GetUptime() const
   const int64_t loopTime = m_Aura->GetLoopTime();
   if (loopTime < m_CreationTime) return 0;
   return (uint32_t)(loopTime - m_CreationTime);
+}
+
+size_t CGame::GetFrameDriftBucket(int64_t actionLateBy) const
+{
+  uint64_t clamped = 0;
+  if (actionLateBy > 350) {
+    clamped = 350;
+  } else if (actionLateBy > 0) {
+    clamped = signed_cast<uint64_t>(actionLateBy);
+  }
+  if (clamped == 0) return 0;
+  if (clamped < 50) return clamped / 5;
+  if (clamped < 150) return 10 + ((clamped - 50) / 10);
+  return 20 + ((clamped - 150) / 20);
 }
 
 uint32_t CGame::SetFD(fd_set* fd, fd_set* send_fd, int32_t* nfds) const
@@ -2052,6 +2102,8 @@ void CGame::RunActionsScheduler()
 {
   const int64_t oldLatency = GetActiveLatency();
   const int64_t actionLateBy = GetLastActionLateBy(oldLatency);
+  const size_t i = GetFrameDriftBucket(actionLateBy);
+  ++m_FrameDrifts[i];
   const int64_t newLatency = GetNextLatency(actionLateBy);
   if (newLatency != oldLatency) {
     m_LatencyTicks = newLatency;
