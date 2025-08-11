@@ -370,6 +370,12 @@ CGame::CGame(CAura* nAura, shared_ptr<CGameSetup> nGameSetup)
       }
     }
   }
+
+#ifdef PROFILING
+  for (size_t i = 0; i < 30; i++) {
+    m_FrameDrifts[i] = 0;
+  }
+#endif
 }
 
 void CGame::InitSlots()
@@ -902,21 +908,26 @@ void CGame::StartGameOverTimer(bool isMMD)
 
 void CGame::LogFrameDrifts()
 {
-  vector<string> frameDriftReport;
-  vector<double> percents;
-  frameDriftReport.reserve(30);
-  percents.reserve(30);
+#ifdef PROFILING
+  size_t maxBucketIndex = 0;
   uint64_t sum = 0;
   for (size_t i = 0; i < 30; i++) {
-    sum += m_FrameDrifts[i];
+    if (m_FrameDrifts[i] > 0) {
+      sum += m_FrameDrifts[i];
+      maxBucketIndex = i;
+    }
   }
   if (sum == 0) return;
-  for (size_t i = 0; i < 30; i++) {
+  vector<string> frameDriftReport;
+  frameDriftReport.reserve(maxBucketIndex + 1);
+  vector<double> percents;
+  percents.reserve(maxBucketIndex + 1);
+  for (size_t i = 0; i <= maxBucketIndex; i++) {
     percents.push_back(static_cast<double>(100.) * static_cast<double>(m_FrameDrifts[i]) / static_cast<double>(sum));
   }
   uint64_t minRange = 0, maxRange = 5;
-  frameDriftReport.push_back(Concat("0-5,", to_string(m_FrameDrifts[0]), ",", ToFormattedString(percents[0]), "%"));
-  for (size_t i = 1; i < 30; i++) {
+  frameDriftReport.push_back(Concat("[0-5>,", to_string(m_FrameDrifts[0]), ",", ToFormattedString(percents[0]), "%"));
+  for (size_t i = 1; i <= maxBucketIndex; i++) {
     if (i >= 20) {
       minRange += 20;
       maxRange += 20;
@@ -927,11 +938,14 @@ void CGame::LogFrameDrifts()
       minRange += 5;
       maxRange += 5;
     }
-    frameDriftReport.push_back(Concat(to_string(minRange), "-", to_string(maxRange), ",", to_string(m_FrameDrifts[i]), ",", ToFormattedString(percents[i]), "%"));
+    if (i == 10) minRange -= 5;
+    if (i == 20) minRange -= 10;
+    frameDriftReport.push_back(Concat("[", to_string(minRange), "-", to_string(maxRange), ">,", to_string(m_FrameDrifts[i]), ",", ToFormattedString(percents[i]), "%"));
   }
   for (const auto& line : frameDriftReport) {
     LogApp(line, LOG_C | LOG_P);
   }
+#endif
 }
 
 CGame::~CGame()
@@ -1494,16 +1508,10 @@ uint32_t CGame::GetUptime() const
 
 size_t CGame::GetFrameDriftBucket(int64_t actionLateBy) const
 {
-  uint64_t clamped = 0;
-  if (actionLateBy > 350) {
-    clamped = 350;
-  } else if (actionLateBy > 0) {
-    clamped = signed_cast<uint64_t>(actionLateBy);
-  }
-  if (clamped == 0) return 0;
-  if (clamped < 50) return clamped / 5;
-  if (clamped < 150) return 10 + ((clamped - 50) / 10);
-  return 20 + ((clamped - 150) / 20);
+  uint64_t clamped = signed_cast<uint64_t>(clamp<int64_t>(actionLateBy, 0, 350));
+  if (clamped < 50) return integer_cast_lossy<size_t>(clamped / 5);
+  if (clamped < 150) return integer_cast_lossy<size_t>(10 + ((clamped - 50) / 10));
+  return integer_cast_lossy<size_t>(20 + ((clamped - 150) / 20));
 }
 
 uint32_t CGame::SetFD(fd_set* fd, fd_set* send_fd, int32_t* nfds) const
@@ -2102,8 +2110,10 @@ void CGame::RunActionsScheduler()
 {
   const int64_t oldLatency = GetActiveLatency();
   const int64_t actionLateBy = GetLastActionLateBy(oldLatency);
+#ifdef PROFILING
   const size_t i = GetFrameDriftBucket(actionLateBy);
   ++m_FrameDrifts[i];
+#endif
   const int64_t newLatency = GetNextLatency(actionLateBy);
   if (newLatency != oldLatency) {
     m_LatencyTicks = newLatency;

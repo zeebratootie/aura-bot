@@ -250,7 +250,9 @@ protected:
   std::optional<CGameVirtualUserReference>               m_InertVirtualUser; // all interactions with this virtual user are forbidden, except maybe chat
   std::optional<CGameVirtualUserReference>               m_JoinInProgressVirtualUser; // must never send actions, otherwise CAsyncObserver desyncs
 
+#ifdef PROFILING
   uint64_t                                               m_FrameDrifts[30];
+#endif
 
 public:
   CGame(CAura* nAura, std::shared_ptr<CGameSetup> nGameSetup);

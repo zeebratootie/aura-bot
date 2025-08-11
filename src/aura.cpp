@@ -103,6 +103,11 @@ using namespace std;
 bool                  gRestart     = false;
 volatile sig_atomic_t gGracefulExit = 0;
 
+constexpr int APP_METRICS_LOBBY_SAMPLE_RATE = 10;
+constexpr size_t APP_METRICS_LOBBY_CAPACITY = 1000;
+constexpr int APP_METRICS_GAME_SAMPLE_RATE = 10;
+constexpr size_t APP_METRICS_GAME_CAPACITY = 1000;
+
 inline void GetAuraHome(const CCLI& cliApp, filesystem::path& homeDir)
 {
   if (cliApp.m_HomePath.has_value()) {
@@ -495,7 +500,15 @@ CAura::CAura(CConfig& CFG, const CCLI& nCLI)
     m_IRC(CIRC(CFG)),
     m_Net(CNet(CFG)),
     m_Config(CBotConfig(CFG)),
+#ifndef PROFILING
     m_ConfigPath(CFG.GetFile())
+#else
+    m_ConfigPath(CFG.GetFile()),
+    m_PerfMetrics(
+      APP_METRICS_LOBBY_SAMPLE_RATE, APP_METRICS_LOBBY_CAPACITY,
+      APP_METRICS_GAME_SAMPLE_RATE, APP_METRICS_GAME_CAPACITY
+    )
+#endif
 {
   m_Discord.m_Aura = this;
   m_IRC.m_Aura = this;
@@ -1263,6 +1276,9 @@ bool CAura::Update()
   // update games, starting from lobbies
 
   for (auto it = begin(m_Lobbies); it != end(m_Lobbies);) {
+#ifdef PROFILING
+    auto t = m_PerfMetrics.lobbies.TryStart();
+#endif
     if ((*it)->Update(&fd, &send_fd)) {
       if ((*it)->GetExiting()) {
         EventGameDeleted(*it);
@@ -1276,9 +1292,18 @@ bool CAura::Update()
       (*it)->UpdatePost(&send_fd);
       ++it;
     }
+#ifdef PROFILING
+    int64_t dt = t.TryEndNano();
+    if (dt > 1e6 && MatchLogLevel(LogLevel::kWarning)) {
+      Print(Concat("Lobby update took " + to_string(dt / 1e6) + " ms");
+    }
+#endif
   }
 
   for (auto it = begin(m_StartedGames); it != end(m_StartedGames);) {
+#ifdef PROFILING
+    auto t = m_PerfMetrics.games.TryStart();
+#endif
     if ((*it)->Update(&fd, &send_fd)) {
       (*it)->FlushLogs();
       if ((*it)->GetExiting()) {
@@ -1293,6 +1318,12 @@ bool CAura::Update()
       (*it)->UpdatePost(&send_fd);
       ++it;
     }
+#ifdef PROFILING
+    int64_t dt = t.TryEndNano();
+    if (dt > 1e6 && MatchLogLevel(LogLevel::kWarning)) {
+      Print(Concat("Game update took " + to_string(dt / 1e6) + " ms");
+    }
+#endif
   }
 
   for (const auto& realm : m_Realms) {

@@ -109,6 +109,8 @@ namespace dpp
 };
 #endif
 
+struct AppMetrics;
+
 struct CBotConfig;
 struct CCommandConfig;
 struct CDataBaseConfig;

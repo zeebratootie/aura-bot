@@ -56,6 +56,7 @@
 #include "game_setup.h"
 #include "locations.h"
 #include "net.h"
+#include "sampler.h"
 #include "util.h"
 #include "integration/irc.h"
 #include "integration/discord.h"
@@ -69,10 +70,28 @@
 #include <windows.h>
 #endif
 
-#define AURA_VERSION "11.0.2.dev"
-#define AURA_APP_NAME "Aura 11.0.2.dev"
+#define AURA_VERSION "11.1.0.dev"
+#define AURA_APP_NAME "Aura 11.1.0.dev"
 #define AURA_REPOSITORY_URL "https://gitlab.com/ivojulca/aura-bot"
 #define AURA_ISSUES_URL "https://gitlab.com/ivojulca/aura-bot/-/issues"
+
+//
+// AppMetrics
+//
+
+struct AppMetrics
+{
+  UniformlySampledTimedData lobbies;
+  UniformlySampledTimedData games;
+
+  AppMetrics(int lobbyRate, size_t lobbyCapacity, int gameRate, size_t gameCapacity)
+   : lobbies(UniformlySampledTimedData(lobbyRate, lobbyCapacity)),
+     games(UniformlySampledTimedData(gameRate, gameCapacity))
+  {
+  }
+
+  ~AppMetrics() = default;
+};
 
 //
 // CAura
@@ -154,6 +173,10 @@ public:
   std::vector<std::string>                           m_RealmsIdentifiers;
   std::map<uint8_t, std::weak_ptr<CRealm>>           m_RealmsByHostCounter;
   std::map<std::string, std::weak_ptr<CRealm>>       m_RealmsByInputID;
+
+#ifdef PROFILING
+  AppMetrics                                         m_PerfMetrics;
+#endif
 
   explicit CAura(CConfig& CFG, const CCLI& nCLI);
   ~CAura();
