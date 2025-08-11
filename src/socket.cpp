@@ -302,6 +302,7 @@ string CStreamIOSocket::GetName() const
 CStreamIOSocket::~CStreamIOSocket()
 {
   m_Server = nullptr;
+  Print("[TCPSOCKET] (" + GetName() +") segmentation - " + to_string(m_SegmentationStats[0]) + ", " + to_string(m_SegmentationStats[1]) + ", " + to_string(m_SegmentationStats[2]) + ", " + to_string(m_SegmentationStats[3]) + ", " + to_string(m_SegmentationStats[4]));
 }
 
 void CStreamIOSocket::SetNoDelay(const bool noDelay)
