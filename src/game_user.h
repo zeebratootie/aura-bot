@@ -55,26 +55,6 @@
 #include "map.h"
 #include "sampler.h"
 
-//
-// GameUser::CGameUser
-//
-
-struct UserMetrics
-{
-  UniformlySampledTimedData action;
-  UniformlySampledTimedData chatToHost;
-  UniformlySampledTimedData keepAlive;
-
-  UserMetrics(int actionRate, size_t actionCapacity, int chatRate, size_t chatCapacity, int keepAliveRate, size_t keepAliveCapacity)
-   : action(UniformlySampledTimedData(actionRate, actionCapacity)),
-     chatToHost(UniformlySampledTimedData(chatRate, chatCapacity)),
-     keepAlive(UniformlySampledTimedData(keepAliveRate, keepAliveCapacity))
-  {
-  }
-
-  ~UserMetrics() = default;
-};
-
 namespace GameUser
 {
   namespace KickReason
@@ -86,6 +66,30 @@ namespace GameUser
     constexpr uint8_t ABUSER = 8u;
     constexpr uint8_t ANTISHARE = 16u;
   };
+
+  //
+  // GameUser::UserMetrics
+  //
+
+  struct UserMetrics
+  {
+    UniformlySampledTimedData action;
+    UniformlySampledTimedData chatToHost;
+    UniformlySampledTimedData keepAlive;
+
+    UserMetrics(int actionRate, size_t actionCapacity, int chatRate, size_t chatCapacity, int keepAliveRate, size_t keepAliveCapacity)
+     : action(UniformlySampledTimedData(actionRate, actionCapacity)),
+       chatToHost(UniformlySampledTimedData(chatRate, chatCapacity)),
+       keepAlive(UniformlySampledTimedData(keepAliveRate, keepAliveCapacity))
+    {
+    }
+
+    ~UserMetrics() = default;
+  };
+
+  //
+  // GameUser::CGameUser
+  //
 
   class CGameUser final : public CConnection
   {
@@ -179,7 +183,7 @@ namespace GameUser
     std::optional<double>                       m_APMTrainer;
 
 #ifdef PROFILING
-    UserMetrics                                 m_PerfMetrics;
+    GameUser::UserMetrics                       m_PerfMetrics;
 #endif
 
     CGameUser(std::shared_ptr<CGame> game, CConnection* connection, uint8_t nUID, const bool gameVersionIsExact, const Version& gameVersion, uint32_t nJoinedRealmInternalId, std::string nJoinedRealm, std::string_view nName, std::array<uint8_t, 4> nInternalIP, bool nReserved);

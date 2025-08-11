@@ -178,7 +178,7 @@ CGameUser::CGameUser(shared_ptr<CGame> nGame, CConnection* connection, uint8_t n
     m_RemainingPauses(GAME_PAUSES_PER_PLAYER)
 #else
     m_RemainingPauses(GAME_PAUSES_PER_PLAYER),
-    m_PerfMetrics(UserMetrics(
+    m_PerfMetrics(GameUser::UserMetrics(
       USER_METRICS_ACTION_SAMPLE_RATE, USER_METRICS_ACTION_CAPACITY,
       USER_METRICS_CHAT_SAMPLE_RATE, USER_METRICS_CHAT_CAPACITY,
       USER_METRICS_KEEPALIVE_SAMPLE_RATE, USER_METRICS_KEEPALIVE_CAPACITY

@@ -88,6 +88,7 @@ class OptWriter;
 namespace GameUser
 {
   class CGameUser;
+  struct UserMetrics;
 };
 
 namespace GameProtocol
