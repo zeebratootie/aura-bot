@@ -450,9 +450,7 @@ void CStreamIOSocket::DoSend(fd_set* send_fd)
 
   if (FD_ISSET(m_Socket, send_fd)) {
     // socket is ready, send it
-
-    auto s = send(m_Socket, m_SendBuffer.c_str(), m_SendBuffer.size(), MSG_NOSIGNAL);
-
+    auto s = send(m_Socket, m_SendBuffer.c_str(), static_cast<NET_DATA_SIZE_TYPE>(m_SendBuffer.size()), MSG_NOSIGNAL);
     if (s > 0) {
       // success! only some of the data may have been sent, remove it from the buffer
 
@@ -474,7 +472,7 @@ void CStreamIOSocket::Flush()
   if (m_Socket == INVALID_SOCKET || m_HasError || m_HasFin || !m_Connected || m_SendBuffer.empty())
     return;
 
-  send(m_Socket, m_SendBuffer.c_str(), m_SendBuffer.size(), MSG_NOSIGNAL);
+  send(m_Socket, m_SendBuffer.c_str(), static_cast<NET_DATA_SIZE_TYPE>(m_SendBuffer.size()), MSG_NOSIGNAL);
   m_SendBuffer.clear();
 }
 
@@ -793,10 +791,12 @@ bool CUDPSocket::SendTo(const sockaddr_storage* address, const vector<uint8_t>& 
   if (m_Family == address->ss_family) {
     return -1 != sendto(
       m_Socket,
-      reinterpret_cast<const char*>(message.data()), message.size(),
+      reinterpret_cast<const char*>(message.data()),
+      static_cast<NET_DATA_SIZE_TYPE>(message.size()),
       0,
-      reinterpret_cast<const struct sockaddr*>(address), sizeof(sockaddr_storage)
-     );
+      reinterpret_cast<const struct sockaddr*>(address),
+      static_cast<NET_DATA_SIZE_TYPE>(sizeof(sockaddr_storage))
+    );
   }
   if (m_Family == AF_INET && address->ss_family == AF_INET6) {
     Print(Concat("Error - Attempt to send UDP6 message from UDP4 socket: ", ByteArrayToDecString(message)));
@@ -806,9 +806,11 @@ bool CUDPSocket::SendTo(const sockaddr_storage* address, const vector<uint8_t>& 
     sockaddr_storage addr6 = IPv4ToIPv6(address);
     return -1 != sendto(
       m_Socket,
-      reinterpret_cast<const char*>(message.data()), message.size(),
+      reinterpret_cast<const char*>(message.data()),
+      static_cast<NET_DATA_SIZE_TYPE>(message.size()),
       0,
-      reinterpret_cast<const struct sockaddr*>(&addr6), sizeof(addr6)
+      reinterpret_cast<const struct sockaddr*>(&addr6),
+      static_cast<NET_DATA_SIZE_TYPE>(sizeof(addr6))
     );
   }
   return false;
@@ -842,9 +844,11 @@ bool CUDPSocket::Broadcast(const sockaddr_storage* addr4, const vector<uint8_t>&
 
   auto result = sendto(
     m_Socket,
-    reinterpret_cast<const char*>(message.data()), message.size(),
+    reinterpret_cast<const char*>(message.data()),
+    static_cast<NET_DATA_SIZE_TYPE>(message.size()),
     0,
-    reinterpret_cast<const struct sockaddr*>(addr4), sizeof(sockaddr_in)
+    reinterpret_cast<const struct sockaddr*>(addr4),
+    static_cast<NET_DATA_SIZE_TYPE>(sizeof(sockaddr_in))
   );
 
   if (result == -1) {
