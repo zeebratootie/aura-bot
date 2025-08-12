@@ -247,6 +247,9 @@
       <MinimalRebuild>false</MinimalRebuild>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <AdditionalOptions>/source-charset:utf-8 /execution-charset:utf-8 %(AdditionalOptions)</AdditionalOptions>
+      <StringPooling>true</StringPooling>
+      <ConformanceMode>true</ConformanceMode>
+      <EnforceTypeConversionRules>true</EnforceTypeConversionRules>
     </ClCompile>
     <Link>
       <AdditionalDependencies>ws2_32.lib;Crypt32.lib;Wldap32.lib;winmm.lib;StormLibRUS.lib;BNCSUtil.lib;cpr.lib;libcurl.lib;iphlpapi.lib;libcmt.lib;miniupnpc.lib;dpp.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -288,6 +291,9 @@
       <MinimalRebuild>false</MinimalRebuild>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <AdditionalOptions>/source-charset:utf-8 /execution-charset:utf-8 %(AdditionalOptions)</AdditionalOptions>
+      <StringPooling>true</StringPooling>
+      <ConformanceMode>true</ConformanceMode>
+      <EnforceTypeConversionRules>true</EnforceTypeConversionRules>
     </ClCompile>
     <Link>
       <AdditionalDependencies>ws2_32.lib;Crypt32.lib;Wldap32.lib;winmm.lib;StormLibRUS.lib;BNCSUtil.lib;pjass.lib;cpr.lib;libcurl.lib;iphlpapi.lib;libcmt.lib;miniupnpc.lib;dpp.lib;dnssd.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -329,6 +335,9 @@
       <MinimalRebuild>false</MinimalRebuild>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <AdditionalOptions>/source-charset:utf-8 /execution-charset:utf-8 %(AdditionalOptions)</AdditionalOptions>
+      <StringPooling>true</StringPooling>
+      <ConformanceMode>true</ConformanceMode>
+      <EnforceTypeConversionRules>true</EnforceTypeConversionRules>
     </ClCompile>
     <Link>
       <AdditionalDependencies>ws2_32.lib;winmm.lib;StormLibRUS.lib;BNCSUtil.lib;iphlpapi.lib;libcmt.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -375,6 +384,9 @@
       <FloatingPointExceptions>true</FloatingPointExceptions>
       <DisableLanguageExtensions>false</DisableLanguageExtensions>
       <AdditionalOptions>/source-charset:utf-8 /execution-charset:utf-8 %(AdditionalOptions)</AdditionalOptions>
+      <StringPooling>true</StringPooling>
+      <ConformanceMode>true</ConformanceMode>
+      <EnforceTypeConversionRules>true</EnforceTypeConversionRules>
     </ClCompile>
     <Link>
       <AdditionalDependencies>ws2_32.lib;Crypt32.lib;Wldap32.lib;winmm.lib;StormLibRUS.lib;BNCSUtil.lib;pjass.lib;cpr.lib;libcurl.lib;iphlpapi.lib;libcmtd.lib;miniupnpc.lib;dpp.lib;dnssd.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -415,6 +427,9 @@
       <LanguageStandard>stdcpp17</LanguageStandard>
       <OmitFramePointers>false</OmitFramePointers>
       <AdditionalOptions>/source-charset:utf-8 /execution-charset:utf-8 %(AdditionalOptions)</AdditionalOptions>
+      <StringPooling>true</StringPooling>
+      <ConformanceMode>true</ConformanceMode>
+      <EnforceTypeConversionRules>true</EnforceTypeConversionRules>
     </ClCompile>
     <Link>
       <AdditionalDependencies>ws2_32.lib;Crypt32.lib;Wldap32.lib;winmm.lib;StormLibRUS.lib;BNCSUtil64.lib;cpr.lib;libcurl.lib;iphlpapi.lib;libcmt.lib;miniupnpc.lib;dpp.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -457,6 +472,9 @@
       <LanguageStandard>stdcpp17</LanguageStandard>
       <OmitFramePointers>false</OmitFramePointers>
       <AdditionalOptions>/source-charset:utf-8 /execution-charset:utf-8 %(AdditionalOptions)</AdditionalOptions>
+      <StringPooling>true</StringPooling>
+      <ConformanceMode>true</ConformanceMode>
+      <EnforceTypeConversionRules>true</EnforceTypeConversionRules>
     </ClCompile>
     <Link>
       <AdditionalDependencies>ws2_32.lib;Crypt32.lib;Wldap32.lib;winmm.lib;StormLibRUS.lib;BNCSUtil64.lib;pjass.lib;cpr.lib;libcurl.lib;iphlpapi.lib;libcmt.lib;miniupnpc.lib;dpp.lib;dnssd.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -499,6 +517,9 @@
       <LanguageStandard>stdcpp17</LanguageStandard>
       <OmitFramePointers>false</OmitFramePointers>
       <AdditionalOptions>/source-charset:utf-8 /execution-charset:utf-8 %(AdditionalOptions)</AdditionalOptions>
+      <StringPooling>true</StringPooling>
+      <ConformanceMode>true</ConformanceMode>
+      <EnforceTypeConversionRules>true</EnforceTypeConversionRules>
     </ClCompile>
     <Link>
       <AdditionalDependencies>ws2_32.lib;winmm.lib;StormLibRUS.lib;BNCSUtil64.lib;iphlpapi.lib;libcmt.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -546,6 +567,9 @@
       <FloatingPointExceptions>true</FloatingPointExceptions>
       <DisableLanguageExtensions>false</DisableLanguageExtensions>
       <AdditionalOptions>/source-charset:utf-8 /execution-charset:utf-8 %(AdditionalOptions)</AdditionalOptions>
+      <StringPooling>true</StringPooling>
+      <ConformanceMode>true</ConformanceMode>
+      <EnforceTypeConversionRules>true</EnforceTypeConversionRules>
     </ClCompile>
     <Link>
       <AdditionalDependencies>ws2_32.lib;Crypt32.lib;Wldap32.lib;winmm.lib;StormLibRUS.lib;BNCSUtil64.lib;pjass.lib;cpr.lib;libcurl.lib;iphlpapi.lib;libcmtd.lib;miniupnpc.lib;dpp.lib;dnssd.lib;%(AdditionalDependencies)</AdditionalDependencies>
