@@ -125,6 +125,7 @@ protected:
   std::string                                            m_MapSiteURL;
   int64_t                                                m_CreationTime;                  // when the game was created
   int64_t                                                m_LastPingTicks;                 // when the last ping was sent
+  int64_t                                                m_LastDiscoveryTicks;            // when the last UDP packet was sent
   int64_t                                                m_LastCheckActionsTicks;
   int64_t                                                m_LastRefreshTime;               // when the last game refresh was sent
   int64_t                                                m_LastDownloadCounterResetTicks; // when the download counter was last reset

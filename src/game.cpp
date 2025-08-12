@@ -154,6 +154,7 @@ CGame::CGame(CAura* nAura, shared_ptr<CGameSetup> nGameSetup)
     m_MapSiteURL(nGameSetup->m_Map->GetMapSiteURL()),
     m_CreationTime(nAura->GetLoopTime()),
     m_LastPingTicks(APP_MIN_TICKS),
+    m_LastDiscoveryTicks(APP_MIN_TICKS),
     m_LastCheckActionsTicks(APP_MIN_TICKS),
     m_LastRefreshTime(nAura->GetLoopTime()),
     m_LastDownloadCounterResetTicks(nAura->GetLoopTicks()),
@@ -1879,41 +1880,20 @@ bool CGame::Update(fd_set* fd, fd_set* send_fd)
   const int64_t loopTicks = m_Aura->GetLoopTicks();
   const int64_t hiResTicks = GetTicks();
 
-  // ping every 5 seconds
-  // changed this to ping during game loading as well to hopefully fix some problems with people disconnecting during loading
-  // changed this to ping during the game as well
-
-  if (!m_LobbyLoading && m_Aura->GetTicksIsAfterDelay(m_LastPingTicks, 5000)) {
+  if (!m_Users.empty() && !m_LobbyLoading && m_Aura->GetTicksIsAfterDelay(m_LastPingTicks, 5000)) {
+    // ping every 5 seconds
+    // changed this to ping during game loading as well to hopefully fix some problems with people disconnecting during loading
+    // changed this to ping during the game as well
     // we must send pings to users who are downloading the map because
     // Warcraft III disconnects from the lobby if it doesn't receive a ping every ~90 seconds
     // so if the user takes longer than 90 seconds to download the map they would be disconnected unless we keep sending pings
-    if (!m_Users.empty()) {
-      vector<uint8_t> pingPacket = GameProtocol::SEND_W3GS_PING_FROM_HOST(loopTicks);
-      for (auto& user : m_Users) {
-        // Avoid ping-spamming GProxy-reconnected players
-        if (!user->GetDisconnected()) {
-          user->Send(pingPacket);
-        }
+    vector<uint8_t> pingPacket = GameProtocol::SEND_W3GS_PING_FROM_HOST(loopTicks);
+    for (auto& user : m_Users) {
+      // Avoid ping-spamming GProxy-reconnected players
+      if (!user->GetDisconnected()) {
+        user->Send(pingPacket);
       }
     }
-
-    // we also broadcast the game to the local network every 5 seconds so we hijack this timer for our nefarious purposes
-    if (GetUDPEnabled() && GetIsStageAcceptingJoins()) {
-      //if (FD_ISSET(m_Aura->m_Net.m_UDPMainServer->m_Socket, &(m_Aura->m_SendFDs))) {
-      if (!m_Aura->m_Net.m_Config.m_UDPBroadcastStrictMode) {
-        SendGameDiscoveryInfo();
-      } else {
-        SendGameDiscoveryRefresh();
-      }
-      m_GameDiscoveryActive = true;
-      //}
-    }
-
-    if (m_GameDiscoveryInfoChanged & GAME_DISCOVERY_CHANGED_SLOTS) {
-      SendGameDiscoveryInfoMDNS();
-      UNSET_TINY(m_GameDiscoveryInfoChanged, GAME_DISCOVERY_CHANGED_SLOTS);
-    }
-
     m_LastPingTicks = loopTicks;
   }
 
@@ -2041,6 +2021,30 @@ bool CGame::Update(fd_set* fd, fd_set* send_fd)
   if (GetIsStageAcceptingJoins()) {
     // Also updates mirror games.
     UpdateJoinable();
+  }
+
+  if (!m_LobbyLoading && m_Aura->GetTicksIsAfterDelay(m_LastDiscoveryTicks, 5000)) {
+    // send UDP refresh every 7.5 seconds
+    // this used to be sent using the same interval as pings
+    // however, if we are broadcasting to a VPN network, this operation can take around 10 ms,
+    // so we want more fine-grained control of this operation
+    if (GetUDPEnabled() && GetIsStageAcceptingJoins()) {
+      //if (FD_ISSET(m_Aura->m_Net.m_UDPMainServer->m_Socket, &(m_Aura->m_SendFDs))) {
+      if (!m_Aura->m_Net.m_Config.m_UDPBroadcastStrictMode) {
+        SendGameDiscoveryInfo();
+      } else {
+        SendGameDiscoveryRefresh();
+      }
+      m_GameDiscoveryActive = true;
+      //}
+    }
+
+    if (m_GameDiscoveryInfoChanged & GAME_DISCOVERY_CHANGED_SLOTS) {
+      SendGameDiscoveryInfoMDNS();
+      UNSET_TINY(m_GameDiscoveryInfoChanged, GAME_DISCOVERY_CHANGED_SLOTS);
+    }
+
+    m_LastDiscoveryTicks = loopTicks;
   }
 
   if (GetIsLobbyStrict()) {
@@ -7461,6 +7465,7 @@ void CGame::Remake()
   m_EffectiveTicks = 0;
   m_CreationTime = loopTime;
   m_LastPingTicks = loopTicks;
+  m_LastDiscoveryTicks = loopTicks;
   m_LastRefreshTime = loopTime;
   m_LastDownloadCounterResetTicks = loopTicks;
   m_LastCountDownTicks = APP_MIN_TICKS;
