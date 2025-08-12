@@ -1774,7 +1774,7 @@ void CAura::OnLoadConfigs()
       if (maybeInstallPath.has_value()) {
         m_GameInstallPath = maybeInstallPath.value();
       } else {
-        vector<wchar_t*> tryPaths = {
+        vector<const wchar_t*> tryPaths = {
           L"C:\\Program Files (x86)\\Warcraft III\\",
           L"C:\\Program Files\\Warcraft III\\",
           L"C:\\Games\\Warcraft III\\",
