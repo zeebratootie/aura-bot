@@ -610,7 +610,7 @@ bool CGameUser::Update(fd_set* fd, int64_t timeout)
               }
             }
 #ifdef PROFILING
-            int64_t dt = t.TryEndNano();
+            int64_t dt = t->TryEndNano();
             if (dt > 1e6) {
               LOG_APP_CUSTOM(LogLevel::kWarning, Concat("Action <", GetStringBytesHex(packet), "> took " + to_string(dt / 1e6) + " ms"), LOG_C | LOG_P);
             }
@@ -632,7 +632,7 @@ bool CGameUser::Update(fd_set* fd, int64_t timeout)
               m_Game.get().EventUserKeepAlive(this);
             }
 #ifdef PROFILING
-            t.TryEndNano();
+            t->TryEndNano();
 #endif
             break;
           }
@@ -649,7 +649,7 @@ bool CGameUser::Update(fd_set* fd, int64_t timeout)
               // empty chat, not UTF8 or contains control characters: ignore it
             }
 #ifdef PROFILING
-            int64_t dt = t.TryEndNano();
+            int64_t dt = t->TryEndNano();
             if (dt > 1e6) {
               LOG_APP_CUSTOM(LogLevel::kWarning, Concat("Chat message ", SanitizeWrapUTF8(incomingChatMessage.GetMessage()), " took " + to_string(dt) + " ms"), LOG_C | LOG_P);
             }

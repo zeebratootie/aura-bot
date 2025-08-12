@@ -402,10 +402,10 @@ CNet::CNet(CConfig& nCFG)
 
     // GProxy's port is actually configurable client-side (lan_port),
     // but this port is always used by Aura in deaf UDP mode.
-    m_UDP4TargetProxyPort(6116), // Constant
+    m_UDP4TargetGProxyLANPort(6116),
     m_UDP6TargetPort(5678), // Only unicast. <net.game_discovery.udp.ipv6.target_port>
     m_MainBroadcastTarget(new sockaddr_storage()),
-    m_ProxyBroadcastTarget(new sockaddr_storage()),
+    m_ProxyReconnectLANBroadcastTarget(new sockaddr_storage()),
 
     m_IPv4SelfCacheV(make_pair(string(), nullptr)),
     m_IPv4SelfCacheT(NET_PUBLIC_IP_ADDRESS_ALGORITHM_INVALID),
@@ -873,8 +873,8 @@ void CNet::SetBroadcastTarget(sockaddr_storage& subnet)
   }
   SetAddressPort(&subnet, m_UDP4TargetPort);
   memcpy(m_MainBroadcastTarget, &subnet, sizeof(sockaddr_storage));
-  memcpy(m_ProxyBroadcastTarget, &subnet, sizeof(sockaddr_storage));
-  SetAddressPort(m_ProxyBroadcastTarget, m_UDP4TargetProxyPort);
+  memcpy(m_ProxyReconnectLANBroadcastTarget, &subnet, sizeof(sockaddr_storage));
+  SetAddressPort(m_ProxyReconnectLANBroadcastTarget, m_UDP4TargetGProxyLANPort);
 
   if (reinterpret_cast<sockaddr_in*>(&subnet)->sin_addr.s_addr != htonl(INADDR_BROADCAST))
     Print("[UDP] broadcasting LAN games to [" + AddressToString(subnet) + "]");
@@ -888,11 +888,13 @@ bool CNet::SendBroadcast(const vector<uint8_t>& packet)
   bool mainSuccess = false;
   if (m_UDPMainServerEnabled) {
     if (m_UDPMainServer->Broadcast(m_MainBroadcastTarget, packet)) mainSuccess = true;
-    if (m_Config.m_ProxyReconnect) m_UDPMainServer->Broadcast(m_ProxyBroadcastTarget, packet);
+    if (!m_Config.m_UDPBroadcastStrictMode && m_Config.m_ProxyReconnect && m_Config.m_ProxyReconnectLANBroadcastLaxEnabled) {
+      m_UDPMainServer->Broadcast(m_ProxyReconnectLANBroadcastTarget, packet);
+    }
   } else {
     if (m_UDPDeafSocket->Broadcast(m_MainBroadcastTarget, packet)) mainSuccess = true;
-    if (m_Config.m_ProxyReconnect) {
-      m_UDPDeafSocket->Broadcast(m_ProxyBroadcastTarget, packet);
+    if (m_Config.m_ProxyReconnect && m_Config.m_ProxyReconnectLANBroadcastLaxEnabled) {
+      m_UDPDeafSocket->Broadcast(m_ProxyReconnectLANBroadcastTarget, packet);
     }
   }
 
@@ -944,7 +946,7 @@ void CNet::SendLoopback(const vector<uint8_t>& packet)
 {
   Send("127.0.0.1", m_UDP4TargetPort, packet);
   if (m_Config.m_ProxyReconnect) {
-    Send("127.0.0.1", m_UDP4TargetProxyPort, packet);
+    Send("127.0.0.1", m_UDP4TargetGProxyLANPort, packet);
   }
 }
 
@@ -968,7 +970,14 @@ void CNet::SendArbitraryUnicast(const string& addressLiteral, const uint16_t por
 
 void CNet::SendGameDiscovery(const vector<uint8_t>& packet, const vector<sockaddr_storage>& clientIps)
 {
+#ifdef PROFILING
+  int64_t t = GetTicks();
+#endif
   SendBroadcast(packet);
+#ifdef PROFILING
+  int64_t dt = GetTicks() - t;
+  Print(Concat("Broadcast took ", to_string(dt), " ms"));
+#endif
 
   if (!clientIps.empty()) {
     if (m_Config.m_UDPBroadcastEnabled)
@@ -2132,7 +2141,7 @@ CNet::~CNet()
   delete m_UDPDeafSocket;
   delete m_UDPIPv6Server;
   delete m_MainBroadcastTarget;
-  delete m_ProxyBroadcastTarget;
+  delete m_ProxyReconnectLANBroadcastTarget;
 
   for (auto& entry : m_GameServers) {
     entry.second.reset();

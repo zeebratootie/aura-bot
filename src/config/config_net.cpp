@@ -70,6 +70,7 @@ CNetConfig::CNetConfig(CConfig& CFG)
     Print("[CONFIG] <net.tcp_extensions.gproxy.basic.enabled = yes> is required for <net.tcp_extensions.gproxy.long.enabled = yes>.");
     CFG.SetFailed();
   }
+  m_ProxyReconnectLANBroadcastLaxEnabled = CFG.GetBool("net.udp_extensions.gproxy.enabled", true);
 
   m_BindAddress4                 = CFG.GetAddressIPv4("net.bind_address", "0.0.0.0");
   CFG.FailIfErrorLast();
@@ -114,7 +115,13 @@ CNetConfig::CNetConfig(CConfig& CFG)
   m_UDPBroadcastEnabled          = CFG.GetBool("net.game_discovery.udp.broadcast.enabled", true);
   m_UDPBroadcastTarget           = CFG.GetAddressIPv4("net.game_discovery.udp.broadcast.address", "255.255.255.255");
   if (m_UDPBroadcastEnabled) CFG.FailIfErrorLast();
-  m_UDPBroadcastStrictMode       = CFG.GetBool("net.game_discovery.udp.broadcast.strict", true);
+  m_UDPBroadcastStrictMode       = CFG.GetBool("net.game_discovery.udp.broadcast.strict", m_UDPMainServerEnabled);
+
+  if (!m_UDPMainServerEnabled && m_UDPBroadcastStrictMode) {
+    Print("[CONFIG] warning - " + CFG.GetKeyValue("net.game_discovery.udp.broadcast.strict") + " requires <net.udp_server.enabled = yes>");
+    Print("[CONFIG] falling back to <net.game_discovery.udp.broadcast.strict = no>");
+    m_UDPBroadcastStrictMode = false;
+  }
 
 #ifdef DISABLE_MINIUPNP
   m_EnableUPnP                   = CFG.GetBool("net.port_forwarding.upnp.enabled", false);

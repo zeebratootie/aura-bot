@@ -115,6 +115,8 @@ public:
   int64_t                                            m_StartedFastPollingTicks;
   std::optional<Version>                             m_GameDataVersion;
   bool                                               m_SupportsModernSlots;
+  fd_set                                             m_ReadFDs;
+  fd_set                                             m_SendFDs;
 
   OptionalDependencyMode                             m_MDNSDependency;
   OptionalDependencyMode                             m_DPPDependency;

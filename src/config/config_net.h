@@ -35,6 +35,7 @@
 
 struct CNetConfig
 {
+  bool                                    m_ProxyReconnectLANBroadcastLaxEnabled;
   uint8_t                                 m_ProxyReconnect;             // whether to listen to GProxy++ reconnects
   sockaddr_storage                        m_BindAddress4;               // Defaults to 0.0.0.0
   sockaddr_storage                        m_BindAddress6;               // Defaults to ::

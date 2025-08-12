@@ -943,13 +943,15 @@ void CGame::LogFrameDrifts()
     frameDriftReport.push_back(Concat("[", to_string(minRange), "-", to_string(maxRange), ">,", to_string(m_FrameDrifts[i]), ",", ToFormattedString(percents[i]), "%"));
   }
   for (const auto& line : frameDriftReport) {
-    LogApp(line, LOG_C | LOG_P);
+    //LogApp(line, LOG_C | LOG_P);
+    Print(line);
   }
 #endif
 }
 
 CGame::~CGame()
 {
+  LogFrameDrifts();
   Reset();
   ReleaseMapBusyTimedLock();
 
@@ -963,8 +965,6 @@ CGame::~CGame()
   if (GetIsBeingReplaced()) {
     --m_Aura->m_ReplacingLobbiesCounter;
   }
-
-  LogFrameDrifts();
 }
 
 template <typename T>
@@ -1067,8 +1067,7 @@ uint32_t CGame::GetSlotsOpen() const
 {
   uint32_t NumSlotsOpen = 0;
 
-  for (const auto& slot : m_Slots)
-  {
+  for (const auto& slot : m_Slots) {
     if (slot.GetSlotStatus() == SLOTSTATUS_OPEN)
       ++NumSlotsOpen;
   }
@@ -1621,7 +1620,7 @@ bool CGame::UpdateLobby()
   //
   // ensures that all pending users' leave messages have already been sent
   // either at CGame::EventUserDeleted or at CGame::EventRequestJoin (reserve system kicks)
-  if (!m_GameLoading && GetSlotsOpen() > 0) {
+  if (!m_GameLoading && HasSlotsOpen()) {
     CreateVirtualHost();
   }
 
@@ -1888,23 +1887,26 @@ bool CGame::Update(fd_set* fd, fd_set* send_fd)
     // we must send pings to users who are downloading the map because
     // Warcraft III disconnects from the lobby if it doesn't receive a ping every ~90 seconds
     // so if the user takes longer than 90 seconds to download the map they would be disconnected unless we keep sending pings
-
-    vector<uint8_t> pingPacket = GameProtocol::SEND_W3GS_PING_FROM_HOST(loopTicks);
-    for (auto& user : m_Users) {
-      // Avoid ping-spamming GProxy-reconnected players
-      if (!user->GetDisconnected()) {
-        user->Send(pingPacket);
+    if (!m_Users.empty()) {
+      vector<uint8_t> pingPacket = GameProtocol::SEND_W3GS_PING_FROM_HOST(loopTicks);
+      for (auto& user : m_Users) {
+        // Avoid ping-spamming GProxy-reconnected players
+        if (!user->GetDisconnected()) {
+          user->Send(pingPacket);
+        }
       }
     }
 
     // we also broadcast the game to the local network every 5 seconds so we hijack this timer for our nefarious purposes
     if (GetUDPEnabled() && GetIsStageAcceptingJoins()) {
-      if (!(m_Aura->m_Net.m_UDPMainServerEnabled && m_Aura->m_Net.m_Config.m_UDPBroadcastStrictMode)) {
+      //if (FD_ISSET(m_Aura->m_Net.m_UDPMainServer->m_Socket, &(m_Aura->m_SendFDs))) {
+      if (!m_Aura->m_Net.m_Config.m_UDPBroadcastStrictMode) {
         SendGameDiscoveryInfo();
       } else {
         SendGameDiscoveryRefresh();
       }
       m_GameDiscoveryActive = true;
+      //}
     }
 
     if (m_GameDiscoveryInfoChanged & GAME_DISCOVERY_CHANGED_SLOTS) {
@@ -2003,19 +2005,19 @@ bool CGame::Update(fd_set* fd, fd_set* send_fd)
     m_StartedKickVoteTime = 0;
   }
 
-
   // start the gameover timer if there's only a configured number of players left
   // do not count observers, but fake users are counted regardless
-  uint8_t RemainingPlayers = MINUS_TINY(GetNumJoinedPlayersOrFakeUsers(), m_JoinedVirtualHosts);
-  if (RemainingPlayers != m_StartPlayers && !GetIsGameOverTrusted() && (m_GameLoading || m_GameLoaded)) {
-    if (RemainingPlayers == 0) {
-      LOG_APP_IF(LogLevel::kInfo, Concat("gameover timer started: 0 p | ", ToDecString(GetNumJoinedObservers()), " obs | 0 fake"));
-      StartGameOverTimer();
-    } else if (RemainingPlayers <= m_Config.m_NumPlayersToStartGameOver) {
-      LOG_APP_IF(LogLevel::kInfo, Concat("gameover timer started: ", ToDecString(GetNumJoinedPlayers()), " p | ", ToDecString(GetNumComputers()), " comp | ", ToDecString(GetNumJoinedObservers()), " obs | ", to_string(m_FakeUsers.size() - m_JoinedVirtualHosts), " fake | ", ToDecString(m_JoinedVirtualHosts), " vhost"));
-      StartGameOverTimer();
-    }
-  }
+  if (m_GameLoading || m_GameLoaded) {
+    uint8_t remainingPlayers = MINUS_TINY(GetNumJoinedPlayersOrFakeUsers(), m_JoinedVirtualHosts);
+    if (remainingPlayers != m_StartPlayers && !GetIsGameOverTrusted()) {
+      if (remainingPlayers == 0) {
+        LOG_APP_IF(LogLevel::kInfo, Concat("gameover timer started: 0 p | ", ToDecString(GetNumJoinedObservers()), " obs | 0 fake"));
+        StartGameOverTimer();
+      } else if (remainingPlayers <= m_Config.m_NumPlayersToStartGameOver) {
+        LOG_APP_IF(LogLevel::kInfo, Concat("gameover timer started: ", ToDecString(GetNumJoinedPlayers()), " p | ", ToDecString(GetNumComputers()), " comp | ", ToDecString(GetNumJoinedObservers()), " obs | ", to_string(m_FakeUsers.size() - m_JoinedVirtualHosts), " fake | ", ToDecString(m_JoinedVirtualHosts), " vhost"));
+        StartGameOverTimer();
+      }
+  }}
 
   // finish the gameover timer
   if (GetIsGameOver() && m_Aura->GetTimeIsAfterDelay(m_GameOverTime.value(), m_GameOverTolerance.value_or(60))) {

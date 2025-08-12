@@ -387,7 +387,7 @@ bool CStreamIOSocket::DoRecv(fd_set* fd)
 
     // Segmentation mainly happens when receiving game lists from PvPGN connections.
     // W3GS packets may also be segmented just as the game loads.
-    if (c >= TCP_LOOP_SEGMENTS_THRESHOLD) { // for size of 4096, threshold is 2905 = 4096 / sqrt(2)
+    if (c >= integer_cast<decltype(c)>(TCP_LOOP_SEGMENTS_THRESHOLD)) { // for size of 4096, threshold is 2905 = 4096 / sqrt(2)
       while ((c = recv(m_Socket, buffer, sizeof(buffer), 0)) > 0) {
         m_RecvBuffer.append(buffer, static_cast<string::size_type>(c));
         // Limit to TCP_MAX_SEGMENTS_PER_READABLE=3 segments per loop iteration to
@@ -448,8 +448,7 @@ void CStreamIOSocket::DoSend(fd_set* send_fd)
   if (m_Socket == INVALID_SOCKET || m_HasError || m_HasFin || !m_Connected || m_SendBuffer.empty())
     return;
 
-  if (FD_ISSET(m_Socket, send_fd))
-  {
+  if (FD_ISSET(m_Socket, send_fd)) {
     // socket is ready, send it
 
     auto s = send(m_Socket, m_SendBuffer.c_str(), m_SendBuffer.size(), MSG_NOSIGNAL);
@@ -466,7 +465,6 @@ void CStreamIOSocket::DoSend(fd_set* send_fd)
       if (m_LogErrors) {
         Print(Concat("[TCPSOCKET] (", GetName(), ") error (send) - ", GetErrorString()));
       }
-      return;
     }
   }
 }
@@ -850,6 +848,8 @@ bool CUDPSocket::Broadcast(const sockaddr_storage* addr4, const vector<uint8_t>&
   );
 
   if (result == -1) {
+    m_Error = GetLastOSError();
+    Print("[UDP] error (sendto) - " + GetErrorString());
     return false;
   }
 

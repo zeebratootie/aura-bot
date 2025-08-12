@@ -1199,35 +1199,34 @@ bool CAura::Update()
   // take every socket we own and throw it in one giant select statement so we can block on all sockets
 
   int32_t nfds = 0;
-  fd_set fd, send_fd;
-  FD_ZERO(&fd);
-  FD_ZERO(&send_fd);
+  FD_ZERO(&m_ReadFDs);
+  FD_ZERO(&m_SendFDs);
 
   // the current lobby's player sockets
 
   for (const auto& lobby : m_Lobbies) {
-    NumFDs += lobby->SetFD(&fd, &send_fd, &nfds);
+    NumFDs += lobby->SetFD(&m_ReadFDs, &m_SendFDs, &nfds);
   }
 
   // all running games' player sockets
 
   for (const auto& game : m_StartedGames) {
-    NumFDs += game->SetFD(&fd, &send_fd, &nfds);
+    NumFDs += game->SetFD(&m_ReadFDs, &m_SendFDs, &nfds);
   }
 
   // all battle.net sockets
 
   for (const auto& realm : m_Realms) {
-    NumFDs += realm->SetFD(&fd, &send_fd, &nfds);
+    NumFDs += realm->SetFD(&m_ReadFDs, &m_SendFDs, &nfds);
   }
 
   // irc socket
   if (m_IRC.GetIsEnabled()) {
-    NumFDs += m_IRC.SetFD(&fd, &send_fd, &nfds);
+    NumFDs += m_IRC.SetFD(&m_ReadFDs, &m_SendFDs, &nfds);
   }
 
   // UDP sockets, outgoing test connections, observers
-  NumFDs += m_Net.SetFD(&fd, &send_fd, &nfds);
+  NumFDs += m_Net.SetFD(&m_ReadFDs, &m_SendFDs, &nfds);
 
   struct timeval tv;
   tv.tv_sec  = 0;
@@ -1247,11 +1246,11 @@ bool CAura::Update()
   }
 
 #ifdef _WIN32
-  select(1, &fd, nullptr, nullptr, &tv);
-  select(1, nullptr, &send_fd, nullptr, &send_tv);
+  select(1, &m_ReadFDs, nullptr, nullptr, &tv);
+  select(1, nullptr, &m_SendFDs, nullptr, &send_tv);
 #else
-  select(nfds + 1, &fd, nullptr, nullptr, &tv);
-  select(nfds + 1, nullptr, &send_fd, nullptr, &send_tv);
+  select(nfds + 1, &m_ReadFDs, nullptr, nullptr, &tv);
+  select(nfds + 1, nullptr, &m_SendFDs, nullptr, &send_tv);
 #endif
 
   if (NumFDs == 0) {
@@ -1271,7 +1270,7 @@ bool CAura::Update()
     }
   }
 
-  m_Net.UpdateBeforeGames(&fd, &send_fd);
+  m_Net.UpdateBeforeGames(&m_ReadFDs, &m_SendFDs);
 
   // update games, starting from lobbies
 
@@ -1279,7 +1278,7 @@ bool CAura::Update()
 #ifdef PROFILING
     auto t = m_PerfMetrics.lobbies.TryStart();
 #endif
-    if ((*it)->Update(&fd, &send_fd)) {
+    if ((*it)->Update(&m_ReadFDs, &m_SendFDs)) {
       if ((*it)->GetExiting()) {
         EventGameDeleted(*it);
         it->reset();
@@ -1289,13 +1288,13 @@ bool CAura::Update()
       it = m_Lobbies.erase(it);
       m_MetaDataNeedsUpdate = true;
     } else {
-      (*it)->UpdatePost(&send_fd);
+      (*it)->UpdatePost(&m_SendFDs);
       ++it;
     }
 #ifdef PROFILING
-    int64_t dt = t.TryEndNano();
-    if (dt > 1e6 && MatchLogLevel(LogLevel::kWarning)) {
-      Print(Concat("Lobby update took " + to_string(dt / 1e6) + " ms");
+    int64_t dt = t->TryEndNano();
+    if (dt > 2e6 && MatchLogLevel(LogLevel::kWarning)) {
+      Print(Concat("Game update (lobby) took " + to_string(dt / 1e6) + " ms"));
     }
 #endif
   }
@@ -1304,7 +1303,7 @@ bool CAura::Update()
 #ifdef PROFILING
     auto t = m_PerfMetrics.games.TryStart();
 #endif
-    if ((*it)->Update(&fd, &send_fd)) {
+    if ((*it)->Update(&m_ReadFDs, &m_SendFDs)) {
       (*it)->FlushLogs();
       if ((*it)->GetExiting()) {
         EventGameDeleted(*it);
@@ -1315,26 +1314,26 @@ bool CAura::Update()
       it = m_StartedGames.erase(it);
       m_MetaDataNeedsUpdate = true;
     } else {
-      (*it)->UpdatePost(&send_fd);
+      (*it)->UpdatePost(&m_SendFDs);
       ++it;
     }
 #ifdef PROFILING
-    int64_t dt = t.TryEndNano();
-    if (dt > 1e6 && MatchLogLevel(LogLevel::kWarning)) {
-      Print(Concat("Game update took " + to_string(dt / 1e6) + " ms");
+    int64_t dt = t->TryEndNano();
+    if (dt > 2e6 && MatchLogLevel(LogLevel::kWarning)) {
+      Print(Concat("Game update (started) took " + to_string(dt / 1e6) + " ms"));
     }
 #endif
   }
 
   for (const auto& realm : m_Realms) {
-    realm->Update(&fd, &send_fd);
+    realm->Update(&m_ReadFDs, &m_SendFDs);
   }
 
-  m_IRC.Update(&fd, &send_fd);
+  m_IRC.Update(&m_ReadFDs, &m_SendFDs);
   m_Discord.Update();
 
   // UDP sockets, outgoing test connections
-  m_Net.UpdateAfterGames(&fd, &send_fd);
+  m_Net.UpdateAfterGames(&m_ReadFDs, &m_SendFDs);
 
   // move stuff from pending vectors to their intended places
   m_Net.MergeDownGradedConnections();
