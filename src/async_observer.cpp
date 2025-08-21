@@ -635,6 +635,10 @@ void CAsyncObserver::EventGameLoaded()
   Print(Concat(GetLogPrefix(), "finished loading"));
   Send(m_GameHistory->m_LoadingRealBuffer);
   Send(m_GameHistory->m_LoadingVirtualBuffer);
+
+  if (auto game = m_Game.lock()) {
+    game->SendSpectatorChat(this, string_view(), Concat(GetName(), " joined as an spectator."));
+  }
 }
 
 void CAsyncObserver::EventChat(const CIncomingMessageOrSettingsView& incomingChatMessage)
@@ -794,6 +798,11 @@ void CAsyncObserver::EventLeft(const uint32_t clientReason)
       reason = Concat(" (", GameProtocol::LeftCodeToString(clientReason), ")");
     }
     Print(Concat(GetLogPrefix(), "left the game at [", ToFormattedTimeStamp(m_GameTicks / 1000), "]", reason));
+    if (m_FinishedLoading) {
+      if (auto game = m_Game.lock()) {
+        game->SendSpectatorChat(this, string_view(), Concat(GetName(), " left spectator mode."));
+      }
+    }
     /*
     if (m_GameHistory->m_PlayingBuffer.size() <= m_Offset) {
       Print(Concat(GetLogPrefix(), "next frame was not available"));
