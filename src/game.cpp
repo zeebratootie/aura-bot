@@ -1556,7 +1556,7 @@ void CGame::UpdateJoinable()
 
     if (m_SlotInfoChanged & SLOTS_DOWNLOAD_PROGRESS_CHANGED) {
       SendAllSlotInfo();
-      UpdateReadyCounters();
+      //UpdateReadyCounters();
       UNSET_TINY(m_SlotInfoChanged, SLOTS_DOWNLOAD_PROGRESS_CHANGED);
     }
 
