@@ -2023,20 +2023,19 @@ bool CGame::Update(fd_set* fd, fd_set* send_fd)
     UpdateJoinable();
   }
 
+
   if (!m_LobbyLoading && m_Aura->GetTicksIsAfterDelay(m_LastDiscoveryTicks, 5000)) {
     // send UDP refresh every 7.5 seconds
     // this used to be sent using the same interval as pings
     // however, if we are broadcasting to a VPN network, this operation can take around 10 ms,
     // so we want more fine-grained control of this operation
     if (GetUDPEnabled() && GetIsStageAcceptingJoins()) {
-      //if (FD_ISSET(m_Aura->m_Net.m_UDPMainServer->m_Socket, &(m_Aura->m_SendFDs))) {
       if (!m_Aura->m_Net.m_Config.m_UDPBroadcastStrictMode) {
         SendGameDiscoveryInfo();
       } else {
         SendGameDiscoveryRefresh();
       }
       m_GameDiscoveryActive = true;
-      //}
     }
 
     if (m_GameDiscoveryInfoChanged & GAME_DISCOVERY_CHANGED_SLOTS) {
@@ -4533,12 +4532,7 @@ void CGame::SendGameDiscoveryRefresh() const
 void CGame::SendGameDiscoveryInfo(const Version& gameVersion)
 {
   // See CNet::SendGameDiscovery()
-
-  if (!m_Aura->m_Net.SendBroadcast(GetGameDiscoveryInfo(gameVersion, GetHostPortFromType(GAME_DISCOVERY_INTERFACE_IPV4)))) {
-    // Ensure the game is available at loopback.
-    LOG_APP_IF(LogLevel::kDebug, Concat("sending IPv4 GAMEINFO packet to IPv4 Loopback (game port ", to_string(m_HostPort), ")"));
-    m_Aura->m_Net.SendLoopback(GetGameDiscoveryInfo(gameVersion, m_HostPort));
-  }
+  m_Aura->m_Net.SendBroadcast(GetGameDiscoveryInfo(gameVersion, GetHostPortFromType(GAME_DISCOVERY_INTERFACE_IPV4)));
 
   for (auto& address : m_Config.m_ExtraDiscoveryAddresses) {
     if (isLoopbackAddress(&address)) continue; // We already ensure sending loopback packets above.

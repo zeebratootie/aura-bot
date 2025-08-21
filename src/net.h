@@ -163,7 +163,7 @@ public:
   void UpdateAfterGames(fd_set* fd, fd_set* send_fd);
   void UpdateMapTransfers();
 
-  bool SendBroadcast(const std::vector<uint8_t>& packet);
+  void SendBroadcast(const std::vector<uint8_t>& packet);
   void Send(const sockaddr_storage* address, const std::vector<uint8_t>& packet) const;
   void Send(const std::string& addressLiteral, const std::vector<uint8_t>& packet) const;
   void Send(const std::string& addressLiteral, const uint16_t port, const std::vector<uint8_t>& packet) const;

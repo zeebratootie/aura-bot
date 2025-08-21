@@ -84,6 +84,7 @@
 #include <iterator>
 #include <exception>
 #include <system_error>
+#include <thread>
 #include <locale>
 
 #ifdef _WIN32
@@ -107,6 +108,12 @@ constexpr int APP_METRICS_LOBBY_SAMPLE_RATE = 10;
 constexpr size_t APP_METRICS_LOBBY_CAPACITY = 1000;
 constexpr int APP_METRICS_GAME_SAMPLE_RATE = 10;
 constexpr size_t APP_METRICS_GAME_CAPACITY = 1000;
+
+inline unsigned int GetThreadPoolSize()
+{
+  unsigned int n = thread::hardware_concurrency();
+  return (n > 1) ? (n - 1) : 1;
+}
 
 inline void GetAuraHome(const CCLI& cliApp, filesystem::path& homeDir)
 {
@@ -480,6 +487,7 @@ CAura::CAura(CConfig& CFG, const CCLI& nCLI)
     m_HistoryGameID(0u),
     m_MaxGameNameSize(MAX_GAME_NAME_SIZE),
 
+    m_ThreadPool(BS::light_thread_pool(GetThreadPoolSize())),
     m_DataBaseConfig(nullptr),
     m_GameDefaultConfig(nullptr),
     m_RealmDefaultConfig(nullptr),
@@ -1372,6 +1380,8 @@ void CAura::AwaitSettled()
   if (m_AutoRehostGameSetup) {
     m_AutoRehostGameSetup->AwaitSettled();
   }
+  m_ThreadPool.purge();
+  m_ThreadPool.wait();
   m_Discord.AwaitSettled();
 }
 

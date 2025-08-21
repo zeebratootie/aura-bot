@@ -64,6 +64,7 @@
 #include <sha1/sha1.h>
 #include <random>
 #include <filesystem>
+#include <thread_pool/BS_thread_pool.hpp>
 
 #ifdef _WIN32
 #pragma once
@@ -128,6 +129,7 @@ public:
   uint64_t                                           m_HistoryGameID;
   size_t                                             m_MaxGameNameSize;
 
+  BS::light_thread_pool                              m_ThreadPool;
   CDataBaseConfig*                                   m_DataBaseConfig;
   CGameConfig*                                       m_GameDefaultConfig;  
   CRealmConfig*                                      m_RealmDefaultConfig;

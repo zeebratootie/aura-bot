@@ -659,6 +659,7 @@
     <ClInclude Include="..\lib\sha1\sha1.h" />
     <ClInclude Include="..\lib\sqlite3\sqlite3.h" />
     <ClInclude Include="..\lib\sqlite3\sqlite3ext.h" />
+    <ClInclude Include="..\lib\thread_pool\thread_pool.hpp" />
     <ClInclude Include="constants.h" />
     <ClInclude Include="forward.h" />
     <ClInclude Include="includes.h" />

@@ -789,7 +789,7 @@ void CNet::UpdateMapTransfers()
   for (const auto& user : downloaderPlayers) {
     shared_ptr<CGame> game = user->GetGame();
     if (!game->GetMap()->GetMapFileIsValid()) {
-      user->AddKickReason(GameUser::KickReason::MAP_MISSING);
+      user->AddKickReason(GameUser::KickReason::kMapMissing);
       if (!user->HasLeftReason()) {
         user->SetLeftReason("autokicked - they don't have the map, and it cannot be transferred (corrupted)");
       }
@@ -880,25 +880,46 @@ void CNet::SetBroadcastTarget(sockaddr_storage& subnet)
     Print("[UDP] broadcasting LAN games to [" + AddressToString(subnet) + "]");
 }
 
-bool CNet::SendBroadcast(const vector<uint8_t>& packet)
+void CNet::SendBroadcast(const vector<uint8_t>& packet)
 {
-  if (!m_Config.m_UDPBroadcastEnabled)
-    return false;
-
-  bool mainSuccess = false;
-  if (m_UDPMainServerEnabled) {
-    if (m_UDPMainServer->Broadcast(m_MainBroadcastTarget, packet)) mainSuccess = true;
-    if (!m_Config.m_UDPBroadcastStrictMode && m_Config.m_ProxyReconnect && m_Config.m_ProxyReconnectLANBroadcastLaxEnabled) {
-      m_UDPMainServer->Broadcast(m_ProxyReconnectLANBroadcastTarget, packet);
-    }
-  } else {
-    if (m_UDPDeafSocket->Broadcast(m_MainBroadcastTarget, packet)) mainSuccess = true;
-    if (m_Config.m_ProxyReconnect && m_Config.m_ProxyReconnectLANBroadcastLaxEnabled) {
-      m_UDPDeafSocket->Broadcast(m_ProxyReconnectLANBroadcastTarget, packet);
-    }
+  if (!m_Config.m_UDPBroadcastEnabled) {
+    return;
   }
 
-  return mainSuccess;
+  sockaddr_storage mainTarget = *m_MainBroadcastTarget;
+  if (m_UDPMainServerEnabled) {
+    m_Aura->m_ThreadPool.detach_task(
+      [this, mainTarget, packet]
+      {
+        m_UDPMainServer->Broadcast(&mainTarget, packet);
+      }
+    );
+    if (!m_Config.m_UDPBroadcastStrictMode && m_Config.m_ProxyReconnect && m_Config.m_ProxyReconnectLANBroadcastLaxEnabled) {
+      sockaddr_storage gProxyLanTarget = *m_ProxyReconnectLANBroadcastTarget;
+      m_Aura->m_ThreadPool.detach_task(
+        [this, gProxyLanTarget, packet]
+        {
+          m_UDPMainServer->Broadcast(&gProxyLanTarget, packet);
+        }
+      );
+    }
+  } else {
+    m_Aura->m_ThreadPool.detach_task(
+      [this, mainTarget, packet]
+      {
+        m_UDPDeafSocket->Broadcast(&mainTarget, packet);
+      }
+    );
+    if (m_Config.m_ProxyReconnect && m_Config.m_ProxyReconnectLANBroadcastLaxEnabled) {
+      sockaddr_storage gProxyLanTarget = *m_ProxyReconnectLANBroadcastTarget;
+      m_Aura->m_ThreadPool.detach_task(
+        [this, gProxyLanTarget, packet]
+        {
+          m_UDPDeafSocket->Broadcast(&gProxyLanTarget, packet);
+        }
+      );
+    }
+  }
 }
 
 void CNet::Send(const sockaddr_storage* address, const vector<uint8_t>& packet) const
@@ -909,13 +930,29 @@ void CNet::Send(const sockaddr_storage* address, const vector<uint8_t>& packet) 
     return;
   }
 
+  sockaddr_storage addr = *address;
   if (address->ss_family == AF_INET6) {
-    m_UDPIPv6Server->SendTo(address, packet);
+    m_Aura->m_ThreadPool.detach_task(
+      [this, addr, packet]
+      {
+        m_UDPIPv6Server->SendTo(&addr, packet);
+      }
+    );
   } else {
     if (m_UDPMainServerEnabled) {
-      m_UDPMainServer->SendTo(address, packet);
+      m_Aura->m_ThreadPool.detach_task(
+        [this, addr, packet]
+        {
+          m_UDPMainServer->SendTo(&addr, packet);
+        }
+      );
     } else {
-      m_UDPDeafSocket->SendTo(address, packet);
+      m_Aura->m_ThreadPool.detach_task(
+        [this, addr, packet]
+        {
+          m_UDPDeafSocket->SendTo(&addr, packet);
+        }
+      );
     }
   }
 }
@@ -959,35 +996,28 @@ void CNet::SendArbitraryUnicast(const string& addressLiteral, const uint16_t por
   sockaddr_storage* address = &(maybeAddress.value());
   SetAddressPort(address, port);
 
-  if (m_Config.m_UDPBroadcastEnabled)
-    PropagateBroadcastEnabled(false);
+  //if (m_Config.m_UDPBroadcastEnabled)
+    //PropagateBroadcastEnabled(false);
 
   Send(address, packet);
 
-  if (m_Config.m_UDPBroadcastEnabled)
-    PropagateBroadcastEnabled(true);
+  //if (m_Config.m_UDPBroadcastEnabled)
+    //PropagateBroadcastEnabled(true);
 }
 
 void CNet::SendGameDiscovery(const vector<uint8_t>& packet, const vector<sockaddr_storage>& clientIps)
 {
-#ifdef PROFILING
-  int64_t t = GetTicks();
-#endif
   SendBroadcast(packet);
-#ifdef PROFILING
-  int64_t dt = GetTicks() - t;
-  Print(Concat("Broadcast took ", to_string(dt), " ms"));
-#endif
 
   if (!clientIps.empty()) {
-    if (m_Config.m_UDPBroadcastEnabled)
-      PropagateBroadcastEnabled(false);
+    //if (m_Config.m_UDPBroadcastEnabled)
+      //PropagateBroadcastEnabled(false);
 
     for (auto& clientIp : clientIps)
       Send(&clientIp, packet);
 
-    if (m_Config.m_UDPBroadcastEnabled)
-      PropagateBroadcastEnabled(true);
+    //if (m_Config.m_UDPBroadcastEnabled)
+      //PropagateBroadcastEnabled(true);
   }
 
   if (m_Config.m_EnableTCPWrapUDP || m_Config.m_VLANEnabled) {

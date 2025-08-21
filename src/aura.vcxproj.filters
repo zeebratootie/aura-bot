@@ -233,6 +233,9 @@
     <ClInclude Include="..\lib\CLI11\CLI11.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\lib\thread_pool\thread_pool.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="constants.h">
       <Filter>Header Files</Filter>
     </ClInclude>
