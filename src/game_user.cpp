@@ -327,7 +327,7 @@ string CGameUser::GetDisplayName() const
 
 shared_ptr<CGame> CGameUser::GetGame()
 {
-  return m_Game.get().shared_from_this();
+  return m_Game.get().GetCheckedShared();
 }
 
 shared_ptr<CGProxyServer> CGameUser::GetGProxy() const

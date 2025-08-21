@@ -186,6 +186,7 @@ protected:
   bool                                                   m_IsAutoVirtualPlayers;          // if we should try to add the virtual host as a second (fake) player in single-player games
   uint8_t                                                m_VirtualHostUID;                // virtual host's UID - note that they don't get a SID
   uint8_t                                                m_GProxyEmptyActions;            // empty actions used for gproxy protocol
+  bool                                                   m_Destroying;                    // true if we are in the CGame destructor
   bool                                                   m_Exiting;                       // set to true and this instance will be deleted next update
   bool                                                   m_ExitingSoon;                   // set to true and this instance will be deleted when no players remain
   uint8_t                                                m_SlotInfoChanged;               // if the slot info has changed and hasn't been sent to the players yet (optimization)
@@ -261,6 +262,7 @@ public:
   CGame(CGame&) = delete;
 
   bool                                                   GetExiting() const { return m_Exiting; }
+  std::shared_ptr<CGame>                                 GetCheckedShared();
   inline QueuedActionsFrameNode*                         GetFirstActionFrameNode() { return m_CurrentActionsFrame; }
   inline QueuedActionsFrameNode*                         GetLastActionFrameNode() { return m_CurrentActionsFrame->prev; }
   inline CQueuedActionsFrame&                            GetFirstActionFrame();

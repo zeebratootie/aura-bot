@@ -204,6 +204,7 @@ CGame::CGame(CAura* nAura, shared_ptr<CGameSetup> nGameSetup)
     m_DisplayMode(nGameSetup->m_RealmsDisplayMode),
     m_IsAutoVirtualPlayers(false),
     m_VirtualHostUID(0xFF),
+    m_Destroying(false),
     m_Exiting(false),
     m_ExitingSoon(false),
     m_SlotInfoChanged(SLOTS_UNCHANGED),
@@ -952,6 +953,7 @@ void CGame::LogFrameDrifts()
 
 CGame::~CGame()
 {
+  m_Destroying = true;
   LogFrameDrifts();
   Reset();
   ReleaseMapBusyTimedLock();
@@ -4241,6 +4243,13 @@ bool CGame::CalcAnyUsingGProxyLegacy() const
 
 PlayersReadyMode CGame::GetPlayersReadyMode() const {
   return m_Config.m_PlayersReadyMode;
+}
+
+shared_ptr<CGame> CGame::GetCheckedShared() {
+  if (m_Destroying) {
+    return nullptr;
+  }
+  return shared_from_this();
 }
 
 CQueuedActionsFrame& CGame::GetFirstActionFrame()
