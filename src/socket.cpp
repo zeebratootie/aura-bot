@@ -104,8 +104,59 @@ string CSocket::GetErrorString() const
   if (!m_HasError)
     return "NO ERROR";
 
-  switch (m_Error)
+  return CSocket::ErrorToString(m_Error);
+}
+
+void CSocket::SetFD(fd_set* fd, fd_set* send_fd, int* nfds)
+{
+  if (m_Socket == INVALID_SOCKET)
+    return;
+
+  FD_SET(m_Socket, fd);
+  FD_SET(m_Socket, send_fd);
+
+#ifndef _WIN32
+  if (m_Socket > *nfds)
+    *nfds = m_Socket;
+#else
+  UNREFERENCED_PARAMETER(nfds);
+#endif
+}
+
+void CSocket::Allocate(const uint8_t family, int type)
+{
+  m_Socket = socket(family, type, 0);
+  m_Type = type;
+
+  if (m_Socket == INVALID_SOCKET)
   {
+    m_HasError = true;
+    m_Error = GetLastOSError();
+    Print("[SOCKET] error (socket) - " + GetErrorString());
+    return;
+  }
+}
+
+void CSocket::Reset()
+{
+  if (m_Socket != INVALID_SOCKET) {
+    closesocket(m_Socket);
+  }
+
+  m_Socket = INVALID_SOCKET;
+  m_HasError = false;
+  m_Error = 0;
+  m_HasFin = false;
+}
+
+void CSocket::SendReply(const sockaddr_storage* /*address*/, const vector<uint8_t>& /*message*/)
+{
+}
+
+string CSocket::ErrorToString(int error) {
+  switch (error) {
+    case EACCES:
+      return "EACCESS";
     case EWOULDBLOCK:
       return "EWOULDBLOCK";
     case EINPROGRESS:
@@ -180,53 +231,7 @@ string CSocket::GetErrorString() const
       return "Connection reset by peer";
   }
 
-  return Concat("UNKNOWN ERROR (", to_string(m_Error), ")");
-}
-
-void CSocket::SetFD(fd_set* fd, fd_set* send_fd, int* nfds)
-{
-  if (m_Socket == INVALID_SOCKET)
-    return;
-
-  FD_SET(m_Socket, fd);
-  FD_SET(m_Socket, send_fd);
-
-#ifndef _WIN32
-  if (m_Socket > *nfds)
-    *nfds = m_Socket;
-#else
-  UNREFERENCED_PARAMETER(nfds);
-#endif
-}
-
-void CSocket::Allocate(const uint8_t family, int type)
-{
-  m_Socket = socket(family, type, 0);
-  m_Type = type;
-
-  if (m_Socket == INVALID_SOCKET)
-  {
-    m_HasError = true;
-    m_Error = GetLastOSError();
-    Print("[SOCKET] error (socket) - " + GetErrorString());
-    return;
-  }
-}
-
-void CSocket::Reset()
-{
-  if (m_Socket != INVALID_SOCKET) {
-    closesocket(m_Socket);
-  }
-
-  m_Socket = INVALID_SOCKET;
-  m_HasError = false;
-  m_Error = 0;
-  m_HasFin = false;
-}
-
-void CSocket::SendReply(const sockaddr_storage* /*address*/, const vector<uint8_t>& /*message*/)
-{
+  return Concat("UNKNOWN ERROR (", to_string(error), ")");
 }
 
 //
@@ -852,11 +857,9 @@ bool CUDPSocket::Broadcast(const sockaddr_storage* addr4, const vector<uint8_t>&
   );
 
   if (result == -1) {
-    m_Error = GetLastOSError();
-    Print("[UDP] error (sendto) - " + GetErrorString());
+    Print(Concat("[UDP] error (sendto) [", AddressToString(*addr4), "] - ", ErrorToString(GetLastOSError())));
     return false;
   }
-
   return true;
 }
 

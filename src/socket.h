@@ -68,6 +68,8 @@
 #define EINVAL WSAEINVAL
 #undef EWOULDBLOCK /* override definition in errno.h */
 #define EWOULDBLOCK WSAEWOULDBLOCK
+#undef EACCES /* override definition in errno.h */
+#define EACCES WSAEACCES
 #undef EAGAIN /* override definition in errno.h */
 #define EAGAIN WSAEWOULDBLOCK
 #undef EINPROGRESS /* override definition in errno.h */
@@ -452,6 +454,7 @@ public:
   void Allocate(const uint8_t family, int type);
 
   virtual void SendReply(const sockaddr_storage* address, const std::vector<uint8_t>& packet);
+  [[nodiscard]] static std::string ErrorToString(int error);
 };
 
 //
