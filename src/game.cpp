@@ -1510,7 +1510,7 @@ uint32_t CGame::GetUptime() const
 
 size_t CGame::GetFrameDriftBucket(int64_t actionLateBy) const
 {
-  uint64_t clamped = signed_cast<uint64_t>(clamp<int64_t>(actionLateBy, 0, 350));
+  uint64_t clamped = signed_cast<uint64_t>(clamp<int64_t>(actionLateBy, 0, 349));
   if (clamped < 50) return integer_cast_lossy<size_t>(clamped / 5);
   if (clamped < 150) return integer_cast_lossy<size_t>(10 + ((clamped - 50) / 10));
   return integer_cast_lossy<size_t>(20 + ((clamped - 150) / 20));
