@@ -3916,7 +3916,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
       targetGame->Send(targetPlayer, GameProtocol::SEND_W3GS_STARTDOWNLOAD(targetGame->GetHostUID()));
       targetPlayer->SetDownloadAllowed(true);
       targetPlayer->GetMapTransfer().Start();
-      targetPlayer->RemoveKickReason(GameUser::KickReason::MAP_MISSING);
+      targetPlayer->RemoveKickReason(GameUser::KickReason::kMapMissing);
       targetPlayer->CheckStillKicked();
       break;
     }

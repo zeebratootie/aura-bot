@@ -59,12 +59,12 @@ namespace GameUser
 {
   namespace KickReason
   {
-    constexpr uint8_t NONE = 0u;
-    constexpr uint8_t MAP_MISSING = 1u;
-    constexpr uint8_t HIGH_PING = 2u;
-    constexpr uint8_t SPOOFER = 4u;
-    constexpr uint8_t ABUSER = 8u;
-    constexpr uint8_t ANTISHARE = 16u;
+    constexpr uint8_t kNone = 0u;
+    constexpr uint8_t kMapMissing = 1u;
+    constexpr uint8_t kHighPing = 2u;
+    constexpr uint8_t kSpoofer = 4u;
+    constexpr uint8_t kAbuser = 8u;
+    constexpr uint8_t kAntiShare = 16u;
   };
 
   //
@@ -286,12 +286,12 @@ namespace GameUser
     [[nodiscard]] inline bool                  GetMapChecked() const { return m_MapChecked; }
     [[nodiscard]] inline bool                  GetMapReady() const { return m_MapReady; }
     [[nodiscard]] inline bool                  GetInGameReady() const { return m_InGameReady; }
-    [[nodiscard]] inline bool                  GetMapKicked() const { return (m_KickReason & GameUser::KickReason::MAP_MISSING) != GameUser::KickReason::NONE; }
-    [[nodiscard]] inline bool                  GetPingKicked() const { return (m_KickReason & GameUser::KickReason::HIGH_PING) != GameUser::KickReason::NONE; }
-    [[nodiscard]] inline bool                  GetSpoofKicked() const { return (m_KickReason & GameUser::KickReason::SPOOFER) != GameUser::KickReason::NONE; }
-    [[nodiscard]] inline bool                  GetAbuseKicked() const { return (m_KickReason & GameUser::KickReason::ABUSER) != GameUser::KickReason::NONE; }
-    [[nodiscard]] inline bool                  GetAntiShareKicked() const { return (m_KickReason & GameUser::KickReason::ANTISHARE) != GameUser::KickReason::NONE; }
-    [[nodiscard]] inline bool                  GetAnyKicked() const { return m_KickReason != GameUser::KickReason::NONE; }
+    [[nodiscard]] inline bool                  GetMapKicked() const { return (m_KickReason & GameUser::KickReason::kMapMissing) != GameUser::KickReason::kNone; }
+    [[nodiscard]] inline bool                  GetPingKicked() const { return (m_KickReason & GameUser::KickReason::kHighPing) != GameUser::KickReason::kNone; }
+    [[nodiscard]] inline bool                  GetSpoofKicked() const { return (m_KickReason & GameUser::KickReason::kSpoofer) != GameUser::KickReason::kNone; }
+    [[nodiscard]] inline bool                  GetAbuseKicked() const { return (m_KickReason & GameUser::KickReason::kAbuser) != GameUser::KickReason::kNone; }
+    [[nodiscard]] inline bool                  GetAntiShareKicked() const { return (m_KickReason & GameUser::KickReason::kAntiShare) != GameUser::KickReason::kNone; }
+    [[nodiscard]] inline bool                  GetAnyKicked() const { return m_KickReason != GameUser::KickReason::kNone; }
     [[nodiscard]] inline bool                  GetHasHighPing() const { return m_HasHighPing; }
     [[nodiscard]] inline bool                  GetKickQueued() const { return m_KickByTicks.has_value(); }
     [[nodiscard]] inline bool                  GetIsLagging() const { return m_Lagging; }
@@ -392,7 +392,7 @@ namespace GameUser
     inline void ClearKickByTicks() { m_KickByTicks = std::nullopt; }
     inline void AddKickReason(const uint8_t nKickReason) { SET_TINY(m_KickReason, nKickReason); }
     inline void RemoveKickReason(const uint8_t nKickReason) { UNSET_TINY(m_KickReason, nKickReason); }
-    inline void ResetKickReason() { m_KickReason = GameUser::KickReason::NONE; }
+    inline void ResetKickReason() { m_KickReason = GameUser::KickReason::kNone; }
     inline void KickAtLatest(int64_t nKickByTicks) {
       if (!m_KickByTicks.has_value() || nKickByTicks < m_KickByTicks.value()) {
         m_KickByTicks = nKickByTicks;

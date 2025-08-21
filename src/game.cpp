@@ -1400,16 +1400,16 @@ string CGame::GetEndDescription(shared_ptr<const CRealm> realm) const
     }
   }
 
-  string Description = Concat(
+  string description = Concat(
     "[", GetMap()->GetMapTitle(), "] \"", GetCustomGameName(realm, true), "\". ", winnersFragment
   );
 
   if (m_GameLoading || m_GameLoaded)
-    Description += Concat(" : ", to_string((m_EffectiveTicks / 1000) / 60), "min");
+    description += Concat(" : ", to_string((m_EffectiveTicks / 1000) / 60), "min");
   else
-    Description += Concat(" : ", to_string((m_Aura->GetLoopTime() - m_CreationTime) / 60), "min");
+    description += Concat(" : ", to_string((m_Aura->GetLoopTime() - m_CreationTime) / 60), "min");
 
-  return Description;
+  return description;
 }
 
 string CGame::GetCategory() const
@@ -1623,7 +1623,7 @@ bool CGame::UpdateLobby()
   //
   // ensures that all pending users' leave messages have already been sent
   // either at CGame::EventUserDeleted or at CGame::EventRequestJoin (reserve system kicks)
-  if (!m_GameLoading && HasSlotsOpen()) {
+  if (!m_GameLoading && !GetHasVirtualHost() && HasSlotsOpen()) {
     CreateVirtualHost();
   }
 
@@ -1889,13 +1889,7 @@ bool CGame::Update(fd_set* fd, fd_set* send_fd)
     // we must send pings to users who are downloading the map because
     // Warcraft III disconnects from the lobby if it doesn't receive a ping every ~90 seconds
     // so if the user takes longer than 90 seconds to download the map they would be disconnected unless we keep sending pings
-    vector<uint8_t> pingPacket = GameProtocol::SEND_W3GS_PING_FROM_HOST(loopTicks);
-    for (auto& user : m_Users) {
-      // Avoid ping-spamming GProxy-reconnected players
-      if (!user->GetDisconnected()) {
-        user->Send(pingPacket);
-      }
-    }
+    SendAllConnected(GameProtocol::SEND_W3GS_PING_FROM_HOST(loopTicks));
     m_LastPingTicks = loopTicks;
   }
 
@@ -2041,7 +2035,14 @@ bool CGame::Update(fd_set* fd, fd_set* send_fd)
     }
 
     if (m_GameDiscoveryInfoChanged & GAME_DISCOVERY_CHANGED_SLOTS) {
+#ifdef PROFILING
+      int64_t t = GetTicks();
+#endif
       SendGameDiscoveryInfoMDNS();
+#ifdef PROFILING
+      int64_t dt = GetTicks() - t;
+      if (dt > 1) Print(Concat("SendGameDiscoveryInfoMDNS() took ", to_string(dt), " ms"));
+#endif
       UNSET_TINY(m_GameDiscoveryInfoChanged, GAME_DISCOVERY_CHANGED_SLOTS);
     }
 
@@ -2289,6 +2290,16 @@ void CGame::SendAll(const std::vector<uint8_t>& data) const
   }
 }
 
+void CGame::SendAllConnected(const std::vector<uint8_t>& data) const
+{
+  // Note: Abuse of this function may desync GProxy-reconnected players
+  // But it's safe for pings and chat.
+  for (auto& user : m_Users) {
+    if (user->GetDisconnected()) continue;
+    user->Send(data);
+  }
+}
+
 void CGame::SendAsChat(CConnection* user, const std::vector<uint8_t>& data) const
 {
   if (user->GetType() == IncomingConnectionType::kPlayer && static_cast<const GameUser::CGameUser*>(user)->GetIsInLoadingScreen()) {
@@ -2492,24 +2503,27 @@ bool CGame::SendSpectatorChat(string_view prefix, string_view message) const
 
 void CGame::UpdateReadyCounters()
 {
-  const uint8_t numTeams = m_Map->GetMapNumTeams();
-  vector<uint8_t> readyControllersByTeam(numTeams, 0);
   m_ControllersWithMap = 0;
   m_ControllersBalanced = true;
   m_ControllersReadyCount = 0;
   m_ControllersNotReadyCount = 0;
-  for (uint8_t i = 0; i < m_Slots.size(); ++i) {
+  if (m_Users.empty()) {
+    return;
+  }
+  const size_t numTeams = m_Map->GetMapNumTeams();
+  vector<uint8_t> readyControllersByTeam(numTeams, 0);
+  for (size_t i = 0; i < m_Slots.size(); ++i) {
     if (m_Slots[i].GetSlotStatus() != SLOTSTATUS_OCCUPIED || m_Slots[i].GetTeam() == m_Map->GetVersionMaxSlots()) {
       continue;
     }
-    GameUser::CGameUser* Player = GetUserFromSID(i);
-    if (!Player) {
+    GameUser::CGameUser* player = GetUserFromSID(integer_cast_lossy<uint8_t>(i));
+    if (!player) {
       ++m_ControllersWithMap;
       ++m_ControllersReadyCount;
       ++readyControllersByTeam[m_Slots[i].GetTeam()];
-    } else if (Player->GetMapReady()) {
+    } else if (player->GetMapReady()) {
       ++m_ControllersWithMap;
-      if (Player->UpdateReady()) {
+      if (player->UpdateReady()) {
         ++m_ControllersReadyCount;
         ++readyControllersByTeam[m_Slots[i].GetTeam()];
       } else {
@@ -2520,7 +2534,7 @@ void CGame::UpdateReadyCounters()
     }
   }
   uint8_t refCount = 0;
-  uint8_t i = static_cast<uint8_t>(numTeams);
+  size_t i = numTeams;
   while (i--) {
     // allow empty teams
     if (readyControllersByTeam[i] == 0) continue;
@@ -3455,7 +3469,7 @@ string CGame::CheckIsValidHCL(const string& hcl) const
 
 void CGame::SendVirtualHostPlayerInfo(CConnection* user) const
 {
-  if (m_VirtualHostUID == 0xFF) {
+  if (!GetHasVirtualHost()) {
     return;
   }
 
@@ -3867,7 +3881,7 @@ void CGame::EventOutgoingAtomicAction(const uint8_t UID, string_view action)
             if (wantsShare && m_Config.m_ShareUnitsHandler == OnShareUnitsHandler::kRestrictSharee) {
               int64_t timeout = user->GetAntiAbuseTimeout();
               if (!user->GetAntiShareKicked()) {
-                user->AddKickReason(GameUser::KickReason::ANTISHARE);
+                user->AddKickReason(GameUser::KickReason::kAntiShare);
                 user->KickAtLatest(m_Aura->GetLoopTicks() + timeout);
                 user->AddAbuseCounter();
               }
@@ -3883,7 +3897,7 @@ void CGame::EventOutgoingAtomicAction(const uint8_t UID, string_view action)
         }
         if (!wantsShare && user->GetAntiShareKicked() && !user->GetIsSharingUnitsWithAnyAllies()) {
           user->ResetLeftReason();
-          user->RemoveKickReason(GameUser::KickReason::ANTISHARE);
+          user->RemoveKickReason(GameUser::KickReason::kAntiShare);
           user->CheckStillKicked();
         }
       }
@@ -5106,7 +5120,7 @@ void CGame::EventUserDisconnectGameAbuse(GameUser::CGameUser* user)
   }
   user->DisableReconnect();
   user->CloseConnection(); // automatically sets ended
-  user->AddKickReason(GameUser::KickReason::ABUSER);
+  user->AddKickReason(GameUser::KickReason::kAbuser);
 }
 
 void CGame::EventUserKickGProxyExtendedTimeout(GameUser::CGameUser* user)
@@ -5124,7 +5138,7 @@ void CGame::EventUserKickUnverified(GameUser::CGameUser* user)
     user->SetLeftReason("has been kicked because they are not verified by their realm");
   }
   user->CloseConnection();
-  user->AddKickReason(GameUser::KickReason::SPOOFER);
+  user->AddKickReason(GameUser::KickReason::kSpoofer);
 }
 
 void CGame::EventUserKickHandleQueued(GameUser::CGameUser* user)
@@ -5500,7 +5514,7 @@ GameUser::CGameUser* CGame::JoinPlayer(CConnection* connection, const CIncomingJ
     LOG_APP_IF(LogLevel::kNotice, Concat("user joined (P", ToDecString(ToBaseOne(SID)), "): [", joinRequest.GetName(), "@", Player->GetRealmHostName(), "#", ToDecString(Player->GetUID()), "] from [", Player->GetIPString(), "] (", Player->GetSocket()->GetName(), ")", notifyString));
   }
   if (joinRequest.GetIsCensored()) {
-    LOG_APP_IF(LogLevel::kNotice, Concat("user [", joinRequest.GetName(), "] is censored name - was [", joinRequest.GetOriginalName(), "]"));
+    LOG_APP_IF(LogLevel::kNotice, Concat("user ", SanitizeWrapUTF8(joinRequest.GetName()), " has censored name - was ", SanitizeWrapUTF8(joinRequest.GetOriginalName())));
   }
 
   return Player;
@@ -6708,7 +6722,7 @@ void CGame::EventUserMapSize(GameUser::CGameUser* user, const CIncomingMapFileSi
       }
 
       if (willKick) {
-        user->AddKickReason(GameUser::KickReason::MAP_MISSING);
+        user->AddKickReason(GameUser::KickReason::kMapMissing);
         user->KickAtLatest(m_Aura->GetLoopTicks() + m_Config.m_LacksMapKickDelay);
 
         if (!user->HasLeftReason()) {
@@ -6797,7 +6811,7 @@ void CGame::EventUserPongToHost(GameUser::CGameUser* user)
       if (!user->HasLeftReason()) {
         user->SetLeftReason(Concat("autokicked - excessive ping of ", to_string(LatencyMilliseconds), "ms"));
       }
-      user->AddKickReason(GameUser::KickReason::HIGH_PING);
+      user->AddKickReason(GameUser::KickReason::kHighPing);
       user->KickAtLatest(m_Aura->GetLoopTicks() + HIGH_PING_KICK_DELAY);
       if (!user->GetHasHighPing()) {
         SendAllChat(Concat("Player [", user->GetDisplayName(), "] has an excessive ping of ", to_string(LatencyMilliseconds), "ms. Autokicking..."));
@@ -6805,7 +6819,7 @@ void CGame::EventUserPongToHost(GameUser::CGameUser* user)
       }
     }
   } else {
-    user->RemoveKickReason(GameUser::KickReason::HIGH_PING);
+    user->RemoveKickReason(GameUser::KickReason::kHighPing);
     user->CheckStillKicked();
     if (user->GetHasHighPing()) {
       bool HasHighPing = LatencyMilliseconds >= m_Config.m_SafeHighPing;
@@ -8398,7 +8412,7 @@ uint8_t CGame::GetHostUID() const
   // return the user to be considered the host (it can be any user)
   // mainly used for sending text messages from the bot
 
-  if (m_VirtualHostUID != 0xFF) {
+  if (GetHasVirtualHost()) {
     return m_VirtualHostUID;
   }
 
@@ -9379,8 +9393,8 @@ void CGame::AddToReserved(const string& name)
     }
 
     // Reserved users are never kicked for latency reasons nor map missing.
-    user->RemoveKickReason(GameUser::KickReason::HIGH_PING);
-    user->RemoveKickReason(GameUser::KickReason::MAP_MISSING);
+    user->RemoveKickReason(GameUser::KickReason::kHighPing);
+    user->RemoveKickReason(GameUser::KickReason::kMapMissing);
     user->CheckStillKicked();
   }
 }
@@ -9411,8 +9425,8 @@ bool CGame::ReserveAll()
     m_Reserved.push_back(user->GetLowerName());
 
     // Reserved users are never kicked for latency reasons nor map missing.
-    user->RemoveKickReason(GameUser::KickReason::HIGH_PING);
-    user->RemoveKickReason(GameUser::KickReason::MAP_MISSING);
+    user->RemoveKickReason(GameUser::KickReason::kHighPing);
+    user->RemoveKickReason(GameUser::KickReason::kMapMissing);
     user->CheckStillKicked();
 
     anyAdded = true;
@@ -9786,7 +9800,7 @@ void CGame::SetOwner(string_view name, string_view realm)
     user->SetOwner(true);
 
     // Owner is never kicked for latency reasons.
-    user->RemoveKickReason(GameUser::KickReason::HIGH_PING);
+    user->RemoveKickReason(GameUser::KickReason::kHighPing);
     user->CheckStillKicked();
   }
 }
@@ -10571,11 +10585,16 @@ void CGame::CloseObserverSlots()
   }
 }
 
+bool CGame::GetHasVirtualHost() const
+{
+  return m_VirtualHostUID != 0xFF;
+}
+
 // Virtual host is needed to generate network traffic when only one user is in the game or lobby.
 // Fake users may also accomplish the same purpose.
 bool CGame::CreateVirtualHost()
 {
-  if (m_VirtualHostUID != 0xFF)
+  if (GetHasVirtualHost())
     return false;
 
   if (m_GameLoading || m_GameLoaded) {
@@ -10597,7 +10616,7 @@ bool CGame::CreateVirtualHost()
 
 bool CGame::DeleteVirtualHost()
 {
-  if (m_VirtualHostUID == 0xFF) {
+  if (!GetHasVirtualHost()) {
     return false;
   }
 

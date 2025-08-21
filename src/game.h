@@ -486,6 +486,7 @@ public:
   void                                                   SendMulti(const std::vector<uint8_t>& UIDs, const std::vector<uint8_t>& data) const;
   void                                                   SendAsChat(CConnection* player, const std::vector<uint8_t>& data) const;
   void                                                   SendAll(const std::vector<uint8_t>& data) const;
+  void                                                   SendAllConnected(const std::vector<uint8_t>& data) const;
   bool                                                   SendAllAsChat(const std::vector<uint8_t>& data) const;
   bool                                                   SendObserversAsChat(const std::vector<uint8_t>& data) const;
  
@@ -668,7 +669,8 @@ public:
   inline bool               GetHMCEnabled() const { return m_HMCEnabled; }
   void                      SendIncomingPlayerInfo(GameUser::CGameUser* user) const;
   MapTransferStatus         NextSendMap(CConnection* connection, const uint8_t UID, MapTransfer& mapTransfer);
-  GameUser::CGameUser*                JoinPlayer(CConnection* connection, const CIncomingJoinRequest& joinRequest, const uint8_t SID, const uint8_t UID, const uint8_t HostCounterID, const std::string JoinedRealm, const bool IsReserved, const bool IsUnverifiedAdmin);  
+  GameUser::CGameUser*      JoinPlayer(CConnection* connection, const CIncomingJoinRequest& joinRequest, const uint8_t SID, const uint8_t UID, const uint8_t HostCounterID, const std::string JoinedRealm, const bool IsReserved, const bool IsUnverifiedAdmin);  
+  [[nodiscard]] bool        GetHasVirtualHost() const;
   bool                      CreateVirtualHost();
   bool                      DeleteVirtualHost();
   bool                      GetHasPvPGNPlayers() const;

@@ -151,7 +151,7 @@ CGameUser::CGameUser(shared_ptr<CGame> nGame, CConnection* connection, uint8_t n
     m_MapReady(false),
     m_InGameReady(false),
     m_Ready(false),
-    m_KickReason(KickReason::NONE),
+    m_KickReason(KickReason::kNone),
     m_HasHighPing(false),
     m_DownloadAllowed(false),
     m_FinishedLoading(false),
