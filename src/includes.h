@@ -334,6 +334,12 @@ inline int64_t GetTicks()
   return std::chrono::duration_cast<std::chrono::milliseconds>(time_now.time_since_epoch()).count();
 }
 
+inline int64_t GetNanoTicks()
+{
+  const std::chrono::steady_clock::time_point time_now = std::chrono::steady_clock::now();
+  return std::chrono::duration_cast<std::chrono::nanoseconds>(time_now.time_since_epoch()).count();
+}
+
 inline void LogStream(std::ostream& outStream, const std::string& message, bool details = false)
 {
   auto now = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
