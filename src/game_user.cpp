@@ -651,7 +651,7 @@ bool CGameUser::Update(fd_set* fd, int64_t timeout)
 #ifdef PROFILING
             int64_t dt = t->TryEndNano();
             if (dt > 1e6) {
-              LOG_APP_CUSTOM(LogLevel::kWarning, Concat("Chat message ", SanitizeWrapUTF8(incomingChatMessage.GetMessage()), " took " + to_string(dt) + " ms"), LOG_C | LOG_P);
+              LOG_APP_CUSTOM(LogLevel::kWarning, Concat("Chat message ", SanitizeWrapUTF8(incomingChatMessage.GetMessage()), " took " + to_string(dt / 1e6) + " ms"), LOG_C | LOG_P);
             }
 #endif
             break;
