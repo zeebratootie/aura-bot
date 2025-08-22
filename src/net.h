@@ -124,8 +124,8 @@ public:
   uint16_t                                                    m_UDP4TargetPort;
   uint16_t                                                    m_UDP4TargetGProxyLANPort;
   uint16_t                                                    m_UDP6TargetPort;             // only unicast
-  sockaddr_storage*                                           m_MainBroadcastTarget;
-  sockaddr_storage*                                           m_ProxyReconnectLANBroadcastTarget;
+  sockaddr_storage                                            m_MainBroadcastTarget;
+  sockaddr_storage                                            m_ProxyReconnectLANBroadcastTarget;
 
   std::map<uint16_t, std::shared_ptr<CTCPServer>>             m_GameServers;
   std::map<uint16_t, std::vector<CConnection*>>               m_IncomingConnections;        // connections that haven't identified their protocol yet

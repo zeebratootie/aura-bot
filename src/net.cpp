@@ -404,8 +404,6 @@ CNet::CNet(CConfig& nCFG)
     // but this port is always used by Aura in deaf UDP mode.
     m_UDP4TargetGProxyLANPort(6116),
     m_UDP6TargetPort(5678), // Only unicast. <net.game_discovery.udp.ipv6.target_port>
-    m_MainBroadcastTarget(new sockaddr_storage()),
-    m_ProxyReconnectLANBroadcastTarget(new sockaddr_storage()),
 
     m_IPv4SelfCacheV(make_pair(string(), nullptr)),
     m_IPv4SelfCacheT(NET_PUBLIC_IP_ADDRESS_ALGORITHM_INVALID),
@@ -422,6 +420,8 @@ CNet::CNet(CConfig& nCFG)
     m_LastDownloadTicks(APP_MIN_TICKS),
     m_TransferredMapBytesThisUpdate(0)
 {
+  memset(&m_MainBroadcastTarget, 0, sizeof(sockaddr_storage));
+  memset(&m_ProxyReconnectLANBroadcastTarget, 0, sizeof(sockaddr_storage));
 }
 
 void CNet::InitPersistentConfig()
@@ -872,9 +872,9 @@ void CNet::SetBroadcastTarget(sockaddr_storage& subnet)
     return;
   }
   SetAddressPort(&subnet, m_UDP4TargetPort);
-  memcpy(m_MainBroadcastTarget, &subnet, sizeof(sockaddr_storage));
-  memcpy(m_ProxyReconnectLANBroadcastTarget, &subnet, sizeof(sockaddr_storage));
-  SetAddressPort(m_ProxyReconnectLANBroadcastTarget, m_UDP4TargetGProxyLANPort);
+  memcpy(&m_MainBroadcastTarget, &subnet, sizeof(sockaddr_storage));
+  memcpy(&m_ProxyReconnectLANBroadcastTarget, &subnet, sizeof(sockaddr_storage));
+  SetAddressPort(&m_ProxyReconnectLANBroadcastTarget, m_UDP4TargetGProxyLANPort);
 
   if (reinterpret_cast<sockaddr_in*>(&subnet)->sin_addr.s_addr != htonl(INADDR_BROADCAST))
     Print("[UDP] broadcasting LAN games to [" + AddressToString(subnet) + "]");
@@ -886,7 +886,7 @@ void CNet::SendBroadcast(const vector<uint8_t>& packet)
     return;
   }
 
-  sockaddr_storage mainTarget = *m_MainBroadcastTarget;
+  sockaddr_storage mainTarget = m_MainBroadcastTarget;
   if (m_UDPMainServerEnabled) {
     m_Aura->m_ThreadPool.detach_task(
       [this, mainTarget, packet]
@@ -895,7 +895,7 @@ void CNet::SendBroadcast(const vector<uint8_t>& packet)
       }
     );
     if (!m_Config.m_UDPBroadcastStrictMode && m_Config.m_ProxyReconnect && m_Config.m_ProxyReconnectLANBroadcastLaxEnabled) {
-      sockaddr_storage gProxyLanTarget = *m_ProxyReconnectLANBroadcastTarget;
+      sockaddr_storage gProxyLanTarget = m_ProxyReconnectLANBroadcastTarget;
       m_Aura->m_ThreadPool.detach_task(
         [this, gProxyLanTarget, packet]
         {
@@ -911,7 +911,7 @@ void CNet::SendBroadcast(const vector<uint8_t>& packet)
       }
     );
     if (m_Config.m_ProxyReconnect && m_Config.m_ProxyReconnectLANBroadcastLaxEnabled) {
-      sockaddr_storage gProxyLanTarget = *m_ProxyReconnectLANBroadcastTarget;
+      sockaddr_storage gProxyLanTarget = m_ProxyReconnectLANBroadcastTarget;
       m_Aura->m_ThreadPool.detach_task(
         [this, gProxyLanTarget, packet]
         {
@@ -2170,8 +2170,6 @@ CNet::~CNet()
   delete m_UDPMainServer;
   delete m_UDPDeafSocket;
   delete m_UDPIPv6Server;
-  delete m_MainBroadcastTarget;
-  delete m_ProxyReconnectLANBroadcastTarget;
 
   for (auto& entry : m_GameServers) {
     entry.second.reset();
