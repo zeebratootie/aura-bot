@@ -1648,7 +1648,7 @@ void CNet::ResetInterfaces()
 
       selfAddr->sin_addr = addr_in->sin_addr;
 
-      if (ifa->ifa_flags & IFF_BROADCAST) {
+      if (ifa->ifa_flags & 0x2 /* IFF_BROADCAST */) {
         // Many Linux drivers fill ifa_broadaddr directly
         if (ifa->ifa_broadaddr) {
           auto* br_in = reinterpret_cast<sockaddr_in*>(ifa->ifa_broadaddr);
@@ -1660,8 +1660,6 @@ void CNet::ResetInterfaces()
           bcastAddr->sin_addr.s_addr = htonl(bcast);
         }
       }
-
-      m_Interfaces.push_back(iface);
     }
   }
 
