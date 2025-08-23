@@ -135,12 +135,10 @@ public:
   std::queue<std::pair<uint16_t, CConnection*>>               m_DownGradedConnections;      // connections that are waiting for insertion into m_IncomingConnections, built from a stale CStreamIOSocket
   std::map<std::pair<uint16_t, uint16_t>, TimedUint8>         m_UPnPTCPCache;
   std::map<std::pair<uint16_t, uint16_t>, TimedUint8>         m_UPnPUDPCache;
-  std::map<std::string, sockaddr_storage*>                    m_IPv4DNSCache;
-  std::map<std::string, sockaddr_storage*>                    m_IPv6DNSCache;
-  std::pair<std::string, sockaddr_storage*>                   m_IPv4SelfCacheV;
-  uint8_t                                                     m_IPv4SelfCacheT;
-  std::pair<std::string, sockaddr_storage*>                   m_IPv6SelfCacheV;
-  uint8_t                                                     m_IPv6SelfCacheT;
+  std::map<const std::string, sockaddr_storage>               m_IPv4DNSCache;
+  std::map<const std::string, sockaddr_storage>               m_IPv6DNSCache;
+  std::pair<std::pair<uint8_t, std::string>, sockaddr_storage> m_IPv4SelfCache;
+  std::pair<std::pair<uint8_t, std::string>, sockaddr_storage> m_IPv6SelfCache;
   std::multiset<NetworkHost>                                  m_OutgoingPendingConnections;
   std::map<NetworkHost, TimedUint8>                           m_OutgoingThrottles;
 
@@ -180,7 +178,7 @@ public:
   [[nodiscard]] uint16_t                        GetUDPPort(const uint8_t protocol) const;
 
   bool                                          ResolveHostName(sockaddr_storage& address, const uint8_t nAcceptFamily, const std::string& hostName, const uint16_t port);
-  bool                                          ResolveHostNameInner(sockaddr_storage& address, const std::string& hostName, const uint16_t port, const uint8_t nFamily, std::map<std::string, sockaddr_storage*>&);
+  bool                                          ResolveHostNameInner(sockaddr_storage& address, const std::string& hostName, const uint16_t port, const uint8_t nFamily, std::map<const std::string, sockaddr_storage>&);
   [[nodiscard]] std::shared_ptr<CTCPServer>     GetOrCreateTCPServer(uint16_t, const std::string& name);
   void                                          FlushDNSCache();
   void                                          FlushSelfIPCache();
