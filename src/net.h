@@ -213,6 +213,7 @@ public:
   void OnThrottledConnectionError(const NetworkHost& host);
   void ResetInterfaces();
   [[nodiscard]] bool GetIsBroadcastAddress(const sockaddr_storage& address) const;
+  [[nodiscard]] bool GetIsLoopbackAddress(const sockaddr_storage& address) const;
   bool QueryIPAddress();
   void ResetIPAddressFetch();
   void HandleIPAddressFetchDone();

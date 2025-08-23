@@ -111,7 +111,8 @@ struct CGameConfig
   uint32_t                         m_LogDelay;
 
   bool                             m_CheckJoinable;
-  std::vector<sockaddr_storage>    m_ExtraDiscoveryAddresses;    // list of addresses Aura announces hosted games to through UDP unicast.
+  std::vector<sockaddr_storage>    m_ExtraDiscoveryAddresses;    // addresses Aura announces hosted games to through UDP unicast/broadcast (augmented by !sendlan)
+  std::vector<sockaddr_storage>    m_ShadowDiscoveryAddresses;   // addresses Aura will NOT announce hosted games to through UDP unicast/broadcast (augmented with forbidden addresses by !sendlan)
   std::map<std::string, Version>   m_GameVersionsByLANPlayerNames;
   uint8_t                          m_ReconnectionMode;
 

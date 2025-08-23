@@ -249,6 +249,7 @@ CGame::CGame(CAura* nAura, shared_ptr<CGameSetup> nGameSetup)
     m_SupportedGameVersionsMin(GAMEVER(0xFF, 0xFF)),
     m_SupportedGameVersionsMax(GAMEVER(0u, 0u)),
     m_GameDiscoveryActive(false),
+    m_GameDiscoveryPending(false),
     m_GameDiscoveryInfoChanged(GAME_DISCOVERY_CHANGED_NEW),
     m_GameDiscoveryInfoVersionOffset(0),
     m_GameDiscoveryInfoDynamicOffset(0)
@@ -2020,18 +2021,19 @@ bool CGame::Update(fd_set* fd, fd_set* send_fd)
   }
 
 
-  if (!m_LobbyLoading && m_Aura->GetTicksIsAfterDelay(m_LastDiscoveryTicks, 5000)) {
-    // send UDP refresh every 7.5 seconds
+  if (!m_LobbyLoading && m_Aura->GetTicksIsAfterDelay(m_LastDiscoveryTicks, m_GameDiscoveryPending ? 2000 : 5000)) {
+    // send UDP refresh every 5 seconds
     // this used to be sent using the same interval as pings
     // however, if we are broadcasting to a VPN network, this operation can take around 10 ms,
     // so we want more fine-grained control of this operation
     if (GetUDPEnabled() && GetIsStageAcceptingJoins()) {
-      if (!m_Aura->m_Net.m_Config.m_UDPBroadcastStrictMode) {
+      if (!m_Aura->m_Net.m_Config.m_UDPBroadcastStrictMode || m_GameDiscoveryPending) {
         SendGameDiscoveryInfo();
       } else {
         SendGameDiscoveryRefresh();
       }
       m_GameDiscoveryActive = true;
+      m_GameDiscoveryPending = false;
     }
 
     if (m_GameDiscoveryInfoChanged & GAME_DISCOVERY_CHANGED_SLOTS) {
@@ -4580,6 +4582,11 @@ void CGame::SendGameDiscoveryInfo(const Version& gameVersion)
       }
     }
   }
+}
+
+void CGame::QueueSendGameDiscoveryInfo()
+{
+  m_GameDiscoveryPending = true;
 }
 
 void CGame::SendGameDiscoveryInfoMDNS() const

@@ -258,8 +258,13 @@ struct UDPPkt
 [[nodiscard]] inline bool isSpecialIPv4Address(const sockaddr_in* address) {
   uint32_t addr = address->sin_addr.s_addr;
   if ((addr & htonl(0xFF000000)) == htonl(INADDR_LOOPBACK)) return true;
-  if (addr == htonl(INADDR_BROADCAST)) return true;
+  if (addr == htonl(INADDR_BROADCAST)) return true; // 255.255.255.255
   if (htonl(INADDR_MULTICAST_START) <= addr && addr <= htonl(INADDR_MULTICAST_END)) return true;
+  if ((addr & 0xFF000000) == 0x0A000000) return true; // Private: 10.0.0.0/8
+  if ((addr & 0xFFF00000) == 0xAC100000) return true; // Private: 172.16.0.0/12
+  if ((addr & 0xFFFF0000) == 0xC0A80000) return true; // Private: 192.168.0.0/16
+  if ((addr & 0xFFFF0000) == 0xA9FE0000) return true; // Link-local: 169.254.0.0/16
+  if ((addr & 0xF0000000) == 0xF0000000) return true; // Reserved/experimental: 240.0.0.0/4
   return false;
 }
 

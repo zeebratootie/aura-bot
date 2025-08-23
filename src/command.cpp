@@ -4760,26 +4760,21 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
         break;
       }
 
-      if (targetGame->GetIsMirror()) {
-        // This is not obvious.
+      if (targetGame->GetIsMirror() && !targetGame->GetIsMirrorProxy()) {
         ErrorReply("Mirrored games cannot be broadcast to LAN");
         break;
       }
 
       optional<bool> targetToggle = ParseBoolean(target, PARSER_BOOLEAN_ALLOW_ALL | PARSER_BOOLEAN_EMPTY_USE_DEFAULT);
-      if (!targetToggle.has_value()) {
-        ErrorReply("Unrecognized setting [" + target + "].");
-        break;
-      }
-
       if (targetToggle.has_value()) {
         // Turn ON/OFF
         targetGame->SetUDPEnabled(targetToggle.value());
         if (targetToggle.value()) {
           targetGame->SendGameDiscoveryCreate();
           targetGame->SendGameDiscoveryRefresh();
-          if (!m_Aura->m_Net.m_UDPMainServerEnabled)
-            targetGame->SendGameDiscoveryInfo(); // Since we won't be able to handle incoming GAME_SEARCH packets
+          if (!m_Aura->m_Net.m_UDPMainServerEnabled) {
+            targetGame->QueueSendGameDiscoveryInfo(); // Since we won't be able to handle incoming GAME_SEARCH packets
+          }
           targetGame->SetGameDiscoveryActive(true);
         }
         if (targetGame->GetUDPEnabled()) {
@@ -4812,22 +4807,26 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
           ErrorReply("Special IP address rejected. Add it to <net.game_discovery.udp.extra_clients.ip_addresses> or use sudo if you are sure about this.");
           break;
         }
-        if (m_Aura->m_Net.GetIsBroadcastAddress(*address) && !GetIsSudo()) {
-          ErrorReply("Broadcast IP address rejected. Add it to <net.game_discovery.udp.extra_clients.ip_addresses> or use sudo if you are sure about this.");
-          break;
-        }
-        if (targetGame->m_Config.m_ExtraDiscoveryAddresses.size() >= UDP_DISCOVERY_MAX_EXTRA_ADDRESSES) {
+        if (targetGame->m_Config.m_ExtraDiscoveryAddresses.size() + targetGame->m_Config.m_ShadowDiscoveryAddresses.size() >= UDP_DISCOVERY_MAX_EXTRA_ADDRESSES) {
           ErrorReply("Max sendlan addresses reached.");
           break;
         }
         bool alreadySending = false;
+        bool alreadyShadow = false;
+        bool shouldShadow = (m_Aura->m_Net.GetIsBroadcastAddress(*address) || m_Aura->m_Net.GetIsLoopbackAddress(*address)) && !GetIsSudo();
         for (auto& existingAddress : targetGame->m_Config.m_ExtraDiscoveryAddresses) {
           if (GetSameAddressesAndPorts(&existingAddress, address)) {
             alreadySending = true;
             break;
           }
         }
-        if (alreadySending && targetGame->GetUDPEnabled()) {
+        for (auto& existingAddress : targetGame->m_Config.m_ShadowDiscoveryAddresses) {
+          if (GetSameAddressesAndPorts(&existingAddress, address)) {
+            alreadyShadow = true;
+            break;
+          }
+        }
+        if ((alreadySending || (alreadyShadow && !GetIsSudo())) && targetGame->GetUDPEnabled()) {
           ErrorReply("Already sending game info to " + target);
           break;
         }
@@ -4835,8 +4834,13 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
           SendReply("This lobby will now be displayed in the Local Area Network game list");
         }
         targetGame->SetUDPEnabled(true);
-        if (!alreadySending) {
-          targetGame->m_Config.m_ExtraDiscoveryAddresses.push_back(std::move(maybeAddress.value()));
+        if (!(alreadySending || (alreadyShadow && !GetIsSudo()))) {
+          if (shouldShadow) {
+            Print("[AURA] warning - [!sendlan " + target + "] by [" + GetSender() + "] shadow-rejected for security.");
+            targetGame->m_Config.m_ShadowDiscoveryAddresses.push_back(std::move(maybeAddress.value()));
+          } else {
+            targetGame->m_Config.m_ExtraDiscoveryAddresses.push_back(std::move(maybeAddress.value()));
+          }
         }
         SendReply("This lobby will be displayed in the Local Area Network game list for IP " + target + ". Make sure your peer has done UDP hole-punching.");
       }
@@ -4874,7 +4878,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
       }
 
       targetGame->SetUDPEnabled(true);
-      targetGame->SendGameDiscoveryInfo();
+      targetGame->QueueSendGameDiscoveryInfo();
       targetGame->SetGameDiscoveryActive(true);
       SendReply("Sent game info to peers.");
       break;

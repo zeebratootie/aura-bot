@@ -239,6 +239,7 @@ protected:
   Version                                                m_SupportedGameVersionsMax;
 
   bool                                                   m_GameDiscoveryActive;
+  bool                                                   m_GameDiscoveryPending;
   uint8_t                                                m_GameDiscoveryInfoChanged;
   std::vector<uint8_t>                                   m_GameDiscoveryInfo;
   uint16_t                                               m_GameDiscoveryInfoVersionOffset;
@@ -546,6 +547,7 @@ public:
   void                                                   ReplySearch(sockaddr_storage* address, CSocket* socket, const std::optional<Version>& customGameVersion);
   void                                                   SendGameDiscoveryInfo(const Version& gameVersion);
   void                                                   SendGameDiscoveryInfo();
+  void                                                   QueueSendGameDiscoveryInfo();
   void                                                   SendGameDiscoveryInfoMDNS() const;
   void                                                   SendGameDiscoveryInfoVLAN(CGameSeeker* gameSeeker) const;
   void                                                   SendGameDiscoveryRefresh() const;

@@ -1678,6 +1678,17 @@ bool CNet::GetIsBroadcastAddress(const sockaddr_storage& address) const
   return false;
 }
 
+bool CNet::GetIsLoopbackAddress(const sockaddr_storage& address) const
+{
+  if (address.ss_family != AF_INET) return false;
+  for (const auto& interface : m_Interfaces) {
+    if (reinterpret_cast<const sockaddr_in*>(&interface.selfAddress)->sin_addr.s_addr == reinterpret_cast<const sockaddr_in*>(&address)->sin_addr.s_addr) {
+      return true;
+    }
+  }
+  return false;
+}
+
 bool CNet::QueryIPAddress()
 {
   if (m_IPAddressFetchInProgress) {
