@@ -4812,6 +4812,10 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
           ErrorReply("Special IP address rejected. Add it to <net.game_discovery.udp.extra_clients.ip_addresses> or use sudo if you are sure about this.");
           break;
         }
+        if (m_Aura->m_Net.GetIsBroadcastAddress(*address) && !GetIsSudo()) {
+          ErrorReply("Broadcast IP address rejected. Add it to <net.game_discovery.udp.extra_clients.ip_addresses> or use sudo if you are sure about this.");
+          break;
+        }
         if (targetGame->m_Config.m_ExtraDiscoveryAddresses.size() >= UDP_DISCOVERY_MAX_EXTRA_ADDRESSES) {
           ErrorReply("Max sendlan addresses reached.");
           break;

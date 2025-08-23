@@ -512,6 +512,7 @@ bool CNet::Init()
 
   m_MDNS = CMDNS::CreateManager();
 
+  ResetInterfaces();
 #ifdef DISABLE_CPR
   QueryIPAddress();
 #endif
@@ -1581,6 +1582,102 @@ void CNet::ReportHealthCheck()
   }
   m_HealthCheckContext->SendAll(JoinStrings(ChatReport, " | "));
   ResetHealthCheck();
+}
+
+void CNet::ResetInterfaces()
+{
+  m_Interfaces.clear();
+
+#ifdef _WIN32
+  ULONG bufferSize = 15000;
+  vector<BYTE> buffer(bufferSize);
+
+  ULONG flags = GAA_FLAG_INCLUDE_PREFIX;
+  ULONG family = AF_INET;
+
+  size_t tries = 1;
+  ULONG result = GetAdaptersAddresses(family, flags, nullptr, reinterpret_cast<PIP_ADAPTER_ADDRESSES>(buffer.data()), &bufferSize);
+
+  while (result == ERROR_BUFFER_OVERFLOW && (++tries <= 3)) {
+    buffer.resize(bufferSize); // GetAdaptersAddresses writes to bufferSize if overflowed
+    result = GetAdaptersAddresses(family, flags, nullptr, reinterpret_cast<PIP_ADAPTER_ADDRESSES>(buffer.data()), &bufferSize);
+  }
+
+  if (result == NO_ERROR) {
+    PIP_ADAPTER_ADDRESSES adapterAddresses = reinterpret_cast<PIP_ADAPTER_ADDRESSES>(buffer.data());
+    while (adapterAddresses) {
+      PIP_ADAPTER_UNICAST_ADDRESS_LH unicast = adapterAddresses->FirstUnicastAddress;
+      while (unicast) {
+        char addressBuffer[INET_ADDRSTRLEN] = {};
+        if (unicast->Address.lpSockaddr->sa_family == AF_INET) {
+          uint32_t prefixLength = unicast->OnLinkPrefixLength; // Vista+
+          uint32_t mask = prefixLength > 0 ? ((1 << (32 - prefixLength)) - 1) : 0;
+          auto& interface = m_Interfaces.emplace_back();
+          interface.selfAddress.ss_family = AF_INET;
+          interface.broadcastAddress.ss_family = AF_INET;
+          sockaddr_in* adapterAddress = reinterpret_cast<sockaddr_in*>(&m_Interfaces.back().selfAddress);
+          sockaddr_in* broadcastAddress = reinterpret_cast<sockaddr_in*>(&m_Interfaces.back().broadcastAddress);
+          adapterAddress->sin_addr.s_addr = reinterpret_cast<sockaddr_in*>(unicast->Address.lpSockaddr)->sin_addr.s_addr;
+          broadcastAddress->sin_addr.s_addr = htonl(ntohl(adapterAddress->sin_addr.s_addr) | mask);
+        }
+        unicast = unicast->Next;
+      }
+      adapterAddresses = adapterAddresses->Next;
+    }
+  }
+#else
+  struct ifaddrs* ifaddr;
+  if (getifaddrs(&ifaddr) == -1) {
+    Print("Error getifaddrs");
+    return;
+  }
+
+  for (struct ifaddrs* ifa = ifaddr; ifa != nullptr; ifa = ifa->ifa_next) {
+    if (!ifa->ifa_addr)
+      continue;
+
+    if (ifa->ifa_addr->sa_family == AF_INET) {
+      auto* addr_in = reinterpret_cast<sockaddr_in*>(ifa->ifa_addr);
+      auto* netmask_in = reinterpret_cast<sockaddr_in*>(ifa->ifa_netmask);
+      auto& interface = m_Interfaces.emplace_back();
+      interface.selfAddress.ss_family = AF_INET;
+      interface.broadcastAddress.ss_family = AF_INET;
+
+      sockaddr_in* selfAddr = reinterpret_cast<sockaddr_in*>(&interface.selfAddress);
+      sockaddr_in* bcastAddr = reinterpret_cast<sockaddr_in*>(&interface.broadcastAddress);
+
+      selfAddr->sin_addr = addr_in->sin_addr;
+
+      if (ifa->ifa_flags & IFF_BROADCAST) {
+        // Many Linux drivers fill ifa_broadaddr directly
+        if (ifa->ifa_broadaddr) {
+          auto* br_in = reinterpret_cast<sockaddr_in*>(ifa->ifa_broadaddr);
+          bcastAddr->sin_addr = br_in->sin_addr;
+        } else {
+          uint32_t ip = ntohl(addr_in->sin_addr.s_addr);
+          uint32_t mask = ntohl(netmask_in->sin_addr.s_addr);
+          uint32_t bcast = ip | ~mask;
+          bcastAddr->sin_addr.s_addr = htonl(bcast);
+        }
+      }
+
+      m_Interfaces.push_back(iface);
+    }
+  }
+
+  freeifaddrs(ifaddr);
+#endif
+}
+
+bool CNet::GetIsBroadcastAddress(const sockaddr_storage& address) const
+{
+  if (address.ss_family != AF_INET) return false;
+  for (const auto& interface : m_Interfaces) {
+    if (reinterpret_cast<const sockaddr_in*>(&interface.broadcastAddress)->sin_addr.s_addr == reinterpret_cast<const sockaddr_in*>(&address)->sin_addr.s_addr) {
+      return true;
+    }
+  }
+  return false;
 }
 
 bool CNet::QueryIPAddress()

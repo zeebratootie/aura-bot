@@ -37,6 +37,19 @@ constexpr uint8_t NOT_CONNECTION_TYPE_CUSTOM_PORT = NOT_TINY(CONNECTION_TYPE_CUS
 constexpr uint8_t NOT_HEALTH_CHECK_PUBLIC_IPV6 = NOT_TINY(HEALTH_CHECK_PUBLIC_IPV6);
 constexpr uint8_t NOT_HEALTH_CHECK_LOOPBACK_IPV6 = NOT_TINY(HEALTH_CHECK_LOOPBACK_IPV6);
 
+struct NetworkInterface
+{
+  sockaddr_storage selfAddress;
+  sockaddr_storage broadcastAddress;
+
+  NetworkInterface()
+  : selfAddress({}),
+    broadcastAddress({})
+  {}
+
+  ~NetworkInterface() {}
+};
+
 //
 // CNet
 //
@@ -141,6 +154,7 @@ public:
   std::pair<std::pair<uint8_t, std::string>, sockaddr_storage> m_IPv6SelfCache;
   std::multiset<NetworkHost>                                  m_OutgoingPendingConnections;
   std::map<NetworkHost, TimedUint8>                           m_OutgoingThrottles;
+  std::vector<NetworkInterface>                               m_Interfaces;
 
   std::vector<CGameTestConnection*>                           m_HealthCheckClients;
   std::vector<CIPAddressAPIConnection*>                       m_IPAddressFetchClients;
@@ -197,6 +211,8 @@ public:
   void OnThrottledConnectionStart(const NetworkHost& host);
   void OnThrottledConnectionSuccess(const NetworkHost& host);
   void OnThrottledConnectionError(const NetworkHost& host);
+  void ResetInterfaces();
+  [[nodiscard]] bool GetIsBroadcastAddress(const sockaddr_storage& address) const;
   bool QueryIPAddress();
   void ResetIPAddressFetch();
   void HandleIPAddressFetchDone();

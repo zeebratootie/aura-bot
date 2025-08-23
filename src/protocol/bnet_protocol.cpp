@@ -49,6 +49,13 @@
 #include "../socket.h"
 #include "../game_stat.h"
 
+#ifdef _WIN32
+#include <winsock2.h>
+#include <iphlpapi.h>
+#else
+#include <arpa/inet.h>
+#endif
+
 #include <utility>
 
 using namespace std;

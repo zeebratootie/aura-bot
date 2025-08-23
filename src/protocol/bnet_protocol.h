@@ -46,12 +46,6 @@
 #ifndef AURA_BNETPROTOCOL_H_
 #define AURA_BNETPROTOCOL_H_
 
-#ifdef _WIN32
-#include <winsock2.h>
-#else
-#include <arpa/inet.h>
-#endif
-
 #include "../includes.h"
 #include "../config/config.h"
 #include "../hash.h"

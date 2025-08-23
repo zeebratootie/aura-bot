@@ -57,6 +57,7 @@
 #ifdef _WIN32
 #include <ws2tcpip.h>
 #include <winsock2.h>
+#include <iphlpapi.h>
 #include <mstcpip.h>
 #include <errno.h>
 
@@ -141,6 +142,7 @@
 #include <arpa/inet.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <ifaddrs.h>
 #include <netdb.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
