@@ -182,6 +182,8 @@ namespace GameUser
     std::optional<TokenBucketRateLimiter>       m_APMQuota;
     std::optional<double>                       m_APMTrainer;
 
+    std::vector<GameProtocol::PacketWrapper>    m_OnLoadChatMessages;
+
 #ifdef PROFILING
     GameUser::UserMetrics                       m_PerfMetrics;
 #endif
@@ -452,6 +454,7 @@ namespace GameUser
 
     void Send(const std::vector<uint8_t>& data) final;
     void Send(const GameProtocol::PacketWrapper& data) final;
+    void SendOnLoadChatMessages();
 
 
     void EventGProxyClientInit(const uint32_t version);

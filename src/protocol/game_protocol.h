@@ -392,9 +392,9 @@ private:
 
 public:
   CIncomingMessageOrSettingsView();
-  CIncomingMessageOrSettingsView(uint8_t nFromUID, std::vector<uint8_t> nToUIDs, uint8_t nFlag, std::string_view nMessage);
-  CIncomingMessageOrSettingsView(uint8_t nFromUID, std::vector<uint8_t> nToUIDs, uint8_t nFlag, std::string_view nMessage, uint8_t nInGameChannel);
-  CIncomingMessageOrSettingsView(uint8_t nFromUID, std::vector<uint8_t> nToUIDs, uint8_t nFlag, uint8_t nByte);
+  CIncomingMessageOrSettingsView(uint8_t nFromUID, std::vector<uint8_t> nToUIDs, uint8_t nDiscriminator, std::string_view nMessage);
+  CIncomingMessageOrSettingsView(uint8_t nFromUID, std::vector<uint8_t> nToUIDs, uint8_t nDiscriminator, std::string_view nMessage, uint8_t nInGameChannel);
+  CIncomingMessageOrSettingsView(uint8_t nFromUID, std::vector<uint8_t> nToUIDs, uint8_t nDiscriminator, uint8_t nByte);
   ~CIncomingMessageOrSettingsView();
 
   [[nodiscard]] inline bool                               GetIsValid() const { return m_Valid; }
@@ -422,6 +422,41 @@ public:
   [[nodiscard]] inline bool  GetIsValid() const { return m_Valid; }
   [[nodiscard]] inline uint8_t  GetFlag() const { return m_Flag; }
   [[nodiscard]] inline uint32_t GetFileSize() const { return m_FileSize; }
+};
+
+class CTinyInGameChatMessage
+{
+private:
+  uint8_t                             m_FromUID;
+  uint8_t                             m_InGameChannel;
+  std::string                         m_Text;
+
+public:
+  CTinyInGameChatMessage();
+  CTinyInGameChatMessage(uint8_t nFromUID, uint8_t nInGameChannel, std::string_view nMessage);
+  CTinyInGameChatMessage(const CIncomingMessageOrSettingsView& incomingMessage);
+  ~CTinyInGameChatMessage();
+
+  [[nodiscard]] inline uint8_t                            GetFromUID() const { return m_FromUID; }
+  [[nodiscard]] inline uint8_t                            GetInGameChannel() const { return m_InGameChannel; }
+  [[nodiscard]] inline std::string_view                   GetText() const { return m_Text; }
+  [[nodiscard]] GameProtocol::PacketWrapper               GetPacket() const;
+};
+
+class CTargetedInGameChatMessage
+{
+private:
+  std::vector<uint8_t>                m_ToUIDs;
+  CTinyInGameChatMessage              m_Message;
+
+public:
+  CTargetedInGameChatMessage();
+  CTargetedInGameChatMessage(uint8_t nFromUID, std::vector<uint8_t> nToUIDs, uint8_t nInGameChannel, std::string_view nMessage);
+  CTargetedInGameChatMessage(const CIncomingMessageOrSettingsView& incomingMessage);
+  ~CTargetedInGameChatMessage();
+
+  [[nodiscard]] inline const CTinyInGameChatMessage& GetMessageView() const { return m_Message; }
+  [[nodiscard]] inline CTinyInGameChatMessage& GetMessage() { return m_Message; }
 };
 
 #endif // AURA_GAMEPROTOCOL_H_

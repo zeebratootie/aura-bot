@@ -157,6 +157,7 @@ protected:
   uint8_t                                                m_GameOver;
   std::optional<int64_t>                                 m_GameOverTime;                  // when the game was over
   std::optional<int64_t>                                 m_GameOverTolerance;
+  std::optional<int64_t>                                 m_LastInGameChatFlushTicks;
   std::optional<int64_t>                                 m_LastPlayerLeaveTicks;          // when the most recent player left the game
   int64_t                                                m_LastLagScreenResetTime;        // when the "lag" screen was last reset
   uint32_t                                               m_RandomSeed;                    // the random seed sent to the Warcraft III clients
@@ -225,6 +226,7 @@ protected:
   bool                                                   m_HMCEnabled;
   uint8_t                                                m_BufferingEnabled;
   uint32_t                                               m_BeforePlayingEmptyActions;     // counter for game-start empty actions. Used for load-in-game feature.
+  std::vector<CTargetedInGameChatMessage>                m_PendingChatMessages;
 
   bool                                                   m_APMTrainerPaused;
   uint32_t                                               m_APMTrainerTicks;
@@ -463,6 +465,7 @@ public:
   bool                                                   UpdateLobby();
   void                                                   UpdateLoading();
   void                                                   UpdateLoaded();
+  void                                                   UpdateLoadedOrLoadInGame();
   bool                                                   Update(fd_set* fd, fd_set* send_fd);
   void                                                   UpdatePost(fd_set* send_fd) const;
   void                                                   CheckLobbyTimeouts();

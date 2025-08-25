@@ -695,7 +695,7 @@ namespace GameProtocol
     return packet;
   }
 
-  std::vector<uint8_t> SEND_W3GS_CHAT_FROM_HOST_IN_GAME_ATOMIC(uint8_t fromUID, const std::vector<uint8_t>& toUIDs, uint8_t flag, const uint32_t inGameChannel, string_view prefix, string_view message)
+  std::vector<uint8_t> SEND_W3GS_CHAT_FROM_HOST_IN_GAME_ATOMIC(uint8_t fromUID, const std::vector<uint8_t>& toUIDs, uint8_t discriminator, const uint32_t inGameChannel, string_view prefix, string_view message)
   {
     vector<uint8_t> packet;
     uint16_t length = static_cast<uint16_t>(12u + toUIDs.size() + prefix.size() + message.size());
@@ -706,15 +706,15 @@ namespace GameProtocol
     packet.push_back(static_cast<uint8_t>(toUIDs.size()));
     AppendContainer(packet, toUIDs);    // receivers
     packet.push_back(fromUID);              // sender
-    packet.push_back(flag);                 // flag
-    AppendNumberLE(packet, inGameChannel); // extra flag
+    packet.push_back(discriminator);                 // discriminator
+    AppendNumberLE(packet, inGameChannel); // [All] vs [Allied] vs [Obs] vs [Private-N]
     AppendByteArrayString(packet, prefix, false);   // prefix
     AppendByteArrayString(packet, message, true);   // message
     AssignLength(packet);
     return packet;
   }
 
-  std::vector<uint8_t> SEND_W3GS_CHAT_FROM_HOST_LOBBY_ATOMIC(uint8_t fromUID, const std::vector<uint8_t>& toUIDs, uint8_t flag, string_view prefix, string_view message)
+  std::vector<uint8_t> SEND_W3GS_CHAT_FROM_HOST_LOBBY_ATOMIC(uint8_t fromUID, const std::vector<uint8_t>& toUIDs, uint8_t discriminator, string_view prefix, string_view message)
   {
     vector<uint8_t> packet;
     uint16_t length = static_cast<uint16_t>(8u + toUIDs.size() + prefix.size() + message.size());
@@ -725,14 +725,14 @@ namespace GameProtocol
     packet.push_back(static_cast<uint8_t>(toUIDs.size()));
     AppendContainer(packet, toUIDs);    // receivers
     packet.push_back(fromUID);              // sender
-    packet.push_back(flag);                 // flag
+    packet.push_back(discriminator);                 // discriminator
     AppendByteArrayString(packet, prefix, false);   // prefix
     AppendByteArrayString(packet, message, true);   // message
     AssignLength(packet);
     return packet;
   }
 
-  std::vector<uint8_t> SEND_W3GS_CHAT_FROM_HOST_IN_GAME(uint8_t fromUID, const std::vector<uint8_t>& toUIDs, uint8_t flag, const uint32_t inGameChannel, string_view message)
+  std::vector<uint8_t> SEND_W3GS_CHAT_FROM_HOST_IN_GAME(uint8_t fromUID, const std::vector<uint8_t>& toUIDs, uint8_t discriminator, const uint32_t inGameChannel, string_view message)
   {
     if (toUIDs.empty() || message.empty() || MAX_SLOTS_MODERN < toUIDs.size()) {
       Print("[GAMEPROTO] invalid parameters passed to SEND_W3GS_CHAT_FROM_HOST_IN_GAME");
@@ -745,16 +745,16 @@ namespace GameProtocol
 
     while (message.size() > MAX_IN_GAME_CHAT_SIZE) {
       string_view chunk = message.substr(0u, MAX_IN_GAME_CHAT_SIZE);
-      AppendContainer(packet, SEND_W3GS_CHAT_FROM_HOST_IN_GAME_ATOMIC(fromUID, toUIDs, flag, inGameChannel, noPrefix, chunk));
+      AppendContainer(packet, SEND_W3GS_CHAT_FROM_HOST_IN_GAME_ATOMIC(fromUID, toUIDs, discriminator, inGameChannel, noPrefix, chunk));
       message.remove_prefix(MAX_IN_GAME_CHAT_SIZE);
     }
     if (!message.empty()) {
-      AppendContainer(packet, SEND_W3GS_CHAT_FROM_HOST_IN_GAME_ATOMIC(fromUID, toUIDs, flag, inGameChannel, noPrefix, message));
+      AppendContainer(packet, SEND_W3GS_CHAT_FROM_HOST_IN_GAME_ATOMIC(fromUID, toUIDs, discriminator, inGameChannel, noPrefix, message));
     }
     return packet;
   }
 
-  std::vector<uint8_t> SEND_W3GS_CHAT_FROM_HOST_LOBBY(uint8_t fromUID, const std::vector<uint8_t>& toUIDs, uint8_t flag, string_view message)
+  std::vector<uint8_t> SEND_W3GS_CHAT_FROM_HOST_LOBBY(uint8_t fromUID, const std::vector<uint8_t>& toUIDs, uint8_t discriminator, string_view message)
   {
     if (toUIDs.empty() || message.empty() || MAX_SLOTS_MODERN < toUIDs.size()) {
       Print("[GAMEPROTO] invalid parameters passed to SEND_W3GS_CHAT_FROM_HOST_LOBBY");
@@ -767,16 +767,16 @@ namespace GameProtocol
 
     while (message.size() > MAX_LOBBY_CHAT_SIZE) {
       string_view chunk = message.substr(0u, MAX_LOBBY_CHAT_SIZE);
-      AppendContainer(packet, SEND_W3GS_CHAT_FROM_HOST_LOBBY_ATOMIC(fromUID, toUIDs, flag, noPrefix, chunk));
+      AppendContainer(packet, SEND_W3GS_CHAT_FROM_HOST_LOBBY_ATOMIC(fromUID, toUIDs, discriminator, noPrefix, chunk));
       message.remove_prefix(MAX_LOBBY_CHAT_SIZE);
     }
     if (!message.empty()) {
-      AppendContainer(packet, SEND_W3GS_CHAT_FROM_HOST_LOBBY_ATOMIC(fromUID, toUIDs, flag, noPrefix, message));
+      AppendContainer(packet, SEND_W3GS_CHAT_FROM_HOST_LOBBY_ATOMIC(fromUID, toUIDs, discriminator, noPrefix, message));
     }
     return packet;
   }
 
-  PacketWrapper SENDWRAP_W3GS_CHAT_FROM_HOST_IN_GAME(uint8_t fromUID, const std::vector<uint8_t>& toUIDs, uint8_t flag, const uint32_t inGameChannel, string_view prefix, string_view message)
+  PacketWrapper SENDWRAP_W3GS_CHAT_FROM_HOST_IN_GAME(uint8_t fromUID, const std::vector<uint8_t>& toUIDs, uint8_t discriminator, const uint32_t inGameChannel, string_view prefix, string_view message)
   {
     if (toUIDs.empty() || message.empty() || MAX_SLOTS_MODERN < toUIDs.size() || prefix.size() >= MAX_IN_GAME_CHAT_SIZE) {
       Print("[GAMEPROTO] invalid parameters passed to SEND_W3GS_CHAT_FROM_HOST_IN_GAME");
@@ -790,16 +790,16 @@ namespace GameProtocol
 
     while (message.size() > maxChatSize) {
       string_view chunk = message.substr(0u, maxChatSize);
-      AppendContainer(packetWrapper.data, SEND_W3GS_CHAT_FROM_HOST_IN_GAME_ATOMIC(fromUID, toUIDs, flag, inGameChannel, prefix, chunk));
+      AppendContainer(packetWrapper.data, SEND_W3GS_CHAT_FROM_HOST_IN_GAME_ATOMIC(fromUID, toUIDs, discriminator, inGameChannel, prefix, chunk));
       message.remove_prefix(maxChatSize);
     }
     if (!message.empty()) {
-      AppendContainer(packetWrapper.data, SEND_W3GS_CHAT_FROM_HOST_IN_GAME_ATOMIC(fromUID, toUIDs, flag, inGameChannel, prefix, message));
+      AppendContainer(packetWrapper.data, SEND_W3GS_CHAT_FROM_HOST_IN_GAME_ATOMIC(fromUID, toUIDs, discriminator, inGameChannel, prefix, message));
     }
     return packetWrapper;
   }
 
-  PacketWrapper SENDWRAP_W3GS_CHAT_FROM_HOST_LOBBY(uint8_t fromUID, const std::vector<uint8_t>& toUIDs, uint8_t flag, string_view prefix, string_view message)
+  PacketWrapper SENDWRAP_W3GS_CHAT_FROM_HOST_LOBBY(uint8_t fromUID, const std::vector<uint8_t>& toUIDs, uint8_t discriminator, string_view prefix, string_view message)
   {
     if (toUIDs.empty() || message.empty() || MAX_SLOTS_MODERN < toUIDs.size() || prefix.size() >= MAX_LOBBY_CHAT_SIZE) {
       Print("[GAMEPROTO] invalid parameters passed to SEND_W3GS_CHAT_FROM_HOST_LOBBY");
@@ -813,11 +813,11 @@ namespace GameProtocol
 
     while (message.size() > maxChatSize) {
       string_view chunk = message.substr(0u, maxChatSize);
-      AppendContainer(packetWrapper.data, SEND_W3GS_CHAT_FROM_HOST_LOBBY_ATOMIC(fromUID, toUIDs, flag, prefix, chunk));
+      AppendContainer(packetWrapper.data, SEND_W3GS_CHAT_FROM_HOST_LOBBY_ATOMIC(fromUID, toUIDs, discriminator, prefix, chunk));
       message.remove_prefix(maxChatSize);
     }
     if (!message.empty()) {
-      AppendContainer(packetWrapper.data, SEND_W3GS_CHAT_FROM_HOST_LOBBY_ATOMIC(fromUID, toUIDs, flag, prefix, message));
+      AppendContainer(packetWrapper.data, SEND_W3GS_CHAT_FROM_HOST_LOBBY_ATOMIC(fromUID, toUIDs, discriminator, prefix, message));
     }
     return packetWrapper;
   }
@@ -1625,3 +1625,61 @@ CIncomingMapFileSize::CIncomingMapFileSize(uint8_t nSizeFlag, uint32_t nMapSize)
 }
 
 CIncomingMapFileSize::~CIncomingMapFileSize() = default;
+
+//
+// CTinyInGameChatMessage
+//
+
+CTinyInGameChatMessage::CTinyInGameChatMessage()
+: m_FromUID(0xFF),
+  m_InGameChannel(0),
+{
+}
+
+CTinyInGameChatMessage::CTinyInGameChatMessage(uint8_t nFromUID, uint8_t nInGameChannel, std::string_view nMessage)
+: m_FromUID(nFromUID),
+  m_InGameChannel(nInGameChannel),
+  m_Text(nMessage)
+{
+}
+
+CTinyInGameChatMessage::CTinyInGameChatMessage(const CIncomingMessageOrSettingsView& incomingMessage)
+: m_FromUID(incomingMessage.GetFromUID()),
+  m_InGameChannel(incomingMessage.GetInGameChannel()),
+  m_Text(incomingMessage.GetMessage())
+{
+}
+
+CTinyInGameChatMessage::~CTinyInGameChatMessage()
+{
+}
+
+GameProtocol::PacketWrapper CTinyInGameChatMessage::GetPacket() const
+{
+  GameProtocol::PacketWrapper packetWrapper;
+  return packetWrapper;
+}
+
+//
+// CTargetedInGameChatMessage
+//
+
+CTargetedInGameChatMessage::CTargetedInGameChatMessage()
+{
+}
+
+CTargetedInGameChatMessage::CTargetedInGameChatMessage(uint8_t nFromUID, vector<uint8_t> nToUIDs, uint8_t nInGameChannel, std::string_view nMessage)
+: m_ToUIDs(nToUIDs),
+  m_Message(nFromUID, nInGameChannel, nMessage),
+{
+}
+
+CTargetedInGameChatMessage::CTargetedInGameChatMessage(const CIncomingMessageOrSettingsView& incomingMessage)
+: m_ToUIDs(incomingMessage.GetToUIDs()),
+  m_Message(incomingMessage)
+{
+}
+
+CTargetedInGameChatMessage::~CTargetedInGameChatMessage()
+{
+}

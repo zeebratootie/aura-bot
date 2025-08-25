@@ -800,7 +800,7 @@ void CAsyncObserver::EventLeft(const uint32_t clientReason)
     Print(Concat(GetLogPrefix(), "left the game at [", ToFormattedTimeStamp(m_GameTicks / 1000), "]", reason));
     if (m_FinishedLoading) {
       if (auto game = m_Game.lock()) {
-        game->SendSpectatorChat(this, string_view(), Concat(GetName(), " left spectator mode."));
+        game->SendSpectatorChat(this, string_view(), Concat("[", GetName(), "] left spectator mode."));
       }
     }
     /*

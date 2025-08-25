@@ -2630,3 +2630,25 @@ uint32_t GetRandomUInt32()
   uniform_int_distribution<uint32_t> dis;
   return dis(gen);
 }
+
+template <typename T>
+vector<T> GetSortedVectorComplement(const vector<T>& U, const vector<T>& S)
+{
+  vector<T> result;
+  result.reserve(U.size() - S.size());
+  size_t i = 0, j = 0;
+  while (i < U.size() && j < S.size()) {
+    if (U[i] == S[j]) {
+      ++i;
+      ++j;
+    } else {
+      result.push_back(U[i]);
+      ++i;
+    }
+  }
+
+  result.insert(result.end(), U.begin() + i, U.end());
+  return result;
+}
+
+template vector<uint8_t> GetSortedVectorComplement(const vector<uint8_t>& U, const vector<uint8_t>& S);

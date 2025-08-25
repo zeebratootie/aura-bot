@@ -899,6 +899,19 @@ void CGameUser::Send(const GameProtocol::PacketWrapper& data)
   }
 }
 
+void CGameUser::SendOnLoadChatMessages()
+{
+  if (m_OnLoadChatMessages.empty()) {
+    return;
+  }
+  m_Game.get().SendChat(this, "== [LoadInGame] Chat history ==");
+  for (const auto& pendingPacket : m_OnLoadChatMessages) {
+    Send(pendingPacket);
+  }
+  m_Game.get().SendChat(this, "== [LoadInGame] History ended ==");
+  m_OnLoadChatMessages.clear();
+}
+
 void CGameUser::EventGProxyClientInit(const uint32_t version)
 {
   shared_ptr<CRealm> realm = GetRealm(false);

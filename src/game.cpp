@@ -1878,6 +1878,27 @@ void CGame::UpdateLoaded()
   */
 }
 
+void CGame::UpdateLoadedOrLoadInGame()
+{
+  m_LastInGameChatFlushTicks = m_Aura->GetLoopTicks();
+  if (m_PendingChatMessages.empty()) {
+    return;
+  }
+  for (const CTargetedInGameChatMessage& chatMessage : m_PendingChatMessages) {
+    GameProtocol::PacketWrapper packetWrapper = chatMessage.GetMessageView().GetPacket();
+    for (const uint8_t targetUID : chatMessage.GetToUIDs()) {
+      const CGameUser* targetUser = GetUserFromUID(targetUID);
+      if (!targetUser) continue;
+      if (targetUser->GetFinishedLoading()) {
+        targetUser->Send(packetWrapper);
+      } else {
+        targetUser->m_OnLoadChatMessages.push_back(move(packetWrapper));
+      }
+    }
+  }
+  m_PendingChatMessages.clear();
+}
+
 bool CGame::Update(fd_set* fd, fd_set* send_fd)
 {
   const int64_t loopTicks = m_Aura->GetLoopTicks();
@@ -1955,8 +1976,12 @@ bool CGame::Update(fd_set* fd, fd_set* send_fd)
   // actions are at the heart of every Warcraft 3 game but luckily we don't need to know their contents to relay them
   // we queue user actions in EventUserIncomingAction then just resend them in batches to all users here
 
-  if (m_GameLoaded && !m_IsLagging && hiResTicks - m_LastActionSentTicks >= m_LatencyTicks - m_LastActionLateBy)
+  if (m_GameLoaded && !m_IsLagging && hiResTicks - m_LastActionSentTicks >= m_LatencyTicks - m_LastActionLateBy) {
+    UpdateLoadedOrLoadInGame();
     SendAllActions();
+  } else if ((m_GameLoaded || (m_GameLoading && m_Config.m_LoadInGame)) && m_Aura->GetTicksIsFirstOrAfterDelay(m_LastInGameChatFlushTicks, 300)) {
+    UpdateLoadedOrLoadInGame();
+  }
 
   UpdateLogs();
 
@@ -6036,6 +6061,7 @@ void CGame::EventUserLoaded(GameUser::CGameUser* user)
     if (laggingPlayers.empty()) {
       m_IsLagging = false;
     }
+    user->SendOnLoadChatMessages();
     if (m_IsLagging) {
       DLOG_APP_IF(LogLevel::kTrace, Concat("@[", user->GetName(), "] lagger update (+", ToNameListSentence(laggingPlayers), ")"));
       Send(user, GameProtocol::SEND_W3GS_START_LAG(laggingPlayers, m_Aura->GetLoopTicks()));
