@@ -362,6 +362,6 @@ bool ReplaceText(std::string& input, const std::string& fragment, const std::str
 [[nodiscard]] uint32_t GetRandomUInt32();
 
 template <typename T>
-[[nodiscard]] std::vector<T> GetSortedVectorComplement(const std::vector<T>& U, const std::vector<T>& S)
+[[nodiscard]] std::vector<T> GetSortedVectorComplement(const std::vector<T>& U, const std::vector<T>& S);
 
 #endif // AURA_UTIL_H_

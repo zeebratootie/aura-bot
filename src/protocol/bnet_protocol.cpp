@@ -49,16 +49,15 @@
 #include "../socket.h"
 #include "../game_stat.h"
 
+#include <utility>
+
+/*
 #ifdef _WIN32
-#include <winsock2.h>
-#include <ws2tcpip.h>
-#include <iphlpapi.h>
-#include <mstcpip.h>
+#include <ws2def.h>
 #else
 #include <arpa/inet.h>
 #endif
-
-#include <utility>
+*/
 
 using namespace std;
 

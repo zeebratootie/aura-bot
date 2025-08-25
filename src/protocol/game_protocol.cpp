@@ -1632,7 +1632,7 @@ CIncomingMapFileSize::~CIncomingMapFileSize() = default;
 
 CTinyInGameChatMessage::CTinyInGameChatMessage()
 : m_FromUID(0xFF),
-  m_InGameChannel(0),
+  m_InGameChannel(0)
 {
 }
 
@@ -1646,7 +1646,7 @@ CTinyInGameChatMessage::CTinyInGameChatMessage(uint8_t nFromUID, uint8_t nInGame
 CTinyInGameChatMessage::CTinyInGameChatMessage(const CIncomingMessageOrSettingsView& incomingMessage)
 : m_FromUID(incomingMessage.GetFromUID()),
   m_InGameChannel(incomingMessage.GetInGameChannel()),
-  m_Text(incomingMessage.GetMessage())
+  m_Text(incomingMessage.GetText())
 {
 }
 
@@ -1670,7 +1670,7 @@ CTargetedInGameChatMessage::CTargetedInGameChatMessage()
 
 CTargetedInGameChatMessage::CTargetedInGameChatMessage(uint8_t nFromUID, vector<uint8_t> nToUIDs, uint8_t nInGameChannel, std::string_view nMessage)
 : m_ToUIDs(nToUIDs),
-  m_Message(nFromUID, nInGameChannel, nMessage),
+  m_Message(nFromUID, nInGameChannel, nMessage)
 {
 }
 

@@ -650,7 +650,7 @@ void CAsyncObserver::EventChat(const CIncomingMessageOrSettingsView& incomingCha
     return;
   }
 
-  string_view textContent = incomingChatMessage.GetMessage();
+  string_view textContent = incomingChatMessage.GetText();
   assert((!textContent.empty()) && "Chat message cannot be empty");
   bool shouldRelay = !isLobbyChat; // relay the chat message to other users
   const uint8_t targetType = incomingChatMessage.GetInGameChannel();

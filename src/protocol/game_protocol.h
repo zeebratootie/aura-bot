@@ -402,7 +402,7 @@ public:
   [[nodiscard]] inline uint8_t                            GetFromUID() const { return m_FromUID; }
   [[nodiscard]] inline const std::vector<uint8_t>&        GetToUIDs() const { return m_ToUIDs; }
   [[nodiscard]] inline uint8_t                            GetDiscriminator() const { return m_Discriminator; }
-  [[nodiscard]] inline std::string_view                   GetMessage() const { return m_Message; }
+  [[nodiscard]] inline std::string_view                   GetText() const { return m_Message; }
   [[nodiscard]] inline uint8_t                            GetByte() const { return m_Byte; }
   [[nodiscard]] inline uint8_t                            GetInGameChannel() const { return m_InGameChannel; }
 };
@@ -455,8 +455,9 @@ public:
   CTargetedInGameChatMessage(const CIncomingMessageOrSettingsView& incomingMessage);
   ~CTargetedInGameChatMessage();
 
-  [[nodiscard]] inline const CTinyInGameChatMessage& GetMessageView() const { return m_Message; }
-  [[nodiscard]] inline CTinyInGameChatMessage& GetMessage() { return m_Message; }
+  [[nodiscard]] inline const std::vector<uint8_t>&    GetToUIDs() const { return m_ToUIDs; }
+  [[nodiscard]] inline const CTinyInGameChatMessage&  GetTinyMessageView() const { return m_Message; }
+  [[nodiscard]] inline CTinyInGameChatMessage&        GetTinyMessage() { return m_Message; }
 };
 
 #endif // AURA_GAMEPROTOCOL_H_

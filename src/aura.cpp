@@ -93,6 +93,7 @@
 #endif
 #include <winsock2.h>
 #include <ws2tcpip.h>
+#include <ws2def.h>
 #include <iphlpapi.h>
 #include <mstcpip.h>
 #include <process.h>

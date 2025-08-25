@@ -1885,9 +1885,9 @@ void CGame::UpdateLoadedOrLoadInGame()
     return;
   }
   for (const CTargetedInGameChatMessage& chatMessage : m_PendingChatMessages) {
-    GameProtocol::PacketWrapper packetWrapper = chatMessage.GetMessageView().GetPacket();
+    GameProtocol::PacketWrapper packetWrapper = chatMessage.GetTinyMessageView().GetPacket();
     for (const uint8_t targetUID : chatMessage.GetToUIDs()) {
-      const CGameUser* targetUser = GetUserFromUID(targetUID);
+      GameUser::CGameUser* targetUser = GetUserFromUID(targetUID);
       if (!targetUser) continue;
       if (targetUser->GetFinishedLoading()) {
         targetUser->Send(packetWrapper);
@@ -5195,7 +5195,7 @@ void CGame::SendChatMessage(const GameUser::CGameUser* user, const CIncomingMess
   }
 
   if (!m_GameLoading && !m_GameLoaded) {
-    SendMulti(chatMessage.GetToUIDs(), GameProtocol::SEND_W3GS_CHAT_FROM_HOST_LOBBY(chatMessage.GetFromUID(), chatMessage.GetToUIDs(), chatMessage.GetDiscriminator(), chatMessage.GetMessage()));
+    SendMulti(chatMessage.GetToUIDs(), GameProtocol::SEND_W3GS_CHAT_FROM_HOST_LOBBY(chatMessage.GetFromUID(), chatMessage.GetToUIDs(), chatMessage.GetDiscriminator(), chatMessage.GetText()));
     return;
   }
 
@@ -5215,14 +5215,14 @@ void CGame::SendChatMessage(const GameUser::CGameUser* user, const CIncomingMess
       inGameChannel = CHAT_RECV_ALL;
     }
     if (!targetUIDs.empty()) {
-      SendMulti(targetUIDs, GameProtocol::SEND_W3GS_CHAT_FROM_HOST_IN_GAME(chatMessage.GetFromUID(), targetUIDs, chatMessage.GetDiscriminator(), inGameChannel, chatMessage.GetMessage()));
+      SendMulti(targetUIDs, GameProtocol::SEND_W3GS_CHAT_FROM_HOST_IN_GAME(chatMessage.GetFromUID(), targetUIDs, chatMessage.GetDiscriminator(), inGameChannel, chatMessage.GetText()));
     }
     return;
   }
 
   // When observers on defeat (or full observers) are enabled, Aura cannot reliably figure out whether a player became an observer
   // therefore, we can only rely on game clients to properly manage chat visibility
-  SendMulti(chatMessage.GetToUIDs(), GameProtocol::SEND_W3GS_CHAT_FROM_HOST_IN_GAME(chatMessage.GetFromUID(), chatMessage.GetToUIDs(), chatMessage.GetDiscriminator(), inGameChannel, chatMessage.GetMessage()));
+  SendMulti(chatMessage.GetToUIDs(), GameProtocol::SEND_W3GS_CHAT_FROM_HOST_IN_GAME(chatMessage.GetFromUID(), chatMessage.GetToUIDs(), chatMessage.GetDiscriminator(), inGameChannel, chatMessage.GetText()));
 }
 
 void CGame::QueueLeftMessage(GameUser::CGameUser* user) const
@@ -6371,7 +6371,7 @@ void CGame::EventUserChat(GameUser::CGameUser* user, const CIncomingMessageOrSet
 
   // relay the chat message to other users
   const uint8_t targetType = incomingChatMessage.GetInGameChannel();
-  string_view textContent = incomingChatMessage.GetMessage();
+  string_view textContent = incomingChatMessage.GetText();
   assert((!textContent.empty()) && "Chat message cannot be empty");
   const bool muteAll = !isLobbyChat && m_MuteAll;
   bool shouldRelay = m_ChatEnabled && !(muteAll && targetType == CHAT_RECV_ALL) && !user->CheckMuted();
