@@ -1881,22 +1881,21 @@ void CGame::UpdateLoaded()
 void CGame::UpdateLoadedOrLoadInGame()
 {
   m_LastInGameChatFlushTicks = m_Aura->GetLoopTicks();
-  if (m_PendingChatMessages.empty()) {
-    return;
-  }
-  for (const CTargetedInGameChatMessage& chatMessage : m_PendingChatMessages) {
-    GameProtocol::PacketWrapper packetWrapper = chatMessage.GetTinyMessageView().GetPacket();
-    for (const uint8_t targetUID : chatMessage.GetToUIDs()) {
-      GameUser::CGameUser* targetUser = GetUserFromUID(targetUID);
-      if (!targetUser) continue;
-      if (targetUser->GetFinishedLoading()) {
-        targetUser->Send(packetWrapper);
-      } else {
-        targetUser->m_OnLoadChatMessages.push_back(move(packetWrapper));
+  if (!m_PendingChatMessages.empty()) {
+    for (const CTargetedInGameChatMessage& chatMessage : m_PendingChatMessages) {
+      GameProtocol::PacketWrapper packetWrapper = chatMessage.GetTinyMessageView().GetPacket();
+      for (const uint8_t targetUID : chatMessage.GetToUIDs()) {
+        GameUser::CGameUser* targetUser = GetUserFromUID(targetUID);
+        if (!targetUser) continue;
+        if (targetUser->GetFinishedLoading()) {
+          targetUser->Send(packetWrapper);
+        } else {
+          targetUser->m_OnLoadChatMessages.push_back(move(packetWrapper));
+        }
       }
     }
+    m_PendingChatMessages.clear();
   }
-  m_PendingChatMessages.clear();
 }
 
 bool CGame::Update(fd_set* fd, fd_set* send_fd)
