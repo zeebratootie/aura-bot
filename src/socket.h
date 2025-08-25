@@ -55,8 +55,8 @@
 #endif
 
 #ifdef _WIN32
-#include <ws2tcpip.h>
 #include <winsock2.h>
+#include <ws2tcpip.h>
 #include <iphlpapi.h>
 #include <mstcpip.h>
 #include <errno.h>

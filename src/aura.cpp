@@ -91,9 +91,10 @@
 #ifndef NOMINMAX
 #define NOMINMAX 1
 #endif
-#include <ws2tcpip.h>
 #include <winsock2.h>
+#include <ws2tcpip.h>
 #include <iphlpapi.h>
+#include <mstcpip.h>
 #include <process.h>
 #endif
 
