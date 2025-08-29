@@ -186,6 +186,9 @@
     <ClCompile Include="rate_limiter.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="restricted_buffer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="sampler.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -429,6 +432,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="rate_limiter.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="restricted_buffer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="sampler.h">

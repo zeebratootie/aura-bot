@@ -105,7 +105,8 @@ struct GameFrame
       case GAME_FRAME_TYPE_ACTIONS: return "actions";
       case GAME_FRAME_TYPE_PAUSED: return "paused";
       case GAME_FRAME_TYPE_LEAVER: return "leaver";
-      case GAME_FRAME_TYPE_CHAT: return "chat";
+      case GAME_FRAME_TYPE_CHAT_PUBLIC: return "chat";
+      case GAME_FRAME_TYPE_CHAT_OMNISCIENT: return "chat_hidden";
       case GAME_FRAME_TYPE_LATENCY: return "latency";
       case GAME_FRAME_TYPE_GPROXY: return "gproxy";
       default: return "unknown";

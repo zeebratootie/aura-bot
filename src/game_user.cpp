@@ -899,17 +899,33 @@ void CGameUser::Send(const GameProtocol::PacketWrapper& data)
   }
 }
 
+void CGameUser::SendChat(string_view message)
+{
+  m_Game.get().SendChat(this, message);
+}
+
 void CGameUser::SendOnLoadChatMessages()
 {
-  if (m_OnLoadChatMessages.empty()) {
+  if (m_OnLoadChatMessages.GetIsEmpty()) {
     return;
   }
-  m_Game.get().SendChat(this, "== [LoadInGame] Chat history ==");
-  for (const auto& pendingPacket : m_OnLoadChatMessages) {
+  size_t deletedSize = m_OnLoadChatMessages.GetDeletedSize();
+  SendChat("== [LoadInGame] Chat history ==");
+  for (const auto& pendingPacket : m_OnLoadChatMessages.GetOldEntries()) {
     Send(pendingPacket);
   }
-  m_Game.get().SendChat(this, "== [LoadInGame] History ended ==");
-  m_OnLoadChatMessages.clear();
+  if (deletedSize > 0) {
+    SendChat(Concat("== [LoadInGame] ", to_string(deletedSize) , " messages omitted... =="));
+    for (const auto& pendingPacket : m_OnLoadChatMessages.GetNewEntries()) {
+      Send(pendingPacket);
+    }
+  } else {
+    for (const auto& pendingPacket : m_OnLoadChatMessages.GetFastNewEntries()) {
+      Send(pendingPacket);
+    }
+  }
+  SendChat("== [LoadInGame] History ended ==");
+  m_OnLoadChatMessages.Clear();
 }
 
 void CGameUser::EventGProxyClientInit(const uint32_t version)

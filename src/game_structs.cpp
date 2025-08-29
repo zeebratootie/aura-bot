@@ -274,7 +274,7 @@ void GameHistory::UpdateSpectatorActions(int64_t spectatorDelay /* seconds */)
         ++m_NumSpectatorActionFrames;
         break;
       default:
-        // GAME_FRAME_TYPE_LEAVER, GAME_FRAME_TYPE_CHAT
+        // GAME_FRAME_TYPE_LEAVER, GAME_FRAME_TYPE_CHAT_PUBLIC
         break;
     }
     ++it;

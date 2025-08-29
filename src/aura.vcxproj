@@ -642,6 +642,7 @@
     <ClCompile Include="command_history.cpp" />
     <ClCompile Include="locations.cpp" />
     <ClCompile Include="rate_limiter.cpp" />
+    <ClCompile Include="restricted_buffer.cpp" />
     <ClCompile Include="sampler.cpp" />
     <ClCompile Include="integration\discord.cpp" />
     <ClCompile Include="integration\irc.cpp" />
@@ -720,6 +721,7 @@
     <ClInclude Include="command_history.h" />
     <ClInclude Include="locations.h" />
     <ClInclude Include="rate_limiter.h" />
+    <ClInclude Include="restricted_buffer.h" />
     <ClInclude Include="sampler.h" />
     <ClInclude Include="integration\discord.h" />
     <ClInclude Include="integration\irc.h" />

@@ -440,7 +440,6 @@ public:
   [[nodiscard]] inline uint8_t                            GetFromUID() const { return m_FromUID; }
   [[nodiscard]] inline uint8_t                            GetInGameChannel() const { return m_InGameChannel; }
   [[nodiscard]] inline std::string_view                   GetText() const { return m_Text; }
-  [[nodiscard]] GameProtocol::PacketWrapper               GetPacket() const;
 };
 
 class CTargetedInGameChatMessage
@@ -455,6 +454,7 @@ public:
   CTargetedInGameChatMessage(const CIncomingMessageOrSettingsView& incomingMessage);
   ~CTargetedInGameChatMessage();
 
+  [[nodiscard]] GameProtocol::PacketWrapper           GetPacket() const;
   [[nodiscard]] inline const std::vector<uint8_t>&    GetToUIDs() const { return m_ToUIDs; }
   [[nodiscard]] inline const CTinyInGameChatMessage&  GetTinyMessageView() const { return m_Message; }
   [[nodiscard]] inline CTinyInGameChatMessage&        GetTinyMessage() { return m_Message; }

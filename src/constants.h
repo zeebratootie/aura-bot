@@ -615,9 +615,10 @@ constexpr uint8_t BUFFERING_ENABLED_ALL = 15u;
 constexpr uint8_t GAME_FRAME_TYPE_ACTIONS = 0u;
 constexpr uint8_t GAME_FRAME_TYPE_PAUSED = 1u;
 constexpr uint8_t GAME_FRAME_TYPE_LEAVER = 2u;
-constexpr uint8_t GAME_FRAME_TYPE_CHAT = 3u;
-constexpr uint8_t GAME_FRAME_TYPE_LATENCY = 4u;
-constexpr uint8_t GAME_FRAME_TYPE_GPROXY = 5u;
+constexpr uint8_t GAME_FRAME_TYPE_CHAT_PUBLIC = 3u;
+constexpr uint8_t GAME_FRAME_TYPE_CHAT_OMNISCIENT = 4u;
+constexpr uint8_t GAME_FRAME_TYPE_LATENCY = 5u;
+constexpr uint8_t GAME_FRAME_TYPE_GPROXY = 6u;
 
 enum class GameFrameType : uint8_t {
   kActions = 0,

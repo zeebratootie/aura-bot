@@ -52,6 +52,7 @@
 #include "protocol/game_protocol.h"
 #include "game_structs.h"
 #include "rate_limiter.h"
+#include "restricted_buffer.h"
 #include "map.h"
 #include "sampler.h"
 
@@ -167,22 +168,22 @@ namespace GameUser
     std::optional<int64_t>           m_LastDisconnectTicks;
     std::optional<int64_t>           m_LastDisconnectRepeatNoticeTicks;
 
-    uint8_t                          m_TeamCaptain;
+    uint8_t                                               m_TeamCaptain;
 
-    std::string                      m_PinnedMessage;
+    std::string                                           m_PinnedMessage;
 
     // Actions
-    uint32_t                                    m_ActionCounter;
-    std::array<uint32_t, 3>                     m_RecentActionCounter;
-    uint8_t                                     m_AntiAbuseCounter;
-    uint8_t                                     m_RemainingSaves;
-    uint8_t                                     m_RemainingPauses;
-    std::optional<uint8_t>                      m_SelfGameResult;
-    std::optional<uint8_t>                      m_FinalGameResult;
-    std::optional<TokenBucketRateLimiter>       m_APMQuota;
-    std::optional<double>                       m_APMTrainer;
+    uint32_t                                                 m_ActionCounter;
+    std::array<uint32_t, 3>                                  m_RecentActionCounter;
+    uint8_t                                                  m_AntiAbuseCounter;
+    uint8_t                                                  m_RemainingSaves;
+    uint8_t                                                  m_RemainingPauses;
+    std::optional<uint8_t>                                   m_SelfGameResult;
+    std::optional<uint8_t>                                   m_FinalGameResult;
+    std::optional<TokenBucketRateLimiter>                    m_APMQuota;
+    std::optional<double>                                    m_APMTrainer;
 
-    std::vector<GameProtocol::PacketWrapper>    m_OnLoadChatMessages;
+    RestrictedBuffer<GameProtocol::PacketWrapper, 50, 50>    m_OnLoadChatMessages;
 
 #ifdef PROFILING
     GameUser::UserMetrics                       m_PerfMetrics;
@@ -454,6 +455,7 @@ namespace GameUser
 
     void Send(const std::vector<uint8_t>& data) final;
     void Send(const GameProtocol::PacketWrapper& data) final;
+    void SendChat(std::string_view message);
     void SendOnLoadChatMessages();
 
 

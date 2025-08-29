@@ -478,8 +478,10 @@ bool CAsyncObserver::PushGameFrames(bool isFlush)
         ++m_ActionFrameCounter;
         Send(it->GetBytes());
         break;
+      case GAME_FRAME_TYPE_CHAT_OMNISCIENT:
+        break;
       default:
-        // GAME_FRAME_TYPE_LEAVER, GAME_FRAME_TYPE_CHAT
+        // GAME_FRAME_TYPE_LEAVER, GAME_FRAME_TYPE_CHAT_PUBLIC
         Send(it->GetBytes());
     }
     ++it;

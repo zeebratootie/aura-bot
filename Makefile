@@ -187,6 +187,7 @@ OBJS = $(OBJDIR)lib/base64/base64.o \
        $(OBJDIR)src/command_history.o \
        $(OBJDIR)src/locations.o \
        $(OBJDIR)src/rate_limiter.o \
+       $(OBJDIR)src/restricted_buffer.o \
        $(OBJDIR)src/sampler.o \
        $(OBJDIR)src/integration/discord.o \
        $(OBJDIR)src/integration/irc.o \

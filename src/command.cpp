@@ -1559,7 +1559,10 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
 
       bool isSpectator = GetGameSource().GetIsSpectator();
       bool isTimed = cmdHash == HashCode("tchat") || cmdHash == HashCode("tallchat");
-      bool isAllChat = cmdHash == HashCode("allchat") || cmdHash == HashCode("tallchat");
+      bool isAllChat = (
+        !(targetGame->GetGameLoading() || targetGame->GetGameLoaded()) ||
+        (cmdHash == HashCode("allchat") || cmdHash == HashCode("tallchat"))
+      );
       if (isTimed && !isSpectator) {
         ErrorReply("This command may only be used in spectator mode.");
         break;
@@ -1579,16 +1582,11 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
 
       string metaMessage = "[" + GetSender() + "]: " + target;
       string filterFragment;
-      bool success = false;
       if (isAllChat) {
-        success = targetGame->SendAllChat(metaMessage);
+        targetGame->SendAllChat(metaMessage);
       } else {
-        success = targetGame->SendObserverChat(metaMessage);
+        targetGame->SendObserverChat(metaMessage);
         filterFragment = "observers in ";
-      }
-      if (!success) {
-        ErrorReply("Failed to send chat message to " + filterFragment + "[" + targetGame->GetCustomGameName(GetSourceRealm(), true) + "]");
-        break;
       }
       SendReply("Chat message sent.");
       break;
@@ -7246,13 +7244,15 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
       if (GameId == "*") {
         bool success = false;
         for (const auto& targetGame : m_Aura->m_Lobbies) {
-          success = targetGame->SendAllChat(Message) || success;
+          if (targetGame->GetHasAnyUser()) success = true;
+          targetGame->SendAllChat(Message);
         }
         for (const auto& targetGame : m_Aura->m_StartedGames) {
-          success = targetGame->SendAllChat(Message) || success;
+          if (targetGame->GetHasAnyUser()) success = true;
+          targetGame->SendAllChat(Message);
         }
         if (!success) {
-          ErrorReply("No games found.");
+          ErrorReply("Nobody is currently in any game.");
           break;
         }
         if (InspectGameSource().GetIsGameExpired()) {
@@ -7269,10 +7269,11 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
           ErrorReply("Game [" + GameId + "] is a mirror game.");
           break;
         }
-        if (!targetGame->SendAllChat(Message)) {
+        if (!targetGame->GetHasAnyUser()) {
           ErrorReply("Failed to send chat message to [" + targetGame->GetCustomGameName(GetSourceRealm(), true) + "]");
           break;
         }
+        targetGame->SendAllChat(Message);
         if (targetGame != sourceGame) {
           SendReply("Sent chat message to [" + targetGame->GetCustomGameName(GetSourceRealm(), true) + "]");
         }

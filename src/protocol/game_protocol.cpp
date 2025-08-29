@@ -1654,12 +1654,6 @@ CTinyInGameChatMessage::~CTinyInGameChatMessage()
 {
 }
 
-GameProtocol::PacketWrapper CTinyInGameChatMessage::GetPacket() const
-{
-  GameProtocol::PacketWrapper packetWrapper;
-  return packetWrapper;
-}
-
 //
 // CTargetedInGameChatMessage
 //
@@ -1682,4 +1676,16 @@ CTargetedInGameChatMessage::CTargetedInGameChatMessage(const CIncomingMessageOrS
 
 CTargetedInGameChatMessage::~CTargetedInGameChatMessage()
 {
+}
+
+GameProtocol::PacketWrapper CTargetedInGameChatMessage::GetPacket() const
+{
+  return GameProtocol::SENDWRAP_W3GS_CHAT_FROM_HOST_IN_GAME(
+    GetTinyMessageView().GetFromUID(),
+    m_ToUIDs,
+    GameProtocol::Magic::ChatType::CHAT_IN_GAME,
+    GetTinyMessageView().GetInGameChannel(),
+    string_view(),
+    GetTinyMessageView().GetText()
+  );
 }

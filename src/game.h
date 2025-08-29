@@ -487,25 +487,34 @@ public:
 
   void                                                   Send(CConnection* player, const std::vector<uint8_t>& data) const;
   void                                                   Send(uint8_t UID, const std::vector<uint8_t>& data) const;
-  void                                                   SendMulti(const std::vector<uint8_t>& UIDs, const std::vector<uint8_t>& data) const;
-  void                                                   SendAsChat(CConnection* player, const std::vector<uint8_t>& data) const;
   void                                                   SendAll(const std::vector<uint8_t>& data) const;
   void                                                   SendAllConnected(const std::vector<uint8_t>& data) const;
-  bool                                                   SendAllAsChat(const std::vector<uint8_t>& data) const;
-  bool                                                   SendObserversAsChat(const std::vector<uint8_t>& data) const;
  
+  // functions to send lobby chat to players
+  // lobby chat is sent instantly
+  void                                                   SendLobbyChat(std::vector<uint8_t> toUIDs, uint8_t fromUID, std::string_view message) const;
+  void                                                   SendLobbyChatSingle(GameUser::CGameUser* targetUser, uint8_t fromUID, std::string_view message) const;
+  void                                                   SendLobbyChatAll(uint8_t fromUID, std::string_view message) const;
+
+  // functions to queue in-game chat to players
+  // in-game chat is queued and sent in batches to handle load-in-game and replays
+  void                                                   SendInGameChat(std::vector<uint8_t> toUIDs, uint8_t fromUID, uint8_t inGameChannel, std::string_view message);
+  void                                                   SendInGameChatSingle(GameUser::CGameUser* targetUser, uint8_t fromUID, std::string_view message);
+  void                                                   SendInGameChatAll(uint8_t fromUID, std::string_view message);
+  void                                                   SendInGameChatObservers(uint8_t fromUID, std::string_view message);
+  
 
   // functions to send packets to players
 
-  void                                                   SendChat(uint8_t fromUID, GameUser::CGameUser* user, std::string_view message, const LogLevelExtra logLevel = LogLevelExtra::kInfo) const;
-  void                                                   SendChat(uint8_t fromUID, uint8_t toUID, std::string_view message, const LogLevelExtra logLevel = LogLevelExtra::kInfo) const;
-  void                                                   SendChat(GameUser::CGameUser* user, std::string_view message, const LogLevelExtra logLevel = LogLevelExtra::kInfo) const;
-  void                                                   SendChat(CAsyncObserver* spectator, std::string_view message, const LogLevelExtra logLevel = LogLevelExtra::kInfo) const;
-  void                                                   SendChat(uint8_t toUID, std::string_view message, const LogLevelExtra logLevel = LogLevelExtra::kInfo) const;
-  bool                                                   SendAllChat(uint8_t fromUID, std::string_view message) const;
-  bool                                                   SendAllChat(std::string_view message) const;
-  bool                                                   SendObserverChat(uint8_t fromUID, std::string_view message) const;
-  bool                                                   SendObserverChat(std::string_view message) const;
+  void                                                   SendChat(uint8_t fromUID, GameUser::CGameUser* user, std::string_view message, const LogLevelExtra logLevel = LogLevelExtra::kInfo);
+  void                                                   SendChat(uint8_t fromUID, uint8_t toUID, std::string_view message, const LogLevelExtra logLevel = LogLevelExtra::kInfo);
+  void                                                   SendChat(GameUser::CGameUser* user, std::string_view message, const LogLevelExtra logLevel = LogLevelExtra::kInfo);
+  void                                                   SendChat(CAsyncObserver* spectator, std::string_view message, const LogLevelExtra logLevel = LogLevelExtra::kInfo);
+  void                                                   SendChat(uint8_t toUID, std::string_view message, const LogLevelExtra logLevel = LogLevelExtra::kInfo);
+  void                                                   SendAllChat(uint8_t fromUID, std::string_view message);
+  void                                                   SendAllChat(std::string_view message);
+  void                                                   SendObserverChat(uint8_t fromUID, std::string_view message);
+  void                                                   SendObserverChat(std::string_view message);
   bool                                                   SendSpectatorChat(const CAsyncObserver* excludeSpectator, std::string_view prefix, std::string_view message) const;
   bool                                                   SendSpectatorChat(std::string_view prefix, std::string_view message) const;
   void                                                   SendAllSlotInfo();
@@ -513,12 +522,12 @@ public:
   void                                                   SendFakeUsersInfo(CConnection* user) const;
   void                                                   SendJoinedPlayersInfo(CConnection* user) const;
   void                                                   SendMapAndVersionCheck(CConnection* user, const Version& gameVersion) const;
-  void                                                   SendWelcomeMessage(GameUser::CGameUser* user) const;
-  void                                                   SendOwnerCommandsHelp(std::string_view cmdToken, GameUser::CGameUser* user) const;
-  void                                                   SendCommandsHelp(std::string_view cmdToken, GameUser::CGameUser* user, const bool isIntro) const;
+  void                                                   SendWelcomeMessage(GameUser::CGameUser* user);
+  void                                                   SendOwnerCommandsHelp(std::string_view cmdToken, GameUser::CGameUser* user);
+  void                                                   SendCommandsHelp(std::string_view cmdToken, GameUser::CGameUser* user, const bool isIntro);
   void                                                   QueueLeftMessage(GameUser::CGameUser* user) const;
-  void                                                   SendLeftMessage(GameUser::CGameUser* user, const bool sendChat) const;
-  void                                                   SendChatMessage(const GameUser::CGameUser* user, const CIncomingMessageOrSettingsView& chatMessage) const;
+  void                                                   SendLeftMessage(GameUser::CGameUser* user, const bool sendChat);
+  void                                                   SendChatMessage(const GameUser::CGameUser* user, const CIncomingMessageOrSettingsView& chatMessage);
 
   void                                                   CheckActions();
   void                                                   PauseAPMTrainer();
@@ -532,7 +541,7 @@ public:
   void                                                   EventOutgoingAtomicAction(const uint8_t UID, std::string_view action);
   void                                                   SendAllActionsCallback();
   void                                                   SendAllActions();
-  void                                                   SendAllAutoStart() const;
+  void                                                   SendAllAutoStart();
 
   inline bool                                            GetIsExpansion() const { return m_Config.m_GameIsExpansion; }
   inline const Version&                                  GetVersion() const { return m_Config.m_GameVersion.value(); }
@@ -566,7 +575,7 @@ public:
   
   void                      EventUserDeleted(GameUser::CGameUser* user, fd_set* fd, fd_set* send_fd);
   void                      EventLobbyLastPlayerLeaves();
-  void                      ReportAllPings() const;
+  void                      ReportAllPings();
   void                      SetLaggingPlayerAndUpdate(GameUser::CGameUser* user);
   void                      SetEveryoneLagging();
   std::pair<int64_t, int64_t> GetReconnectWaitTicks() const;
@@ -657,7 +666,8 @@ public:
   bool                      GetIsRealPlayerSlot(const uint8_t SID) const;
   bool                      GetIsVirtualPlayerSlot(const uint8_t SID) const;
   bool                      GetHasAnotherPlayer(const uint8_t ExceptSID) const;
-  bool                      CheckIPFlood(std::string_view joinName, const sockaddr_storage* sourceAddress) const;
+  bool                      CheckIPFlood(std::string_view joinName, const sockaddr_storage* sourceAddress);
+  std::vector<uint8_t>      GetAllUIDs() const;
   std::vector<uint8_t>      GetAllChatUIDs() const;
   std::vector<uint8_t>      GetObserverChatUIDs() const;
   std::vector<uint8_t>      GetFilteredChatUIDs(uint8_t fromUID, const std::vector<uint8_t>& toUIDs) const;

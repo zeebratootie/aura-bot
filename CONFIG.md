@@ -1203,7 +1203,7 @@ Config
 
 ## \`net.game_discovery.udp.broadcast.strict\`
 - Type: bool
-- Default value: true
+- Default value: Empty
 - Error handling: Use default value
 
 ## \`net.game_discovery.udp.do_not_route\`
@@ -1446,6 +1446,11 @@ Config
 - Error handling: Use default value
 
 ## \`net.tcp_extensions.udp_tunnel.enabled\`
+- Type: bool
+- Default value: true
+- Error handling: Use default value
+
+## \`net.udp_extensions.gproxy.enabled\`
 - Type: bool
 - Default value: true
 - Error handling: Use default value

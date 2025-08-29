@@ -1883,14 +1883,20 @@ void CGame::UpdateLoadedOrLoadInGame()
   m_LastInGameChatFlushTicks = m_Aura->GetLoopTicks();
   if (!m_PendingChatMessages.empty()) {
     for (const CTargetedInGameChatMessage& chatMessage : m_PendingChatMessages) {
-      GameProtocol::PacketWrapper packetWrapper = chatMessage.GetTinyMessageView().GetPacket();
+      GameProtocol::PacketWrapper packetWrapper = chatMessage.GetPacket();
       for (const uint8_t targetUID : chatMessage.GetToUIDs()) {
         GameUser::CGameUser* targetUser = GetUserFromUID(targetUID);
         if (!targetUser) continue;
         if (targetUser->GetFinishedLoading()) {
           targetUser->Send(packetWrapper);
         } else {
-          targetUser->m_OnLoadChatMessages.push_back(move(packetWrapper));
+          targetUser->m_OnLoadChatMessages.Push(move(packetWrapper));
+        }
+        if (m_JoinInProgressVirtualUser.has_value() && targetUID == m_JoinInProgressVirtualUser->GetUID()) {
+          if (m_BufferingEnabled & BUFFERING_ENABLED_PLAYING) {
+            GameFrame& frame = m_GameHistory->m_PlayingBuffer.emplace_back(GAME_FRAME_TYPE_CHAT_PUBLIC);
+            frame.m_Bytes = vector<uint8_t>(begin(packetWrapper.data), begin(packetWrapper.data) + static_cast<ptrdiff_t>(packetWrapper.data.size()));
+          }
         }
       }
     }
@@ -2295,20 +2301,6 @@ void CGame::Send(uint8_t UID, const std::vector<uint8_t>& data) const
   Send(user, data);
 }
 
-void CGame::SendMulti(const std::vector<uint8_t>& UIDs, const std::vector<uint8_t>& data) const
-{
-  for (auto& UID : UIDs) {
-    if (m_JoinInProgressVirtualUser.has_value() && UID == m_JoinInProgressVirtualUser->GetUID()) {
-      if (m_GameLoaded && (m_BufferingEnabled & BUFFERING_ENABLED_PLAYING)) {
-        GameFrame& frame = m_GameHistory->m_PlayingBuffer.emplace_back(GAME_FRAME_TYPE_CHAT);
-        frame.m_Bytes = vector<uint8_t>(begin(data), begin(data) + static_cast<ptrdiff_t>(data.size()));
-      }
-    } else {
-      Send(UID, data);
-    }
-  }
-}
-
 void CGame::SendAll(const std::vector<uint8_t>& data) const
 {
   for (auto& user : m_Users) {
@@ -2326,56 +2318,66 @@ void CGame::SendAllConnected(const std::vector<uint8_t>& data) const
   }
 }
 
-void CGame::SendAsChat(CConnection* user, const std::vector<uint8_t>& data) const
+void CGame::SendLobbyChat(vector<uint8_t> toUIDs, uint8_t fromUID, string_view message) const
 {
-  if (user->GetType() == IncomingConnectionType::kPlayer && static_cast<const GameUser::CGameUser*>(user)->GetIsInLoadingScreen()) {
+  auto packet = GameProtocol::SENDWRAP_W3GS_CHAT_FROM_HOST_LOBBY(fromUID, toUIDs, GameProtocol::Magic::ChatType::CHAT_LOBBY, string_view(), message);
+  for (auto& targetUID : toUIDs) {
+    GameUser::CGameUser* targetUser = GetUserFromUID(targetUID);
+    if (!targetUser || targetUser->GetLeftMessageSent()) {
+      continue;
+    }
+    targetUser->Send(packet);
+  }
+}
+
+void CGame::SendLobbyChatSingle(GameUser::CGameUser* targetUser, uint8_t fromUID, string_view message) const
+{
+  if (targetUser->GetLeftMessageSent()) {
     return;
   }
-  user->Send(data);
+  targetUser->Send(GameProtocol::SENDWRAP_W3GS_CHAT_FROM_HOST_LOBBY(fromUID, CreateByteArray(targetUser->GetUID()), GameProtocol::Magic::ChatType::CHAT_LOBBY, string_view(), message));
 }
 
-bool CGame::SendAllAsChat(const std::vector<uint8_t>& data) const
+void CGame::SendLobbyChatAll(uint8_t fromUID, string_view message) const
 {
-  bool success = false;
-  for (auto& user : m_Users) {
-    if (user->GetIsInLoadingScreen()) {
+  vector<uint8_t> toUIDs = GetAllUIDs();
+  if (toUIDs.empty()) {
+    return;
+  }
+  auto packet = GameProtocol::SENDWRAP_W3GS_CHAT_FROM_HOST_LOBBY(fromUID, toUIDs, GameProtocol::Magic::ChatType::CHAT_LOBBY, string_view(), message);
+  for (auto& targetUser : m_Users) {
+    if (targetUser->GetLeftMessageSent()) {
       continue;
     }
-    user->Send(data);
-    success = true;
+    targetUser->Send(packet);
   }
-  if (!success) return success;
-
-  if (m_GameLoaded && (m_BufferingEnabled & BUFFERING_ENABLED_PLAYING)) {
-    GameFrame& frame = m_GameHistory->m_PlayingBuffer.emplace_back(GAME_FRAME_TYPE_CHAT);
-    frame.m_Bytes = vector<uint8_t>(begin(data), begin(data) + static_cast<ptrdiff_t>(data.size()));
-  }
-
-  return success;
 }
 
-bool CGame::SendObserversAsChat(const std::vector<uint8_t>& data) const
+void CGame::SendInGameChat(vector<uint8_t> toUIDs, uint8_t fromUID, uint8_t inGameChannel, string_view message)
 {
-  if (!m_GameLoaded) return false;
-  bool success = false;
-  for (auto& user : m_Users) {
-    if (!user->GetIsObserver()) {
-      continue;
-    }
-    user->Send(data);
-    success = true;
+  if (toUIDs.empty()) {
+    return;
   }
-  if (!success) return success;
-
-  if (m_BufferingEnabled & BUFFERING_ENABLED_PLAYING) {
-    GameFrame& frame = m_GameHistory->m_PlayingBuffer.emplace_back(GAME_FRAME_TYPE_CHAT);
-    frame.m_Bytes = vector<uint8_t>(begin(data), begin(data) + static_cast<ptrdiff_t>(data.size()));
-  }
-
-  return success;
+  m_PendingChatMessages.emplace_back(fromUID, toUIDs, inGameChannel, message);
 }
 
-void CGame::SendChat(uint8_t fromUID, GameUser::CGameUser* user, string_view message, const LogLevelExtra logLevel) const
+void CGame::SendInGameChatSingle(GameUser::CGameUser* targetUser, uint8_t fromUID, string_view message)
+{
+  SendInGameChat(CreateByteArray(targetUser->GetUID()), fromUID, targetUser->GetChatChannel(true), message);
+}
+
+void CGame::SendInGameChatAll(uint8_t fromUID, string_view message)
+{
+  SendInGameChat(GetAllUIDs(), fromUID, CHAT_RECV_ALL, message);
+}
+
+void CGame::SendInGameChatObservers(uint8_t fromUID, string_view message)
+{
+  // send a public message to all known observers - it'll be marked [Observers] or [Referees] in Warcraft 3
+  SendInGameChat(GetObserverChatUIDs(), fromUID, CHAT_RECV_OBS, message);
+}
+
+void CGame::SendChat(uint8_t fromUID, GameUser::CGameUser* user, string_view message, const LogLevelExtra logLevel)
 {
   // send a private message to one user - it'll be marked [Private] in Warcraft 3
 
@@ -2400,47 +2402,41 @@ void CGame::SendChat(uint8_t fromUID, GameUser::CGameUser* user, string_view mes
   }
 #endif
 
-  vector<uint8_t> packet;
+  
   if (!m_GameLoading && !m_GameLoaded) {
-    packet = GameProtocol::SEND_W3GS_CHAT_FROM_HOST_LOBBY(fromUID, CreateByteArray(user->GetUID()), GameProtocol::Magic::ChatType::CHAT_LOBBY, message);
+    SendLobbyChatSingle(user, fromUID, message);
   } else {
-    packet = GameProtocol::SEND_W3GS_CHAT_FROM_HOST_IN_GAME(fromUID, CreateByteArray(user->GetUID()), GameProtocol::Magic::ChatType::CHAT_IN_GAME, user->GetChatChannel(true), message);
+    SendInGameChatSingle(user, fromUID, message);
   }
-  SendAsChat(user, packet);
 }
 
-void CGame::SendChat(uint8_t fromUID, uint8_t toUID, string_view message, const LogLevelExtra logLevel) const
+void CGame::SendChat(uint8_t fromUID, uint8_t toUID, string_view message, const LogLevelExtra logLevel)
 {
   SendChat(fromUID, GetUserFromUID(toUID), message, logLevel);
 }
 
-void CGame::SendChat(GameUser::CGameUser* user, string_view message, const LogLevelExtra logLevel) const
+void CGame::SendChat(GameUser::CGameUser* user, string_view message, const LogLevelExtra logLevel)
 {
   SendChat(GetHostUID(), user, message, logLevel);
 }
 
-void CGame::SendChat(uint8_t toUID, string_view message, const LogLevelExtra logLevel) const
+void CGame::SendChat(uint8_t toUID, string_view message, const LogLevelExtra logLevel)
 {
   SendChat(GetHostUID(), toUID, message, logLevel);
 }
 
-void CGame::SendChat(CAsyncObserver* spectator, string_view message, const LogLevelExtra /*logLevel*/) const
+void CGame::SendChat(CAsyncObserver* spectator, string_view message, const LogLevelExtra /*logLevel*/)
 {
   spectator->SendChat(message);
 }
 
-bool CGame::SendAllChat(uint8_t fromUID, string_view message) const
+void CGame::SendAllChat(uint8_t fromUID, string_view message)
 {
   if (m_GameLoading && !m_Config.m_LoadInGame)
-    return false;
+    return;
 
   if (message.empty())
-    return false;
-
-  vector<uint8_t> toUIDs = GetAllChatUIDs();
-  if (toUIDs.empty()) {
-    return false;
-  }
+    return;
 
   if (m_Aura->GetIsLoggingTrace()) {
     const GameUser::CGameUser* fromUser = GetUserFromUID(fromUID);
@@ -2457,32 +2453,26 @@ bool CGame::SendAllChat(uint8_t fromUID, string_view message) const
 
   // send a public message to all users - it'll be marked [All] in Warcraft 3
 
-  vector<uint8_t> packet;
+  
   if (!m_GameLoading && !m_GameLoaded) {
-    packet = GameProtocol::SEND_W3GS_CHAT_FROM_HOST_LOBBY(fromUID, toUIDs, GameProtocol::Magic::ChatType::CHAT_LOBBY, message);
+    SendLobbyChatAll(fromUID, message);
   } else {
-    packet = GameProtocol::SEND_W3GS_CHAT_FROM_HOST_IN_GAME(fromUID, toUIDs, GameProtocol::Magic::ChatType::CHAT_IN_GAME, CHAT_RECV_ALL, message);
+    SendInGameChatAll(fromUID, message);
   }
-  return SendAllAsChat(packet);
 }
 
-bool CGame::SendAllChat(string_view message) const
+void CGame::SendAllChat(string_view message)
 {
-  return SendAllChat(GetHostUID(), message);
+  SendAllChat(GetHostUID(), message);
 }
 
-bool CGame::SendObserverChat(uint8_t fromUID, string_view message) const
+void CGame::SendObserverChat(uint8_t fromUID, string_view message)
 {
   if (!m_GameLoaded)
-    return false;
+    return;
 
   if (message.empty())
-    return false;
-
-  vector<uint8_t> toUIDs = GetObserverChatUIDs();
-  if (toUIDs.empty()) {
-    return false;
-  }
+    return;
 
   if (m_Aura->GetIsLoggingTrace()) {
     const GameUser::CGameUser* fromUser = GetUserFromUID(fromUID);
@@ -2497,15 +2487,12 @@ bool CGame::SendObserverChat(uint8_t fromUID, string_view message) const
     LOG_APP_IF(LogLevel::kInfo, Concat("sent <<", message, ">>"));
   }
 
-  // send a public message to all observers - it'll be marked [Observers] or [Referees] in Warcraft 3
-
-  vector<uint8_t> packet = GameProtocol::SEND_W3GS_CHAT_FROM_HOST_IN_GAME(fromUID, toUIDs, GameProtocol::Magic::ChatType::CHAT_IN_GAME, CHAT_RECV_OBS, message);
-  return SendObserversAsChat(packet);
+  SendInGameChatObservers(fromUID, message);
 }
 
-bool CGame::SendObserverChat(string_view message) const
+void CGame::SendObserverChat(string_view message)
 {
-  return SendObserverChat(GetHostUID(), message);
+  SendObserverChat(GetHostUID(), message);
 }
 
 bool CGame::SendSpectatorChat(const CAsyncObserver* excludeSpectator, string_view prefix, string_view message) const
@@ -3415,7 +3402,7 @@ string CGame::GetCmdToken() const
   return m_Config.m_BroadcastCmdToken.empty() ? m_Config.m_PrivateCmdToken : m_Config.m_BroadcastCmdToken;
 }
 
-void CGame::SendAllAutoStart() const
+void CGame::SendAllAutoStart()
 {
   SendAllChat(GetAutoStartText());
 }
@@ -3663,7 +3650,7 @@ MapTransferStatus CGame::NextSendMap(CConnection* user, const uint8_t UID, MapTr
   return MapTransferStatus::kInProgress;
 }
 
-void CGame::SendWelcomeMessage(GameUser::CGameUser* user) const
+void CGame::SendWelcomeMessage(GameUser::CGameUser* user)
 {
   for (size_t i = 0; i < m_Aura->m_Config.m_Greeting.size(); i++) {
     string::size_type matchIndex;
@@ -3840,7 +3827,7 @@ void CGame::SendWelcomeMessage(GameUser::CGameUser* user) const
   }
 }
 
-void CGame::SendOwnerCommandsHelp(string_view cmdToken, GameUser::CGameUser* user) const
+void CGame::SendOwnerCommandsHelp(string_view cmdToken, GameUser::CGameUser* user)
 {
   SendChat(user, Concat(cmdToken, "open [NUMBER] - opens a slot"), LogLevelExtra::kTrace);
   SendChat(user, Concat(cmdToken, "close [NUMBER] - closes a slot"), LogLevelExtra::kTrace);
@@ -3852,7 +3839,7 @@ void CGame::SendOwnerCommandsHelp(string_view cmdToken, GameUser::CGameUser* use
   SendChat(user, Concat(cmdToken, "terminator - sets humans vs computers"), LogLevelExtra::kTrace);
 }
 
-void CGame::SendCommandsHelp(string_view cmdToken, GameUser::CGameUser* user, const bool isIntro) const
+void CGame::SendCommandsHelp(string_view cmdToken, GameUser::CGameUser* user, const bool isIntro)
 {
   if (isIntro) {
     SendChat(user, Concat("Welcome, ", user->GetName(), ". Please use ", cmdToken, GetTokenName(cmdToken), " for commands."), LogLevelExtra::kTrace);
@@ -4839,7 +4826,7 @@ void CGame::EventLobbyLastPlayerLeaves()
   }
 }
 
-void CGame::ReportAllPings() const
+void CGame::ReportAllPings()
 {
   UserList SortedPlayers = m_Users;
   if (SortedPlayers.empty()) return;
@@ -5187,20 +5174,20 @@ void CGame::EventUserKickHandleQueued(GameUser::CGameUser* user)
   // left reason, left code already assigned when queued
 }
 
-void CGame::SendChatMessage(const GameUser::CGameUser* user, const CIncomingMessageOrSettingsView& chatMessage) const
+void CGame::SendChatMessage(const GameUser::CGameUser* user, const CIncomingMessageOrSettingsView& chatMessage)
 {
   if (m_GameLoading && !m_Config.m_LoadInGame) {
     return;
   }
 
   if (!m_GameLoading && !m_GameLoaded) {
-    SendMulti(chatMessage.GetToUIDs(), GameProtocol::SEND_W3GS_CHAT_FROM_HOST_LOBBY(chatMessage.GetFromUID(), chatMessage.GetToUIDs(), chatMessage.GetDiscriminator(), chatMessage.GetText()));
+    SendLobbyChat(chatMessage.GetToUIDs(), chatMessage.GetFromUID(), chatMessage.GetText());
     return;
   }
 
   uint8_t inGameChannel = chatMessage.GetInGameChannel();
 
-  // Never allow observers/referees to send private messages to users.
+  // Never allow referees to send private messages to users.
   // Referee rulings/warnings are expected to be public.
   if (user->GetIsObserver() && m_Map->GetGameObservers() == GameObserversMode::kReferees && inGameChannel != CHAT_RECV_OBS) {
     vector<uint8_t> targetUIDs;
@@ -5213,15 +5200,13 @@ void CGame::SendChatMessage(const GameUser::CGameUser* user, const CIncomingMess
       targetUIDs = GetFilteredChatUIDs(chatMessage.GetFromUID(), chatMessage.GetToUIDs());
       inGameChannel = CHAT_RECV_ALL;
     }
-    if (!targetUIDs.empty()) {
-      SendMulti(targetUIDs, GameProtocol::SEND_W3GS_CHAT_FROM_HOST_IN_GAME(chatMessage.GetFromUID(), targetUIDs, chatMessage.GetDiscriminator(), inGameChannel, chatMessage.GetText()));
-    }
+    SendInGameChat(targetUIDs, chatMessage.GetFromUID(), inGameChannel, chatMessage.GetText());
     return;
   }
 
   // When observers on defeat (or full observers) are enabled, Aura cannot reliably figure out whether a player became an observer
   // therefore, we can only rely on game clients to properly manage chat visibility
-  SendMulti(chatMessage.GetToUIDs(), GameProtocol::SEND_W3GS_CHAT_FROM_HOST_IN_GAME(chatMessage.GetFromUID(), chatMessage.GetToUIDs(), chatMessage.GetDiscriminator(), inGameChannel, chatMessage.GetText()));
+  SendInGameChat(chatMessage.GetToUIDs(), chatMessage.GetFromUID(), inGameChannel, chatMessage.GetText());
 }
 
 void CGame::QueueLeftMessage(GameUser::CGameUser* user) const
@@ -5232,7 +5217,7 @@ void CGame::QueueLeftMessage(GameUser::CGameUser* user) const
   DLOG_APP_IF(LogLevel::kTrace, Concat("[", user->GetName(), "] scheduled for deletion in ", ToDecString(user->GetPingEqualizerOffset()), " frames"));
 }
 
-void CGame::SendLeftMessage(GameUser::CGameUser* user, const bool sendChat) const
+void CGame::SendLeftMessage(GameUser::CGameUser* user, const bool sendChat)
 {
   // This function, together with GetLeftMessage and SetLeftMessageSent,
   // controls which UIDs Aura considers available.
@@ -5653,7 +5638,7 @@ void CGame::EventObserverMapSize(CAsyncObserver* user, const CIncomingMapFileSiz
   }
 }
 
-bool CGame::CheckIPFlood(string_view joinName, const sockaddr_storage* sourceAddress) const
+bool CGame::CheckIPFlood(string_view joinName, const sockaddr_storage* sourceAddress)
 {
   // check for multiple IP usage
   UserList usersSameIP;
@@ -8267,6 +8252,25 @@ bool CGame::GetHasAnotherPlayer(const uint8_t ExceptSID) const
   return SID != ExceptSID;
 }
 
+vector<uint8_t> CGame::GetAllUIDs() const
+{
+  vector<uint8_t> result;
+  result.reserve(m_Users.size() + 1);
+
+  for (auto& user : m_Users) {
+    if (user->GetLeftMessageSent()) {
+      continue;
+    }
+    result.push_back(user->GetUID());
+  }
+
+  if (m_JoinInProgressVirtualUser.has_value()) {
+    result.push_back(m_JoinInProgressVirtualUser->GetUID());
+  }
+
+  return result;
+}
+
 std::vector<uint8_t> CGame::GetAllChatUIDs() const
 {
   std::vector<uint8_t> result;
@@ -8278,7 +8282,6 @@ std::vector<uint8_t> CGame::GetAllChatUIDs() const
     result.push_back(user->GetUID());
   }
 
-  // if a tree falls in the forest and nobody is there to hear it does it make a sound? for simplicity and some pointless privacy, let's say no
   if (m_JoinInProgressVirtualUser.has_value()) {
     result.push_back(m_JoinInProgressVirtualUser->GetUID());
   }
