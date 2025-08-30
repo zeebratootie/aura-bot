@@ -409,6 +409,7 @@ CNet::CNet(CConfig& nCFG)
 
     m_IPv4SelfCache({{NET_PUBLIC_IP_ADDRESS_ALGORITHM_INVALID, {}}, {}}),
     m_IPv6SelfCache({{NET_PUBLIC_IP_ADDRESS_ALGORITHM_INVALID, {}}, {}}),
+    m_GameVersionCache(1024),
 
     m_HealthCheckVerbose(false),
     m_HealthCheckInProgress(false),
@@ -1106,6 +1107,9 @@ void CNet::HandleUDP(UDPPkt pkt)
   }
 
   const Version requestVersion = GAMEVER(1, GetByteAt(data, 8));
+  if (requestVersion.second != 0 && pkt.sender.ss_family == AF_INET) {
+    m_GameVersionCache.Put(reinterpret_cast<const sockaddr_in*>(&pkt.sender)->sin_addr.s_addr, requestVersion);
+  }
 
   DPRINT_IF(LogLevel::kTrace3, "[NET] IP " + ipAddress + " searching games from port " + to_string(remotePort) + "...");
 
@@ -1816,6 +1820,14 @@ uint16_t CNet::GetUDPPort(const uint8_t protocol) const
     }
   }
   return 0;
+}
+
+optional<Version> CNet::GetMaybeCachedGameVersion(const sockaddr_storage* address)
+{
+  if (address->ss_family != AF_INET) {
+    return {};
+  }
+  return m_Aura->m_Net.m_GameVersionCache.GetMaybe(reinterpret_cast<const sockaddr_in*>(address)->sin_addr.s_addr);
 }
 
 uint16_t CNet::NextHostPort()

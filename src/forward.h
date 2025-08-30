@@ -111,6 +111,12 @@ namespace dpp
 };
 #endif
 
+template<typename key_t, typename value_t>
+class LRUCache;
+
+template <typename T>
+struct RestrictedBuffer;
+
 struct AppMetrics;
 
 struct CBotConfig;
@@ -189,5 +195,7 @@ typedef std::pair<size_t, size_t>                   RangeSizeType;
 typedef std::weak_ptr<std::vector<uint8_t>>         WeakByteArray;
 typedef std::shared_ptr<std::vector<uint8_t>>       SharedByteArray;
 typedef std::variant<AppAction, LazyCommandContext> GenericAppAction;
+typedef uint16_t                                    NetworkShort;
+typedef uint32_t                                    NetworkLong;
 
 #endif // AURA_FORWARD_H_

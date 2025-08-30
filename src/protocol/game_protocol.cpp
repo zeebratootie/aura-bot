@@ -710,7 +710,6 @@ namespace GameProtocol
     AppendNumberLE(packet, inGameChannel); // [All] vs [Allied] vs [Obs] vs [Private-N]
     AppendByteArrayString(packet, prefix, false);   // prefix
     AppendByteArrayString(packet, message, true);   // message
-    AssignLength(packet);
     return packet;
   }
 
@@ -728,7 +727,6 @@ namespace GameProtocol
     packet.push_back(discriminator);                 // discriminator
     AppendByteArrayString(packet, prefix, false);   // prefix
     AppendByteArrayString(packet, message, true);   // message
-    AssignLength(packet);
     return packet;
   }
 

@@ -3300,12 +3300,13 @@ optional<Version> CGame::GetIncomingPlayerVersion(const CConnection* user, const
   return result;
 }
 
-Version CGame::GuessIncomingPlayerVersion(const CConnection* /*user*/, const CIncomingJoinRequest& joinRequest, shared_ptr<const CRealm> /*fromRealm*/) const
+Version CGame::GuessIncomingPlayerVersion(const CConnection* user, const CIncomingJoinRequest& joinRequest, shared_ptr<const CRealm> /*fromRealm*/) const
 {
   string lowerName = joinRequest.GetLowerName();
   auto versionErrors = m_VersionErrors.find(lowerName);
   if (versionErrors == m_VersionErrors.end() || versionErrors->second.size() == m_SupportedGameVersions.count()) {
-    return GetVersion();
+    optional<Version> lastKnownVersion = m_Aura->m_Net.GetMaybeCachedGameVersion(user->GetRemoteAddress());
+    return lastKnownVersion.value_or(GetVersion());
   }
 
   bool onlyRangeHeads = true;
@@ -3328,8 +3329,11 @@ Version CGame::GuessIncomingPlayerVersion(const CConnection* /*user*/, const CIn
     onlyRangeHeads = false;
   }
 
-  // If all versions failed, just use the default version
-  return GetVersion();
+  // Fallback
+  {
+    optional<Version> lastKnownVersion = m_Aura->m_Net.GetMaybeCachedGameVersion(user->GetRemoteAddress());
+    return lastKnownVersion.value_or(GetVersion());
+  }
 }
 
 bool CGame::GetIsAutoStartDue() const
@@ -5519,15 +5523,15 @@ GameUser::CGameUser* CGame::JoinPlayer(CConnection* connection, const CIncomingJ
 
   size_t observerCount = GetObservers().size();
   if (observerCount > 0) {
-    LogRemote(Concat("[", Player->GetExtendedName(), "] joined (", ToDecString(GetNumControllers()), " / ", to_string(m_Map->GetMapNumControllers()), "), ", to_string(observerCount), " obs"));
+    LogRemote(Concat("[", Player->GetExtendedName(), "] joined (", Player->GetGameVersionString(), " - ", ToDecString(GetNumControllers()), " / ", to_string(m_Map->GetMapNumControllers()), "), ", to_string(observerCount), " obs"));
   } else {
-    LogRemote(Concat("[", Player->GetExtendedName(), "] joined (", ToDecString(GetNumControllers()), " / ", to_string(m_Map->GetMapNumControllers()), ")"));
+    LogRemote(Concat("[", Player->GetExtendedName(), "] joined (", Player->GetGameVersionString(), " - ", ToDecString(GetNumControllers()), " / ", to_string(m_Map->GetMapNumControllers()), ")"));
   }
 
   if (notifyString.empty()) {
-    LOG_APP_IF(LogLevel::kInfo, Concat("user joined (P", ToDecString(ToBaseOne(SID)), "): [", joinRequest.GetName(), "@", Player->GetRealmHostName(), "#", ToDecString(Player->GetUID()), "] from [", Player->GetIPString(), "] (", Player->GetSocket()->GetName(), ")", notifyString));
+    LOG_APP_IF(LogLevel::kInfo, Concat("user joined (P", ToDecString(ToBaseOne(SID)), "): [", joinRequest.GetName(), "@", Player->GetRealmHostName(), "#", ToDecString(Player->GetUID()), "] ", Player->GetGameVersionString(), " from [", Player->GetIPString(), "] (", Player->GetSocket()->GetName(), ")", notifyString));
   } else {
-    LOG_APP_IF(LogLevel::kNotice, Concat("user joined (P", ToDecString(ToBaseOne(SID)), "): [", joinRequest.GetName(), "@", Player->GetRealmHostName(), "#", ToDecString(Player->GetUID()), "] from [", Player->GetIPString(), "] (", Player->GetSocket()->GetName(), ")", notifyString));
+    LOG_APP_IF(LogLevel::kNotice, Concat("user joined (P", ToDecString(ToBaseOne(SID)), "): [", joinRequest.GetName(), "@", Player->GetRealmHostName(), "#", ToDecString(Player->GetUID()), "] ", Player->GetGameVersionString(), " from [", Player->GetIPString(), "] (", Player->GetSocket()->GetName(), ")", notifyString));
   }
   if (joinRequest.GetIsCensored()) {
     LOG_APP_IF(LogLevel::kNotice, Concat("user ", SanitizeWrapUTF8(joinRequest.GetName()), " has censored name - was ", SanitizeWrapUTF8(joinRequest.GetOriginalName())));

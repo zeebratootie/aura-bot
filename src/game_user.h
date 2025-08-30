@@ -183,7 +183,7 @@ namespace GameUser
     std::optional<TokenBucketRateLimiter>                    m_APMQuota;
     std::optional<double>                                    m_APMTrainer;
 
-    RestrictedBuffer<GameProtocol::PacketWrapper, 50, 50>    m_OnLoadChatMessages;
+    RestrictedBuffer<GameProtocol::PacketWrapper>            m_OnLoadChatMessages;
 
 #ifdef PROFILING
     GameUser::UserMetrics                       m_PerfMetrics;

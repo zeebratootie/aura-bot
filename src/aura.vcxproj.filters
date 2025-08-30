@@ -183,6 +183,9 @@
     <ClCompile Include="locations.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="lru_cache.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="rate_limiter.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -429,6 +432,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="test\runner.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="lru_cache.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="rate_limiter.h">

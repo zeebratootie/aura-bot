@@ -27,6 +27,7 @@
 #define AURA_NET_H_
 
 #include "includes.h"
+#include "lru_cache.h"
 #include "socket.h"
 #include "mdns.h"
 #include "config/config_net.h"
@@ -152,6 +153,7 @@ public:
   std::map<const std::string, sockaddr_storage>               m_IPv6DNSCache;
   std::pair<std::pair<uint8_t, std::string>, sockaddr_storage> m_IPv4SelfCache;
   std::pair<std::pair<uint8_t, std::string>, sockaddr_storage> m_IPv6SelfCache;
+  LRUCache<NetworkLong, Version>                              m_GameVersionCache;
   std::multiset<NetworkHost>                                  m_OutgoingPendingConnections;
   std::map<NetworkHost, TimedUint8>                           m_OutgoingThrottles;
   std::vector<NetworkInterface>                               m_Interfaces;
@@ -190,6 +192,7 @@ public:
   
   [[nodiscard]] std::vector<uint16_t>           GetPotentialGamePorts() const;
   [[nodiscard]] uint16_t                        GetUDPPort(const uint8_t protocol) const;
+  [[nodiscard]] std::optional<Version>          GetMaybeCachedGameVersion(const sockaddr_storage* address);
 
   bool                                          ResolveHostName(sockaddr_storage& address, const uint8_t nAcceptFamily, const std::string& hostName, const uint16_t port);
   bool                                          ResolveHostNameInner(sockaddr_storage& address, const std::string& hostName, const uint16_t port, const uint8_t nFamily, std::map<const std::string, sockaddr_storage>&);

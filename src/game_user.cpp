@@ -175,9 +175,11 @@ CGameUser::CGameUser(shared_ptr<CGame> nGame, CConnection* connection, uint8_t n
     m_AntiAbuseCounter(0),
     m_RemainingSaves(GAME_SAVES_PER_PLAYER),
 #ifndef PROFILING
-    m_RemainingPauses(GAME_PAUSES_PER_PLAYER)
+    m_RemainingPauses(GAME_PAUSES_PER_PLAYER),
+    m_OnLoadChatMessages(50, 50)
 #else
     m_RemainingPauses(GAME_PAUSES_PER_PLAYER),
+    m_OnLoadChatMessages(50, 50),
     m_PerfMetrics(GameUser::UserMetrics(
       USER_METRICS_ACTION_SAMPLE_RATE, USER_METRICS_ACTION_CAPACITY,
       USER_METRICS_CHAT_SAMPLE_RATE, USER_METRICS_CHAT_CAPACITY,

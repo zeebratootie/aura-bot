@@ -28,16 +28,26 @@
 
 #include "includes.h"
 
-template <typename T, size_t oldSize, size_t newSize>
+template <typename T>
 struct RestrictedBuffer
 {
+private:
   std::vector<T> m_OldEntries;
   std::vector<T> m_NewEntries;
+  size_t m_MaxOldSize;
+  size_t m_MaxNewSize;
+
+public:
   size_t m_DeletedSize;
+
+private:
   size_t m_NewStartIndex;
 
-  RestrictedBuffer()
-  : m_DeletedSize(0),
+public:
+  RestrictedBuffer(size_t maxOldSize, size_t maxNewSize)
+  : m_MaxOldSize(maxOldSize),
+    m_MaxNewSize(maxNewSize),
+    m_DeletedSize(0),
     m_NewStartIndex(0)
   {
   }
@@ -47,6 +57,8 @@ struct RestrictedBuffer
   RestrictedBuffer(const RestrictedBuffer& other)
   : m_OldEntries(other.m_OldEntries),
     m_NewEntries(other.m_NewEntries),
+    m_MaxOldSize(other.m_MaxOldSize),
+    m_MaxNewSize(other.m_MaxNewSize),
     m_DeletedSize(other.m_DeletedSize),
     m_NewStartIndex(other.m_NewStartIndex)
   {
@@ -59,6 +71,8 @@ struct RestrictedBuffer
     if (this != &other) {
       m_OldEntries = other.m_OldEntries;
       m_NewEntries = other.m_NewEntries;
+      m_MaxOldSize = other.m_MaxOldSize;
+      m_MaxNewSize = other.m_MaxNewSize;
       m_DeletedSize = other.m_DeletedSize;
       m_NewStartIndex = other.m_NewStartIndex;
     }
@@ -68,6 +82,8 @@ struct RestrictedBuffer
   RestrictedBuffer(RestrictedBuffer&& other) noexcept
   : m_OldEntries(move(other.m_OldEntries)),
     m_NewEntries(move(other.m_NewEntries)),
+    m_MaxOldSize(other.m_MaxOldSize),
+    m_MaxNewSize(other.m_MaxNewSize),
     m_DeletedSize(other.m_DeletedSize),
     m_NewStartIndex(other.m_NewStartIndex)
   {
@@ -77,6 +93,8 @@ struct RestrictedBuffer
     if (this != &other) {
       m_OldEntries = move(other.m_OldEntries);
       m_NewEntries = move(other.m_NewEntries);
+      m_MaxOldSize = other.m_MaxOldSize;
+      m_MaxNewSize = other.m_MaxNewSize;
       m_DeletedSize = other.m_DeletedSize;
       m_NewStartIndex = other.m_NewStartIndex;
     }

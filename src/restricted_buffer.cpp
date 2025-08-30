@@ -28,10 +28,10 @@
 
 using namespace std;
 
-template struct RestrictedBuffer<GameProtocol::PacketWrapper, 50, 50>;
+template struct RestrictedBuffer<GameProtocol::PacketWrapper>;
 
-template <typename T, size_t oldSize, size_t newSize>
-vector<T> RestrictedBuffer<T, oldSize, newSize>::GetNewEntries() const
+template <typename T>
+vector<T> RestrictedBuffer<T>::GetNewEntries() const
 {
   vector<T> newEntries;
   newEntries.reserve(m_NewEntries.size());
@@ -40,8 +40,8 @@ vector<T> RestrictedBuffer<T, oldSize, newSize>::GetNewEntries() const
   return newEntries;
 }
 
-template <typename T, size_t oldSize, size_t newSize>
-void RestrictedBuffer<T, oldSize, newSize>::Clear()
+template <typename T>
+void RestrictedBuffer<T>::Clear()
 {
   m_OldEntries = vector<T>();
   m_NewEntries = vector<T>();
@@ -49,30 +49,30 @@ void RestrictedBuffer<T, oldSize, newSize>::Clear()
   m_NewStartIndex = 0;
 }
 
-template <typename T, size_t oldSize, size_t newSize>
-void RestrictedBuffer<T, oldSize, newSize>::Push(const T& entry)
+template <typename T>
+void RestrictedBuffer<T>::Push(const T& entry)
 {
-  if (m_OldEntries.size() < oldSize) {
+  if (m_OldEntries.size() < m_MaxOldSize) {
     m_OldEntries.push_back(entry);
-  } else if (m_NewEntries.size() < newSize) {
+  } else if (m_NewEntries.size() < m_MaxNewSize) {
     m_NewEntries.push_back(entry);
   } else {
     m_NewEntries[m_NewStartIndex] = entry;
     m_DeletedSize++;
-    m_NewStartIndex = (m_NewStartIndex + 1) % newSize;
+    m_NewStartIndex = (m_NewStartIndex + 1) % m_MaxNewSize;
   }
 }
 
-template <typename T, size_t oldSize, size_t newSize>
-void RestrictedBuffer<T, oldSize, newSize>::Push(T&& entry)
+template <typename T>
+void RestrictedBuffer<T>::Push(T&& entry)
 {
-  if (m_OldEntries.size() < oldSize) {
+  if (m_OldEntries.size() < m_MaxOldSize) {
     m_OldEntries.push_back(entry);
-  } else if (m_NewEntries.size() < newSize) {
+  } else if (m_NewEntries.size() < m_MaxNewSize) {
     m_NewEntries.push_back(entry);
   } else {
     m_NewEntries[m_NewStartIndex] = move(entry);
     m_DeletedSize++;
-    m_NewStartIndex = (m_NewStartIndex + 1) % newSize;
+    m_NewStartIndex = (m_NewStartIndex + 1) % m_MaxNewSize;
   }
 }
