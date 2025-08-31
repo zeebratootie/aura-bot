@@ -378,6 +378,20 @@ inline void SetAddressPort(sockaddr_storage* address, const uint16_t port)
   return true;
 }
 
+[[nodiscard]] inline uint32_t AddressToIPv4NetworkLong(const sockaddr_storage* address) {
+  if (address->ss_family == AF_INET) {
+    const sockaddr_in* addr4 = reinterpret_cast<const sockaddr_in*>(address);
+    return addr4->sin_addr.s_addr;
+  } else if (address->ss_family == AF_INET6) {
+    const sockaddr_in6* addr6 = reinterpret_cast<const sockaddr_in6*>(address);
+    if (isIPv4MappedAddress(addr6)) {
+      const in_addr* addr4 = reinterpret_cast<const in_addr*>(addr6->sin6_addr.s6_addr + 12);
+      return addr4->s_addr;
+    }
+  }
+  return 0;
+}
+
 [[nodiscard]] inline std::array<uint8_t, 4> AddressToIPv4Array(const sockaddr_storage* address) {
   if (address->ss_family == AF_INET) {
     std::array<uint8_t, 4> ipBytes;

@@ -2647,7 +2647,7 @@ vector<T> GetSortedVectorComplement(const vector<T>& U, const vector<T>& S)
     }
   }
 
-  result.insert(result.end(), U.begin() + i, U.end());
+  result.insert(result.end(), U.begin() + signed_cast<ptrdiff_t>(i), U.end());
   return result;
 }
 

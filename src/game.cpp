@@ -5569,7 +5569,7 @@ void CGame::JoinObserver(CConnection* connection, const CIncomingJoinRequest& jo
 
   string realmHostName;
   if (fromRealm) realmHostName = fromRealm->GetServer();
-  LOG_APP_IF(LogLevel::kInfo, Concat("spectator joined [", joinRequest.GetName(), "@", realmHostName, "#", to_string(observer->GetUID()), "] from [", observer->GetIPString(), "]"));
+  LOG_APP_IF(LogLevel::kInfo, Concat("spectator joined [", joinRequest.GetName(), "@", realmHostName, "#", to_string(observer->GetUID()), "] ", observer->GetGameVersionString() , " from [", observer->GetIPString(), "]"));
 }
 
 void CGame::EventObserverMapSize(CAsyncObserver* user, const CIncomingMapFileSize& clientMap)

@@ -108,6 +108,15 @@ CAsyncObserver::~CAsyncObserver()
   }
 }
 
+string CAsyncObserver::GetGameVersionString() const
+{
+  if (m_GameVersionIsExact) {
+    return Concat("v", ToVersionString(GetGameVersion()));
+  } else {
+    return Concat("v", ToVersionString(GetGameVersion()), "?");
+  }
+}
+
 void CAsyncObserver::SetTimeout(const int64_t delta)
 {
   m_TimeoutTicks = m_Aura->GetLoopTicks() + delta;
@@ -208,13 +217,13 @@ AsyncObserverStatus CAsyncObserver::Update(fd_set* fd, fd_set* send_fd, int64_t 
             }
 
             case GameProtocol::Magic::OUTGOING_ACTION: {
-              // Ignore all actions performed by observers,
-              // and let's see how this turns out.
               if (packetSize < 9) {
                 EventProtocolError();
                 Abort = true;
                 break;
               }
+              // Ignore all actions performed by observers,
+              // and let's see how this turns out.
               bool skipActions = false;
               uint8_t actionType = GetByteAt(packet, 8);
               switch (actionType) {

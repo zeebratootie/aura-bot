@@ -35,8 +35,8 @@ vector<T> RestrictedBuffer<T>::GetNewEntries() const
 {
   vector<T> newEntries;
   newEntries.reserve(m_NewEntries.size());
-  newEntries.insert(newEntries.end(), m_NewEntries.begin() + m_NewStartIndex, m_NewEntries.end());
-  newEntries.insert(newEntries.end(), m_NewEntries.begin(), m_NewEntries.begin() + m_NewStartIndex);
+  newEntries.insert(newEntries.end(), m_NewEntries.begin() + signed_cast<ptrdiff_t>(m_NewStartIndex), m_NewEntries.end());
+  newEntries.insert(newEntries.end(), m_NewEntries.begin(), m_NewEntries.begin() + signed_cast<ptrdiff_t>(m_NewStartIndex));
   return newEntries;
 }
 

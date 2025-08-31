@@ -140,6 +140,7 @@ public:
 
   [[nodiscard]] inline bool                     GetGameVersionIsExact() const { return m_GameVersionIsExact; }
   [[nodiscard]] inline Version                  GetGameVersion() const { return m_GameVersion; }
+  [[nodiscard]] std::string                     GetGameVersionString() const;
   [[nodiscard]] inline std::string_view         GetName() const { return m_Name; }
   [[nodiscard]] inline std::shared_ptr<CGame>   GetGame() const { return m_Game.lock(); }
 
