@@ -241,6 +241,10 @@ AsyncObserverStatus CAsyncObserver::Update(fd_set* fd, fd_set* send_fd, int64_t 
                 case ACTION_SAVE_ENDED:
                   skipActions = true;
                   break;
+                 case ACTION_GAME_CACHE_INT:
+                  skipActions = true;
+                  Print(Concat(GetLogPrefix(), "got maybe ignored W3MMD action <", ByteArrayToHexString((uint8_t*)(packet.data() + 8), (size_t)(packetSize - 8)), ">"));
+                  break;
               }
               if (!skipActions) {
                 Print(Concat(GetLogPrefix(), "got action <", ByteArrayToHexString((uint8_t*)(packet.data() + 8), (size_t)(packetSize - 8)), ">"));
