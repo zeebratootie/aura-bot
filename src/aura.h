@@ -71,8 +71,8 @@
 #include <windows.h>
 #endif
 
-#define AURA_VERSION "11.3.1"
-#define AURA_APP_NAME "Aura 11.3.1"
+#define AURA_VERSION "11.3.2"
+#define AURA_APP_NAME "Aura 11.3.2"
 #define AURA_REPOSITORY_URL "https://gitlab.com/ivojulca/aura-bot"
 #define AURA_ISSUES_URL "https://gitlab.com/ivojulca/aura-bot/-/issues"
 
