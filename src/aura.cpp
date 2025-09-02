@@ -509,6 +509,7 @@ CAura::CAura(CConfig& CFG, const CCLI& nCLI)
     m_MetaDataNeedsUpdate(false),
 
     m_LogLevel(LogLevel::kDebug),
+    m_LoopTicks(APP_MIN_TICKS),
     m_ClockTicks(APP_MIN_TICKS),
     m_ClockTime(APP_MIN_TICKS),
     m_LastPerformanceWarningTicks(APP_MIN_TICKS),
