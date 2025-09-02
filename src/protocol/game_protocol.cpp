@@ -483,7 +483,7 @@ namespace GameProtocol
     // 2 bytes					-> Length
     // 4 bytes					-> Pong
 
-    // the pong value is just a copy of whatever was sent in SEND_W3GS_PING_FROM_HOST which was CAura::GetLoopTicks() at the time of sending
+    // the pong value is just a copy of whatever was sent in SEND_W3GS_PING_FROM_HOST which was CAura::GetClockTicks() at the time of sending
     // so as long as we trust that the client isn't trying to fake us out and mess with the pong value we can find the round trip time by simple subtraction
     // (the subtraction is done elsewhere because the very first pong value seems to be 1 and we want to discard that one)
 

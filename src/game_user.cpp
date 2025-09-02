@@ -129,7 +129,7 @@ CGameUser::CGameUser(shared_ptr<CGame> nGame, CConnection* connection, uint8_t n
     m_PongCounter(0),
     m_SyncCounterOffset(0),
     m_SyncCounter(0),
-    m_JoinTicks(nGame->m_Aura->GetLoopTicks()),
+    m_JoinTicks(nGame->m_Aura->GetClockTicks()),
     m_FinishedLoadingTicks(0),
     m_HandicapTicks(0),
     m_StartedLaggingTicks(0),
@@ -163,7 +163,7 @@ CGameUser::CGameUser(shared_ptr<CGame> nGame, CConnection* connection, uint8_t n
     m_LeftMessageSent(false),
     m_StatusMessageSent(false),
     m_LatencySent(false),
-    m_CheckStatusByTicks(nGame->m_Aura->GetLoopTicks() + CHECK_STATUS_LATENCY),
+    m_CheckStatusByTicks(nGame->m_Aura->GetClockTicks() + CHECK_STATUS_LATENCY),
     m_MuteEndTicks(0),
 
     m_Disconnected(false),
@@ -484,7 +484,7 @@ bool CGameUser::CloseConnection(bool fromOpen)
     TrySetEnding();
     DisableReconnect();
   }
-  m_LastDisconnectTicks = m_Aura->GetLoopTicks();
+  m_LastDisconnectTicks = m_Aura->GetClockTicks();
   m_Disconnected = true;
   m_Socket->Close();
   m_Game.get().EventUserAfterDisconnect(this, fromOpen);
@@ -496,7 +496,7 @@ void CGameUser::UnrefConnection(bool deferred)
   m_Game.get().m_Aura->m_Net.OnUserKicked(this, deferred);
 
   if (!m_Disconnected) {
-    m_LastDisconnectTicks = m_Aura->GetLoopTicks();
+    m_LastDisconnectTicks = m_Aura->GetClockTicks();
     m_Disconnected = true;
   }
 }
@@ -593,7 +593,7 @@ bool CGameUser::Update(fd_set* fd, int64_t timeout)
             if (GameProtocol::RECEIVE_W3GS_GAMELOADED_SELF(packet)) {
               if (m_Game.get().GetGameLoading() && !m_FinishedLoading) {
                 m_FinishedLoading      = true;
-                m_FinishedLoadingTicks = m_Aura->GetLoopTicks();
+                m_FinishedLoadingTicks = m_Aura->GetClockTicks();
                 m_Game.get().EventUserLoaded(this);
               }
             }
@@ -692,7 +692,7 @@ bool CGameUser::Update(fd_set* fd, int64_t timeout)
               if (useSystemRTT && (!m_MeasuredRTT.has_value() || m_Aura->GetTicksIsAfterDelay(m_MeasuredRTT->first, SYSTEM_RTT_POLLING_PERIOD))) {
                 optional<uint32_t> rtt = m_Socket->GetRTT();
                 if (rtt.has_value()) {
-                  m_MeasuredRTT = make_pair(m_Aura->GetLoopTicks(), useLiteralRTT ? rtt.value() : (rtt.value() / 2));
+                  m_MeasuredRTT = make_pair(m_Aura->GetClockTicks(), useLiteralRTT ? rtt.value() : (rtt.value() / 2));
                   m_RTTValues.clear();
                 } else {
                   useSystemRTT = false;
@@ -708,7 +708,7 @@ bool CGameUser::Update(fd_set* fd, int64_t timeout)
                   if (m_RTTValues.size() == MAXIMUM_PINGS_COUNT) {
                     m_RTTValues.erase(begin(m_RTTValues));
                   }
-                  m_RTTValues.push_back(useLiteralRTT ? (signed_cast_lossy<uint32_t>(m_Aura->GetLoopTicks()) - Pong) : ((signed_cast_lossy<uint32_t>(m_Aura->GetLoopTicks()) - Pong) / 2));
+                  m_RTTValues.push_back(useLiteralRTT ? (signed_cast_lossy<uint32_t>(m_Aura->GetClockTicks()) - Pong) : ((signed_cast_lossy<uint32_t>(m_Aura->GetClockTicks()) - Pong) / 2));
                 }
               }
 
@@ -718,7 +718,7 @@ bool CGameUser::Update(fd_set* fd, int64_t timeout)
 
               if (!GetIsRTTMeasuredConsistent() && !GetIsDownloading()) {
                 // Measure player's ping as fast as possible, by chaining new pings to pongs received.
-                Send(GameProtocol::SEND_W3GS_PING_FROM_HOST(m_Aura->GetLoopTicks()));
+                Send(GameProtocol::SEND_W3GS_PING_FROM_HOST(m_Aura->GetClockTicks()));
               }
             }
 
@@ -1037,11 +1037,11 @@ void CGameUser::EventGProxyReconnect(CConnection* connection, const uint32_t las
   DCHECK((m_GProxy->UnqueuePackets(lastPacket)), ("EventGProxyReconnect() triggered with an old lastPacket"));
   m_GProxy->SynchronizeFromBuffer();
   m_Disconnected = false;
-  m_StartedLaggingTicks = m_Aura->GetLoopTicks();
+  m_StartedLaggingTicks = m_Aura->GetClockTicks();
   m_DisconnectNoticeSent = false;
   m_LastDisconnectRepeatNoticeTicks.reset();
   if (m_LastDisconnectTicks.has_value()) {
-    m_TotalDisconnectTicks += m_Aura->GetLoopTicks() - m_LastDisconnectTicks.value();
+    m_TotalDisconnectTicks += m_Aura->GetClockTicks() - m_LastDisconnectTicks.value();
   }
   if (GetGProxy()->GetIsExtended()) {
     m_Game.get().SendAllChat(Concat("Player [", GetDisplayName(), "] reconnected with GProxyDLL!"));
@@ -1070,7 +1070,7 @@ int64_t CGameUser::GetTotalDisconnectTicks() const
   if (!m_Disconnected || !m_LastDisconnectTicks.has_value()) {
     return m_TotalDisconnectTicks;
   } else {
-    return m_TotalDisconnectTicks + m_Aura->GetLoopTicks() - m_LastDisconnectTicks.value();
+    return m_TotalDisconnectTicks + m_Aura->GetClockTicks() - m_LastDisconnectTicks.value();
   }
 }
 
@@ -1162,7 +1162,7 @@ bool CGameUser::GetCanUsePublicChat() const
 
 bool CGameUser::Mute(const int64_t seconds)
 {
-  int64_t muteEndTicks = m_Aura->GetLoopTicks() + (seconds * 1000);
+  int64_t muteEndTicks = m_Aura->GetClockTicks() + (seconds * 1000);
   if (m_Muted && m_MuteEndTicks >= muteEndTicks) return false;
   m_Muted = true;
   m_MuteEndTicks = muteEndTicks;
@@ -1252,5 +1252,5 @@ bool CGameUser::GetReadyReminderIsDue() const
 
 void CGameUser::SetReadyReminded()
 {
-  m_ReadyReminderLastTicks = m_Aura->GetLoopTicks();
+  m_ReadyReminderLastTicks = m_Aura->GetClockTicks();
 }

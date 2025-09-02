@@ -154,6 +154,8 @@ Commands
 - Syntax: fp
 - Syntax: fp \<ON|OFF\>
 
+## \`fps\`
+
 ## \`freestart\`
 
 ## \`games\`

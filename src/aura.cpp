@@ -91,12 +91,14 @@
 #ifndef NOMINMAX
 #define NOMINMAX 1
 #endif
+#include <windows.h>
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #include <ws2def.h>
 #include <iphlpapi.h>
 #include <mstcpip.h>
 #include <process.h>
+#include <timeapi.h>
 #endif
 
 using namespace std;
@@ -382,6 +384,17 @@ int main(const int argc, char** argv)
 #endif
 
 #ifdef _WIN32
+  unsigned int timerResolution = 0;
+  for (unsigned int i = 1; i <= 5; ++i) {
+    // increase timer resolution from ~15.6 ms default
+    if (timeBeginPeriod(i) == TIMERR_NOERROR) {
+      timerResolution = i;
+      break;
+    }
+  }
+#endif
+
+#ifdef _WIN32
   // initialize winsock
 
   WSADATA wsadata;
@@ -442,6 +455,9 @@ int main(const int argc, char** argv)
     if (gAura.has_value() && gAura->GetReady()) {
       // loop start
 
+      gAura->UpdateClock();
+      gAura->m_LoopTicks = gAura->m_ClockTicks;
+
       while (!gAura->Update())
         ;
 
@@ -457,6 +473,13 @@ int main(const int argc, char** argv)
   // shutdown winsock
 
   WSACleanup();
+
+  // shutdown timer
+
+  // Hack to disable timer APIs in ReleaseLite distributions
+  if (timerResolution > 0) {
+    timeEndPeriod(timerResolution);
+  }
 #endif
 
   // restart the program
@@ -482,15 +505,13 @@ CAura::CAura(CConfig& CFG, const CCLI& nCLI)
     m_Exiting(false),
     m_ExitingSoon(false),
     m_Ready(true),
-    m_IsFastPolling(false),
     m_AutoReHosted(false),
     m_MetaDataNeedsUpdate(false),
 
     m_LogLevel(LogLevel::kDebug),
-    m_LoopTicks(APP_MIN_TICKS),
-    m_LoopTime(APP_MIN_TICKS),
+    m_ClockTicks(APP_MIN_TICKS),
+    m_ClockTime(APP_MIN_TICKS),
     m_LastPerformanceWarningTicks(APP_MIN_TICKS),
-    m_StartedFastPollingTicks(APP_MIN_TICKS),
     m_SupportsModernSlots(false),
     m_MDNSDependency(OptionalDependencyMode::kUnknown),
     m_DPPDependency(OptionalDependencyMode::kUnknown),
@@ -1129,7 +1150,7 @@ AppActionStatus CAura::HandleGenericAction(const GenericAppAction& genAction)
     case 0: { // AppAction
       const AppAction& action = std::get<AppAction>(genAction);
       AppActionStatus result = HandleAction(action);
-      if (result == AppActionStatus::kWait && action.queuedTicks + 20000 < m_LoopTicks) {
+      if (result == AppActionStatus::kWait && action.queuedTicks + 20000 < m_ClockTicks) {
         result = AppActionStatus::kTimeOut;
       }
       return result;
@@ -1137,7 +1158,7 @@ AppActionStatus CAura::HandleGenericAction(const GenericAppAction& genAction)
     case 1: { // LazyCommandContext
       const LazyCommandContext& lazyCtx = std::get<LazyCommandContext>(genAction);
       AppActionStatus result = HandleDeferredCommandContext(lazyCtx);
-      if (result == AppActionStatus::kWait && lazyCtx.queuedTicks + 20000 < m_LoopTicks) {
+      if (result == AppActionStatus::kWait && lazyCtx.queuedTicks + 20000 < m_ClockTicks) {
         result = AppActionStatus::kTimeOut;
       }
       return result;
@@ -1150,32 +1171,38 @@ AppActionStatus CAura::HandleGenericAction(const GenericAppAction& genAction)
 int64_t CAura::GetSelectBlockTime() const
 {
   // before we call select we need to determine how long to block for
-  // 50 ms is the hard maximum
+  // 50 ms is the hard maximum (idle: ~20 FPS)
 
   int64_t usecBlock = 50000;
 
   for (const auto& game : m_StartedGames) {
-    game->UpdateSelectBlockTime(usecBlock);
+    game->UpdateSelectBlockTime<1000>(usecBlock);
   }
   m_Net.UpdateSelectBlockTime(usecBlock);
-
-  if (usecBlock < 10000 && m_IsFastPolling && m_StartedFastPollingTicks + 1000 < m_LoopTicks) {
-    // Block for at least 10 ms to avoid CPU starvation
-    usecBlock = 10000;
-  }
 
   return usecBlock;
 }
 
+int64_t CAura::GetSelectBlockTimeRefreshed()
+{
+  UpdateClock();
+  return GetSelectBlockTime();
+}
+
+void CAura::UpdateClock()
+{
+  m_ClockTicks = GetTicks();
+  m_ClockTime = GetTime();
+}
+
 bool CAura::Update()
 {
-  m_LoopTicks = GetTicks();
-  m_LoopTime = GetTime();
+  m_PerfMetrics.globalFrames.TrySample(m_LoopTicks);
+
   if (gGracefulExit == 1 || m_ExitingSoon) {
     // Intentionally execute on every loop turn after graceful exit is flagged.
     GracefulExit();
   }
-  m_PerfMetrics.globalFrames.TrySample(m_LoopTicks);
 
   // 1. pending actions
   bool skipActions = false;
@@ -1225,7 +1252,7 @@ bool CAura::Update()
     return true;
   }
 
-  uint32_t NumFDs = 0;
+  uint32_t numFDs = 0;
 
   // take every socket we own and throw it in one giant select statement so we can block on all sockets
 
@@ -1236,45 +1263,36 @@ bool CAura::Update()
   // the current lobby's player sockets
 
   for (const auto& lobby : m_Lobbies) {
-    NumFDs += lobby->SetFD(&m_ReadFDs, &m_SendFDs, &nfds);
+    numFDs += lobby->SetFD(&m_ReadFDs, &m_SendFDs, &nfds);
   }
 
   // all running games' player sockets
 
   for (const auto& game : m_StartedGames) {
-    NumFDs += game->SetFD(&m_ReadFDs, &m_SendFDs, &nfds);
+    numFDs += game->SetFD(&m_ReadFDs, &m_SendFDs, &nfds);
   }
 
   // all battle.net sockets
 
   for (const auto& realm : m_Realms) {
-    NumFDs += realm->SetFD(&m_ReadFDs, &m_SendFDs, &nfds);
+    numFDs += realm->SetFD(&m_ReadFDs, &m_SendFDs, &nfds);
   }
 
   // irc socket
   if (m_IRC.GetIsEnabled()) {
-    NumFDs += m_IRC.SetFD(&m_ReadFDs, &m_SendFDs, &nfds);
+    numFDs += m_IRC.SetFD(&m_ReadFDs, &m_SendFDs, &nfds);
   }
 
   // UDP sockets, outgoing test connections, observers
-  NumFDs += m_Net.SetFD(&m_ReadFDs, &m_SendFDs, &nfds);
+  numFDs += m_Net.SetFD(&m_ReadFDs, &m_SendFDs, &nfds);
 
   struct timeval tv;
   tv.tv_sec  = 0;
-  tv.tv_usec = static_cast<long int>(GetSelectBlockTime());
+  tv.tv_usec = static_cast<long int>(GetSelectBlockTimeRefreshed());
 
   struct timeval send_tv;
   send_tv.tv_sec  = 0;
   send_tv.tv_usec = 0;
-
-  if (tv.tv_usec == 0) {
-    if (!m_IsFastPolling) {
-      m_StartedFastPollingTicks = m_LoopTicks;
-    }
-    m_IsFastPolling = true;
-  } else {
-    m_IsFastPolling = false;
-  }
 
 #ifdef _WIN32
   select(1, &m_ReadFDs, nullptr, nullptr, &tv);
@@ -1284,15 +1302,7 @@ bool CAura::Update()
   select(nfds + 1, nullptr, &m_SendFDs, nullptr, &send_tv);
 #endif
 
-  if (NumFDs == 0) {
-    // we don't have any sockets (i.e. we aren't connected to battle.net and irc maybe due to a lost connection and there aren't any games running)
-    // select will return immediately and we'll chew up the CPU if we let it loop so just sleep for 200ms to kill some time
-
-    this_thread::sleep_for(chrono::milliseconds(200));
-  }
-
-  m_LoopTicks = GetTicks();
-  m_LoopTime = GetTime();
+  UpdateClock();
 
   // update map downloads
   if (m_GameSetup) {
@@ -1391,6 +1401,28 @@ bool CAura::Update()
 
   // house-keeping
   ClearStaleContexts();
+
+  UpdateClock();
+
+  const int64_t deltaLoopTicks = m_ClockTicks - m_LoopTicks;
+  m_LoopTicks = m_ClockTicks;
+
+  if (numFDs == 0) {
+    // we don't have any sockets - Aura is idle, so we should just sleep for a while
+    // this results in ~5 FPS
+
+    this_thread::sleep_for(chrono::milliseconds(200));
+  } else if (deltaLoopTicks < APP_MIN_FRAME_PERIOD) {
+    // prevent incoming traffic from causing CPU starvation,
+    // but ensure we respect each game's individual frame rate
+    // this effectively tries to cap frame rate to ~300 FPS
+
+    int64_t blockTicks = APP_MIN_FRAME_PERIOD - deltaLoopTicks;
+    for (const auto& game : m_StartedGames) {
+      game->UpdateSelectBlockTime<1>(blockTicks);
+    }
+    this_thread::sleep_for(chrono::milliseconds(blockTicks));
+  }
 
   return m_Exiting;
 }
@@ -2153,7 +2185,7 @@ void CAura::LogPerformanceWarning(const TaskType taskType, const void* taskPtr, 
   if (!MatchLogLevel(LogLevel::kWarning)) {
     return;
   }
-  int64_t Ticks = m_LoopTicks;
+  int64_t Ticks = m_ClockTicks;
   if (Ticks < m_LastPerformanceWarningTicks + 5000) {
     return;
   }
@@ -2315,7 +2347,7 @@ bool CAura::GetNewGameIsInQuotaAutoReHost() const
 bool CAura::GetIsAutoHostThrottled() const
 {
   if (m_Realms.empty()) return false;
-  return m_LastGameAutoHostedTicks.has_value() && m_LastGameAutoHostedTicks.value() + AUTO_REHOST_COOLDOWN_TICKS >= m_LoopTicks;
+  return m_LastGameAutoHostedTicks.has_value() && m_LastGameAutoHostedTicks.value() + AUTO_REHOST_COOLDOWN_TICKS >= m_ClockTicks;
 }
 
 bool CAura::CreateGame(shared_ptr<CGameSetup> gameSetup)
@@ -2374,7 +2406,7 @@ bool CAura::CreateGame(shared_ptr<CGameSetup> gameSetup)
 
   shared_ptr<CGame> createdLobby = make_shared<CGame>(this, gameSetup);
 
-  m_LastGameHostedTicks = m_LoopTicks;
+  m_LastGameHostedTicks = m_ClockTicks;
   if (createdLobby->GetFromAutoReHost()) {
     m_AutoRehostGameSetup = gameSetup;
     m_LastGameAutoHostedTicks = m_LastGameHostedTicks;

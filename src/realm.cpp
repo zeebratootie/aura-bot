@@ -156,7 +156,7 @@ void CRealm::EventConnectionTimeOut()
   PRINT_IF(LogLevel::kInfo, GetLogPrefix() + "waiting " + to_string(m_Aura->m_Net.GetThrottleTime(host, m_MinReconnectDelay)) + " seconds to retry");
   m_Socket->Reset();
   //m_Socket->SetKeepAlive(true, REALM_TCP_KEEPALIVE_IDLE_TIME);
-  m_LastDisconnectedTime = m_Aura->GetLoopTime();
+  m_LastDisconnectedTime = m_Aura->GetClockTime();
   m_WaitingToConnect     = true;
 }
 
@@ -177,7 +177,7 @@ void CRealm::EventConnected(fd_set* /*fd*/, fd_set* send_fd)
   SendAuth(BNETProtocol::SEND_PROTOCOL_INITIALIZE_SELECTOR());
   SendAuth(BNETProtocol::SEND_SID_AUTH_INFO(m_GameIsExpansion, m_AuthGameVersion, m_Config.m_Win32LocaleID, m_Config.m_Win32LanguageID, m_Config.m_LocaleShort, m_Config.m_CountryShort, m_Config.m_Country));
   m_Socket->DoSend(send_fd);
-  m_LastGameListTime = m_Aura->GetLoopTime();
+  m_LastGameListTime = m_Aura->GetClockTime();
 }
 
 void CRealm::UpdateConnected(fd_set* fd, fd_set* send_fd)
@@ -500,7 +500,7 @@ void CRealm::UpdateConnected(fd_set* fd, fd_set* send_fd)
 
   if (GetIsPvPGN() && m_Aura->GetTicksIsAfterDelay(m_Socket->GetLastRecv(), REALM_APP_KEEPALIVE_IDLE_TICKS)) {
     // Many PvPGN servers do not implement TCP Keep Alive. However, all PvPGN servers reply to BNET protocol null packets.
-    int64_t expectedNullsSent = ((m_Aura->GetLoopTicks() - m_Socket->GetLastRecv() - REALM_APP_KEEPALIVE_IDLE_TICKS) / REALM_APP_KEEPALIVE_INTERVAL) + 1;
+    int64_t expectedNullsSent = ((m_Aura->GetClockTicks() - m_Socket->GetLastRecv() - REALM_APP_KEEPALIVE_IDLE_TICKS) / REALM_APP_KEEPALIVE_INTERVAL) + 1;
     if (expectedNullsSent > REALM_APP_KEEPALIVE_MAX_MISSED) {
       PRINT_IF(LogLevel::kWarning, GetLogPrefix() + "socket inactivity timeout");
       ResetConnection(false);
@@ -520,12 +520,12 @@ void CRealm::UpdateConnected(fd_set* fd, fd_set* send_fd)
     if (auto game = GetGameBroadcast()) {
       TrySendGameRefresh(game);
     }
-    m_LastGameRefreshTime = m_Aura->GetLoopTime();
+    m_LastGameRefreshTime = m_Aura->GetClockTime();
   }
 
   if (m_Aura->GetTimeIsAfterDelay(m_LastGameListTime, m_GameBroadcast.expired() ? 90 : 20)) {
     TrySendGetGamesList();
-    m_LastGameListTime = m_Aura->GetLoopTime();
+    m_LastGameListTime = m_Aura->GetClockTime();
   }
 
   m_Socket->DoSend(send_fd);
@@ -594,7 +594,7 @@ void CRealm::Update(fd_set* fd, fd_set* send_fd)
       m_Socket->m_HasError = true;
     }
     m_WaitingToConnect          = false;
-    m_LastConnectionAttemptTime = m_Aura->GetLoopTime();
+    m_LastConnectionAttemptTime = m_Aura->GetClockTime();
   }
 
   if (m_Socket->GetConnecting()) {
@@ -756,7 +756,7 @@ void CRealm::ProcessChatEvent(const uint32_t eventType, string_view fromUser, st
 uint8_t CRealm::CountChatQuota()
 {
   if (m_ChatQuotaInUse.empty()) return 0;
-  int64_t minTicks = m_Aura->GetLoopTicks() - signed_cast<int64_t>(m_Config.m_FloodQuotaTime) * 1000 - 300; // 300 ms hardcoded latency
+  int64_t minTicks = m_Aura->GetClockTicks() - signed_cast<int64_t>(m_Config.m_FloodQuotaTime) * 1000 - 300; // 300 ms hardcoded latency
   uint16_t spentQuota = 0;
   for (auto it = begin(m_ChatQuotaInUse); it != end(m_ChatQuotaInUse);) {
     if ((*it).first < minTicks) {
@@ -818,7 +818,7 @@ bool CRealm::SendQueuedMessage(CQueuedChatMessage* message)
   }
   if (!m_Config.m_FloodImmune) {
     uint8_t extraQuota = message->GetVirtualSize(m_Config.m_VirtualLineLength, selectType);
-    m_ChatQuotaInUse.push_back(make_pair(m_Aura->GetLoopTicks(), extraQuota));
+    m_ChatQuotaInUse.push_back(make_pair(m_Aura->GetClockTicks(), extraQuota));
   }
 
   switch (message->GetCallback()) {
@@ -1633,7 +1633,7 @@ bool CRealm::SendGameRefresh(shared_ptr<CGame> game)
     }
     PRINT_IF(LogLevel::kDebug, GetLogPrefix() + "registering game...");
     m_LastGameHostCounter = hostCounter;
-    m_GameBroadcastStartTicks = m_Aura->GetLoopTicks();
+    m_GameBroadcastStartTicks = m_Aura->GetClockTicks();
   }
 
   Version version = GetGameVersion();
@@ -1669,7 +1669,7 @@ bool CRealm::SendGameRefresh(shared_ptr<CGame> game)
 
 void CRealm::StopConnection(bool hadError)
 {
-  m_LastDisconnectedTime = m_Aura->GetLoopTime();
+  m_LastDisconnectedTime = m_Aura->GetClockTime();
   m_BNCSUtil->Reset(m_Config.m_UserName, m_Config.m_PassWord);
 
   if (m_Socket) {

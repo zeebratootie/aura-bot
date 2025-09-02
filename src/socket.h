@@ -46,15 +46,13 @@
 #ifndef AURA_SOCKET_H_
 #define AURA_SOCKET_H_
 
+#pragma once
+
 #include "includes.h"
 #include "util.h"
 
 #ifdef _WIN32
-#pragma once
 #include <windows.h>
-#endif
-
-#ifdef _WIN32
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #include <ws2def.h>

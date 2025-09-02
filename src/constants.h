@@ -268,6 +268,8 @@ constexpr uint8_t APP_FOUND_DEPS_NONE = 0u;
 constexpr uint8_t APP_FOUND_DEPS_DPP = (1 << 0);
 constexpr uint8_t APP_FOUND_DEPS_MDNS = (1 << 1);
 
+constexpr int64_t APP_MIN_FRAME_PERIOD = 3; // caps frame rate to ~300 FPS (not absolute)
+
 // parser.h
 
 constexpr uint8_t PARSER_BOOLEAN_EMPTY_USE_DEFAULT = 1u;

@@ -99,7 +99,7 @@ void CQueuedChatMessage::SetCallback(const uint8_t type, const uint32_t data)
 
 int64_t CQueuedChatMessage::GetQueuedDuration() const
 {
-  return m_Realm.get().m_Aura->GetLoopTime() - m_QueuedTime;
+  return m_Realm.get().m_Aura->GetClockTime() - m_QueuedTime;
 }
 
 bool CQueuedChatMessage::GetIsStale() const

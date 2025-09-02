@@ -164,7 +164,7 @@ bool CGameTestConnection::Update(fd_set* fd, fd_set* send_fd)
 
   if (m_Socket->HasError()) {
     if (!m_CanConnect.has_value()) m_CanConnect = false;
-    m_LastConnectionFailureTicks = m_Aura->GetLoopTicks();
+    m_LastConnectionFailureTicks = m_Aura->GetClockTicks();
     m_Socket->Reset();
   } else if (m_Socket->GetConnected() && !m_Aura->GetTicksIsAfter(m_TimeoutTicks)) {
     bool gotJoinedMessage = false;
@@ -190,12 +190,12 @@ bool CGameTestConnection::Update(fd_set* fd, fd_set* send_fd)
   } else if (m_Aura->GetTicksIsAfter(m_TimeoutTicks) && (m_Socket->GetConnecting() || m_CanConnect.has_value())) {
     if (!m_CanConnect.has_value()) m_CanConnect = false;
     m_Passed = false;
-    m_LastConnectionFailureTicks = m_Aura->GetLoopTicks();
+    m_LastConnectionFailureTicks = m_Aura->GetClockTicks();
     m_Socket->Reset();
     m_Socket->Disconnect();
   } else if (!m_Socket->GetConnecting() && !m_CanConnect.has_value() && m_Aura->GetTicksIsAfterDelay(m_LastConnectionFailureTicks, 900)) {
     m_Socket->Connect(emptyBindAddress, m_TargetHost);
-    m_TimeoutTicks = m_Aura->GetLoopTicks() + GAME_TEST_TIMEOUT;
+    m_TimeoutTicks = m_Aura->GetClockTicks() + GAME_TEST_TIMEOUT;
   }
 
   return !m_Passed.has_value();
@@ -262,7 +262,7 @@ bool CNet::GetIsOutgoingThrottled(const NetworkHost& host) const
     return false;
   }
   const int64_t dueTime = throttled.first + ((int64_t) NET_BASE_RECONNECT_DELAY << (int64_t)throttled.second);
-  return m_Aura->GetLoopTime() < dueTime;
+  return m_Aura->GetClockTime() < dueTime;
 }
 
 void CNet::ResetOutgoingThrottled(const NetworkHost& host)
@@ -286,11 +286,11 @@ void CNet::OnThrottledConnectionError(const NetworkHost& host)
   m_OutgoingPendingConnections.erase(host);
   auto it = m_OutgoingThrottles.find(host);
   if (it == m_OutgoingThrottles.end()) {
-    m_OutgoingThrottles[host] = TimedUint8(m_Aura->GetLoopTime(), static_cast<uint8_t>(0u));
+    m_OutgoingThrottles[host] = TimedUint8(m_Aura->GetClockTime(), static_cast<uint8_t>(0u));
     return;
   }
   TimedUint8& throttled = it->second;
-  throttled.first = m_Aura->GetLoopTime();
+  throttled.first = m_Aura->GetClockTime();
   if (throttled.second < NET_RECONNECT_MAX_BACKOFF) {
     // Max delay 45 << 12 seconds ~ 2 days
     throttled.second = throttled.second + 1;
@@ -330,7 +330,7 @@ bool CIPAddressAPIConnection::Update(fd_set* fd, fd_set* send_fd)
 
   if (m_Socket->HasError()) {
     if (!m_CanConnect.has_value()) m_CanConnect = false;
-    m_LastConnectionFailureTicks = m_Aura->GetLoopTicks();
+    m_LastConnectionFailureTicks = m_Aura->GetClockTicks();
     m_Socket->Reset();
   } else if (m_Socket->GetConnected() && !m_Aura->GetTicksIsAfter(m_TimeoutTicks)) {
     bool gotAddress = false;
@@ -373,12 +373,12 @@ bool CIPAddressAPIConnection::Update(fd_set* fd, fd_set* send_fd)
     m_CanConnect = true;
   } else if (m_Aura->GetTicksIsAfter(m_TimeoutTicks) && (m_Socket->GetConnecting() || m_CanConnect.has_value())) {
     if (!m_CanConnect.has_value()) m_CanConnect = false;
-    m_LastConnectionFailureTicks = m_Aura->GetLoopTicks();
+    m_LastConnectionFailureTicks = m_Aura->GetClockTicks();
     m_Socket->Reset();
     m_Socket->Disconnect();
   } else if (!m_Socket->GetConnecting() && !m_CanConnect.has_value() && m_Aura->GetTicksIsAfterDelay(m_LastConnectionFailureTicks, 900)) {
     m_Socket->Connect(emptyBindAddress, m_TargetHost);
-    m_TimeoutTicks = m_Aura->GetLoopTicks() + IP_ADDRESS_API_TIMEOUT;
+    m_TimeoutTicks = m_Aura->GetClockTicks() + IP_ADDRESS_API_TIMEOUT;
   }
 
   return !m_Result.has_value();
@@ -854,7 +854,7 @@ void CNet::UpdateMapTransfers()
     }
   }
 
-  m_LastDownloadTicks = m_Aura->GetLoopTicks();
+  m_LastDownloadTicks = m_Aura->GetClockTicks();
 
   for (auto& game : m_Aura->GetJoinableGames()) {
     if (downloadersCountByGame.find(game) == downloadersCountByGame.end()) {
@@ -1359,11 +1359,11 @@ uint8_t CNet::RequestUPnP(const NetProtocol protocolCode, const uint16_t externa
 
   switch (protocolCode) {
     case NetProtocol::kTCP: {
-      m_UPnPTCPCache[make_pair(externalPort, internalPort)] = TimedUint8(m_Aura->GetLoopTime(), integer_cast_lossy<uint8_t>(success));
+      m_UPnPTCPCache[make_pair(externalPort, internalPort)] = TimedUint8(m_Aura->GetClockTime(), integer_cast_lossy<uint8_t>(success));
       break;
     }
     case NetProtocol::kUDP: {
-      m_UPnPUDPCache[make_pair(externalPort, internalPort)] = TimedUint8(m_Aura->GetLoopTime(), integer_cast_lossy<uint8_t>(success));
+      m_UPnPUDPCache[make_pair(externalPort, internalPort)] = TimedUint8(m_Aura->GetClockTime(), integer_cast_lossy<uint8_t>(success));
       break;
     }
     IGNORE_ENUM_LAST(NetProtocol)
@@ -1612,7 +1612,6 @@ void CNet::ResetInterfaces()
     while (adapterAddresses) {
       PIP_ADAPTER_UNICAST_ADDRESS_LH unicast = adapterAddresses->FirstUnicastAddress;
       while (unicast) {
-        char addressBuffer[INET_ADDRSTRLEN] = {};
         if (unicast->Address.lpSockaddr->sa_family == AF_INET) {
           uint32_t prefixLength = unicast->OnLinkPrefixLength; // Vista+
           uint32_t mask = prefixLength > 0 ? ((1 << (32 - prefixLength)) - 1) : 0;
@@ -1857,12 +1856,11 @@ void CNet::UpdateSelectBlockTime(int64_t& usecBlockTime) const
     return;
   }
 
-  const int64_t hiResTicks = GetTicks();
   int64_t byTicks = APP_MAX_TICKS;
   for (const auto& serverConnections : m_GameObservers) {
     for (const auto& connection : serverConnections.second) {
       const int64_t thisByTicks = connection->GetNextTimedActionByTicks();
-      if (thisByTicks <= hiResTicks) {
+      if (thisByTicks <= m_Aura->GetClockTicks()) {
         usecBlockTime = 0;
         return;
       }
@@ -1872,7 +1870,7 @@ void CNet::UpdateSelectBlockTime(int64_t& usecBlockTime) const
     }
   }
   if (byTicks != APP_MAX_TICKS) { // avoid overflow
-    int64_t maybeBlockTime = (byTicks - hiResTicks) * 1000;
+    int64_t maybeBlockTime = (byTicks - m_Aura->GetClockTicks()) * 1000;
     if (maybeBlockTime < usecBlockTime) {
       usecBlockTime = maybeBlockTime;
     }

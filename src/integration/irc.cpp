@@ -140,7 +140,7 @@ void CIRC::Update(fd_set* fd, fd_set* send_fd)
     }
     Print("[IRC: " + m_Config.m_HostName + "] waiting 60 seconds to reconnect");
     ResetConnection();
-    m_LastConnectionAttemptTime = m_Aura->GetLoopTime();
+    m_LastConnectionAttemptTime = m_Aura->GetClockTime();
     return;
   }
 
@@ -158,7 +158,7 @@ void CIRC::Update(fd_set* fd, fd_set* send_fd)
     if (m_Aura->GetTimeIsAfterDelay(m_LastAntiIdleTime, 60))
     {
       Send("TIME");
-      m_LastAntiIdleTime = m_Aura->GetLoopTime();
+      m_LastAntiIdleTime = m_Aura->GetClockTime();
     }
 
     if (m_Socket->DoRecv(fd)) {
@@ -177,7 +177,7 @@ void CIRC::Update(fd_set* fd, fd_set* send_fd)
 
     Print("[IRC: " + m_Config.m_HostName + "] disconnected, waiting 60 seconds to reconnect");
     ResetConnection();
-    m_LastConnectionAttemptTime = m_Aura->GetLoopTime();
+    m_LastConnectionAttemptTime = m_Aura->GetClockTime();
     return;
   }
 
@@ -203,7 +203,7 @@ void CIRC::Update(fd_set* fd, fd_set* send_fd)
       m_LoggedIn = true;
       Print("[IRC: " + m_Config.m_HostName + "] connected");
 
-      m_LastPacketTime = m_Aura->GetLoopTime();
+      m_LastPacketTime = m_Aura->GetClockTime();
 
       return;
     }
@@ -213,7 +213,7 @@ void CIRC::Update(fd_set* fd, fd_set* send_fd)
 
       Print("[IRC: " + m_Config.m_HostName + "] connect timed out, waiting 60 seconds to reconnect");
       ResetConnection();
-      m_LastConnectionAttemptTime = m_Aura->GetLoopTime();
+      m_LastConnectionAttemptTime = m_Aura->GetClockTime();
       return;
     }
   }
@@ -230,7 +230,7 @@ void CIRC::Update(fd_set* fd, fd_set* send_fd)
       m_Socket->m_HasError = true;
     }
     m_WaitingToConnect          = false;
-    m_LastConnectionAttemptTime = m_Aura->GetLoopTime();
+    m_LastConnectionAttemptTime = m_Aura->GetClockTime();
   }
 
   return;
@@ -256,7 +256,7 @@ void CIRC::ProcessPacket(string_view packet)
 {
   // track timeouts
 
-  m_LastPacketTime = m_Aura->GetLoopTime();
+  m_LastPacketTime = m_Aura->GetClockTime();
 
   // ping packet
   // in:  PING :2748459196

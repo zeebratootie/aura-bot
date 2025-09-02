@@ -1379,7 +1379,7 @@ void CGameSetup::SetActive()
     }
   }
   m_Aura->m_GameSetup = shared_from_this();
-  m_ActiveTicks = m_Aura->GetLoopTicks();
+  m_ActiveTicks = m_Aura->GetClockTicks();
 }
 
 bool CGameSetup::RestoreFromSaveFile()

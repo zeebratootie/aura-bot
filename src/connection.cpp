@@ -78,7 +78,7 @@ uint32_t CConnection::SetFD(fd_set* fd, fd_set* send_fd, int32_t* nfds) const
 
 void CConnection::SetTimeout(const int64_t delta)
 {
-  m_TimeoutTicks = m_Aura->GetLoopTicks() + delta;
+  m_TimeoutTicks = m_Aura->GetClockTicks() + delta;
 }
 
 void CConnection::SetTimeoutAtLatest(const int64_t atLatestTicks)
@@ -138,7 +138,7 @@ IncomingConnectionStatus CConnection::Update(fd_set* fd, fd_set* send_fd, int64_
               DPRINT_IF(LogLevel::kTrace2, "[AURA] Got invalid REQJOIN <" + GetStringBytesHex(packet) + ">");
               if (joinRequest.GetError() != JoinRequestError::kCannotParse) {
                 Send(GameProtocol::SENDWRAP_W3GS_GHOST_LOBBY_ERROR(GameProtocol::JoinRequestErrorToString(joinRequest.GetError())));
-                SetTimeoutAtLatest(m_Aura->GetLoopTicks() + 8000);
+                SetTimeoutAtLatest(m_Aura->GetClockTicks() + 8000);
                 result = IncomingConnectionStatus::kDestroyDelayed;
                 m_Type = IncomingConnectionType::kKickedPlayer;
               }
@@ -187,7 +187,7 @@ IncomingConnectionStatus CConnection::Update(fd_set* fd, fd_set* send_fd, int64_
               case JoinRequestResult::kFailDelayed: {
                 result = IncomingConnectionStatus::kDestroyDelayed;
                 m_Type = IncomingConnectionType::kKickedPlayer;
-                SetTimeoutAtLatest(m_Aura->GetLoopTicks() + 8000);
+                SetTimeoutAtLatest(m_Aura->GetClockTicks() + 8000);
                 break;
               }
               case JoinRequestResult::kFail: {

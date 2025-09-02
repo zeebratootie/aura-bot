@@ -1988,7 +1988,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
       }
 
       targetGame->m_KickVotePlayer = targetPlayer->GetName();
-      targetGame->m_StartedKickVoteTime = m_Aura->GetLoopTime();
+      targetGame->m_StartedKickVoteTime = m_Aura->GetClockTime();
 
       for (auto& it : targetGame->m_Users)
         it->SetKickVote(false);
@@ -3397,7 +3397,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
         for (auto& realm : m_Aura->m_Realms) {
           realm->TrySetGameBroadcastPending(targetGame);
         }
-        targetGame->m_CreationTime = targetGame->m_LastRefreshTime = m_Aura->GetLoopTime();
+        targetGame->m_CreationTime = targetGame->m_LastRefreshTime = m_Aura->GetClockTime();
       } else {
         if (!m_Aura->m_GameSetup || m_Aura->m_GameSetup->GetIsDownloading()) {
           ErrorReply("A map must be loaded with " + (sourceRealm ? sourceRealm->GetCommandToken() : "!") + "map first.");
@@ -3670,7 +3670,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
         break;
       }
 
-      int64_t time = m_Aura->GetLoopTime();
+      int64_t time = m_Aura->GetClockTime();
       int64_t dueTime = time + signed_cast<int64_t>(MinMinutes) * 60;
       if (dueTime < time) {
         ErrorReply("Failed to set timed start after " + to_string(MinMinutes) + " minutes.");

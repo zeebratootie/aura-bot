@@ -119,7 +119,7 @@ string CAsyncObserver::GetGameVersionString() const
 
 void CAsyncObserver::SetTimeout(const int64_t delta)
 {
-  m_TimeoutTicks = m_Aura->GetLoopTicks() + delta;
+  m_TimeoutTicks = m_Aura->GetClockTicks() + delta;
 }
 
 void CAsyncObserver::SetTimeoutAtLatest(const int64_t atLatestTicks)
@@ -207,7 +207,7 @@ AsyncObserverStatus CAsyncObserver::Update(fd_set* fd, fd_set* send_fd, int64_t 
               if (GameProtocol::RECEIVE_W3GS_GAMELOADED_SELF(packet)) {
                 if (m_StartedLoading && !m_FinishedLoading) {
                   m_FinishedLoading      = true;
-                  m_FinishedLoadingTicks = m_Aura->GetLoopTicks();
+                  m_FinishedLoadingTicks = m_Aura->GetClockTicks();
                   m_LastFrameTicks = m_FinishedLoadingTicks;
                   EventGameLoaded();
                 }
@@ -389,8 +389,8 @@ AsyncObserverStatus CAsyncObserver::Update(fd_set* fd, fd_set* send_fd, int64_t 
   }
 
   if (m_Aura->GetTicksIsAfterDelay(m_LastPingTicks, 5000)) {
-    Send(GameProtocol::SEND_W3GS_PING_FROM_HOST(m_Aura->GetLoopTicks()));
-    m_LastPingTicks = m_Aura->GetLoopTicks();
+    Send(GameProtocol::SEND_W3GS_PING_FROM_HOST(m_Aura->GetClockTicks()));
+    m_LastPingTicks = m_Aura->GetClockTicks();
   }
 
   m_Socket->DoSend(send_fd);
@@ -420,7 +420,7 @@ void CAsyncObserver::CheckPlayBackOver()
     SendChat("Playback ended. Game will exit automatically in 10 seconds.");
 
     // Kick after 10 seconds
-    SetTimeoutAtLatest(m_Aura->GetLoopTicks() + 10000);
+    SetTimeoutAtLatest(m_Aura->GetClockTicks() + 10000);
   }
 }
 
@@ -526,7 +526,7 @@ void CAsyncObserver::EventClientGameState(const uint32_t checkSum)
     m_StateSynchronized = false;
   }
 
-  m_CheckSumsTimeStamps.TrySample(m_Aura->GetLoopTicks());
+  m_CheckSumsTimeStamps.TrySample(m_Aura->GetClockTicks());
 }
 
 bool CAsyncObserver::UpdateClientGameState(const uint32_t checkSum)
@@ -881,7 +881,7 @@ void CAsyncObserver::SendGameLoadedReport()
     otherSpectators = Concat(" with ", to_string(numSpectators - 1), " other user(s)");
   }
   if (m_GameHistory->GetIsFinished()) {
-    int64_t playedAgo = (m_Aura->GetLoopTicks() - m_GameHistory->GetFinishedTicks()) / 1000;
+    int64_t playedAgo = (m_Aura->GetClockTicks() - m_GameHistory->GetFinishedTicks()) / 1000;
     string playedAgoFragment;
     if (playedAgo > 0) {
       playedAgoFragment = Concat(ToDurationString(playedAgo), " ago");
@@ -982,7 +982,7 @@ void CAsyncObserver::SendProgressReport()
   SendChat(message);
 
   if (!m_CheckSumsTimeStamps.GetIsEmpty() || (clientFrameRate - 6.) <= epsilon /* 6x or slower can be trusted */) {
-    m_LastProgressReportTime = m_Aura->GetLoopTime();
+    m_LastProgressReportTime = m_Aura->GetClockTime();
   }
 }
 

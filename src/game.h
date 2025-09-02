@@ -361,7 +361,10 @@ public:
   uint8_t                                                GetLayout() const;
   uint8_t                                                GetCustomLayout() const { return m_CustomLayout; }
   bool                                                   GetIsCustomForces() const;
-  void                                                   UpdateSelectBlockTime(int64_t& usecBlockTime) const;
+
+  template <int64_t factor>
+  void                                                   UpdateSelectBlockTime(int64_t& blockTime) const;
+
   uint32_t                                               GetSlotsOccupied() const;
   uint32_t                                               GetSlotsOpen() const;
   bool                                                   HasSlotsOpen() const;

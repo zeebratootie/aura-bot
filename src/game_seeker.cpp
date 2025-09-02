@@ -63,7 +63,7 @@ CGameSeeker::~CGameSeeker()
 
 void CGameSeeker::SetTimeout(const int64_t delta)
 {
-  m_TimeoutTicks = m_Aura->GetLoopTicks() + delta;
+  m_TimeoutTicks = m_Aura->GetClockTicks() + delta;
 }
 
 void CGameSeeker::SetTimeoutAtLatest(const int64_t atLatestTicks)
@@ -152,7 +152,7 @@ GameSeekerStatus CGameSeeker::Update(fd_set* fd, fd_set* send_fd, int64_t timeou
                 Abort = true;
               } else {
                 Send(GameProtocol::SENDWRAP_W3GS_GHOST_LOBBY_ERROR(GameProtocol::JoinRequestErrorToString(joinRequest.GetError())));
-                SetTimeoutAtLatest(m_Aura->GetLoopTicks() + 8000);
+                SetTimeoutAtLatest(m_Aura->GetClockTicks() + 8000);
               }
               break;
             }

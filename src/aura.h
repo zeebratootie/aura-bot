@@ -71,8 +71,8 @@
 #include <windows.h>
 #endif
 
-#define AURA_VERSION "11.3.2"
-#define AURA_APP_NAME "Aura 11.3.2"
+#define AURA_VERSION "11.3.3"
+#define AURA_APP_NAME "Aura 11.3.3"
 #define AURA_REPOSITORY_URL "https://gitlab.com/ivojulca/aura-bot"
 #define AURA_ISSUES_URL "https://gitlab.com/ivojulca/aura-bot/-/issues"
 
@@ -107,15 +107,14 @@ public:
   bool                                               m_Exiting;                    // set to true to force aura to shutdown next update (used by SignalCatcher)
   bool                                               m_ExitingSoon;                // set to true to let aura gracefully stop all services and network traffic, and shutdown once done
   bool                                               m_Ready;                      // indicates if there's lacking configuration info so we can quit
-  bool                                               m_IsFastPolling;
   bool                                               m_AutoReHosted;               // whether our autorehost game setup has been used for one of the active lobbies
   bool                                               m_MetaDataNeedsUpdate;
 
   LogLevel                                           m_LogLevel;
   int64_t                                            m_LoopTicks;
-  int64_t                                            m_LoopTime;
+  int64_t                                            m_ClockTicks;
+  int64_t                                            m_ClockTime;
   int64_t                                            m_LastPerformanceWarningTicks;
-  int64_t                                            m_StartedFastPollingTicks;
   std::optional<Version>                             m_GameDataVersion;
   bool                                               m_SupportsModernSlots;
   fd_set                                             m_ReadFDs;
@@ -224,7 +223,9 @@ public:
   [[nodiscard]] AppActionStatus HandleAction(const AppAction& action);
   [[nodiscard]] AppActionStatus HandleDeferredCommandContext(const LazyCommandContext& lazyCtx);
   [[nodiscard]] AppActionStatus HandleGenericAction(const GenericAppAction& genAction);
+  [[nodiscard]] int64_t GetSelectBlockTimeRefreshed();
   [[nodiscard]] int64_t GetSelectBlockTime() const;
+  void UpdateClock();
   bool Update();
   void AwaitSettled();
   [[nodiscard]] inline bool GetReady() const { return m_Ready; }
@@ -240,14 +241,14 @@ public:
   [[nodiscard]] inline bool GetIsAdvertisingGames() { return !m_Lobbies.empty() || !m_JoinInProgressGames.empty(); }
   [[nodiscard]] inline bool GetHasGames() { return !m_StartedGames.empty() || !m_Lobbies.empty(); }
 
-  [[nodiscard]] inline int64_t GetLoopTicks() const { return m_LoopTicks; }
-  [[nodiscard]] inline int64_t GetLoopTime() const { return m_LoopTime; }
-  [[nodiscard]] inline bool GetTicksIsAfter(int64_t referenceTicks) const { return referenceTicks <= m_LoopTicks; }
-  [[nodiscard]] inline bool GetTicksIsAfterDelay(int64_t referenceTicks, int64_t delayTicks) const { return referenceTicks + delayTicks <= m_LoopTicks; }
-  [[nodiscard]] inline bool GetTicksIsFirstOrAfterDelay(std::optional<int64_t> referenceTicks, int64_t delayTicks) const { return !referenceTicks.has_value() || referenceTicks.value() + delayTicks <= m_LoopTicks; }
-  [[nodiscard]] inline bool GetTimeIsAfter(int64_t referenceTime) const { return referenceTime <= m_LoopTime; }
-  [[nodiscard]] inline bool GetTimeIsAfterDelay(int64_t referenceTime, int64_t delayTime) const { return referenceTime + delayTime <= m_LoopTime; }
-  [[nodiscard]] inline bool GetTimeIsFirstOrAfterDelay(std::optional<int64_t> referenceTime, int64_t delayTime) const { return !referenceTime.has_value() || referenceTime.value() + delayTime <= m_LoopTime; }
+  [[nodiscard]] inline int64_t GetClockTicks() const { return m_ClockTicks; }
+  [[nodiscard]] inline int64_t GetClockTime() const { return m_ClockTime; }
+  [[nodiscard]] inline bool GetTicksIsAfter(int64_t referenceTicks) const { return referenceTicks <= m_ClockTicks; }
+  [[nodiscard]] inline bool GetTicksIsAfterDelay(int64_t referenceTicks, int64_t delayTicks) const { return referenceTicks + delayTicks <= m_ClockTicks; }
+  [[nodiscard]] inline bool GetTicksIsFirstOrAfterDelay(std::optional<int64_t> referenceTicks, int64_t delayTicks) const { return !referenceTicks.has_value() || referenceTicks.value() + delayTicks <= m_ClockTicks; }
+  [[nodiscard]] inline bool GetTimeIsAfter(int64_t referenceTime) const { return referenceTime <= m_ClockTime; }
+  [[nodiscard]] inline bool GetTimeIsAfterDelay(int64_t referenceTime, int64_t delayTime) const { return referenceTime + delayTime <= m_ClockTime; }
+  [[nodiscard]] inline bool GetTimeIsFirstOrAfterDelay(std::optional<int64_t> referenceTime, int64_t delayTime) const { return !referenceTime.has_value() || referenceTime.value() + delayTime <= m_ClockTime; }
 
   // events
 
