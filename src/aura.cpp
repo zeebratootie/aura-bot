@@ -111,6 +111,8 @@ constexpr int APP_METRICS_LOBBY_SAMPLE_RATE = 10;
 constexpr size_t APP_METRICS_LOBBY_CAPACITY = 1000;
 constexpr int APP_METRICS_GAME_SAMPLE_RATE = 10;
 constexpr size_t APP_METRICS_GAME_CAPACITY = 1000;
+constexpr int APP_METRICS_FRAME_SAMPLE_RATE = 10;
+constexpr size_t APP_METRICS_FRAME_CAPACITY = 200;
 
 inline unsigned int GetThreadPoolSize()
 {
@@ -289,7 +291,7 @@ inline bool LoadConfig(CConfig& CFG, CCLI& cliApp, const filesystem::path& homeD
   return true;
 }
 
-inline PLATFORM_STRING_TYPE GetAuraTitle(shared_ptr<CGame> detailsGame, size_t lobbyCount, size_t gameCount, bool hasRehost)
+inline PLATFORM_STRING_TYPE GetAuraTitle(shared_ptr<CGame> detailsGame, size_t lobbyCount, size_t gameCount, bool hasRehost, optional<size_t> fps)
 {
   const static PLATFORM_STRING_TYPE HyphenConnector = PLATFORM_STRING(" - ");
   const static PLATFORM_STRING_TYPE DetailsLobbyPrefix = PLATFORM_STRING(" - Lobby: ");
@@ -299,8 +301,10 @@ inline PLATFORM_STRING_TYPE GetAuraTitle(shared_ptr<CGame> detailsGame, size_t l
   const static PLATFORM_STRING_TYPE SingleGameSuffix = PLATFORM_STRING(" hosted game");
   const static PLATFORM_STRING_TYPE PluralGameSuffix = PLATFORM_STRING(" hosted games");
   const static PLATFORM_STRING_TYPE IdleSuffix = PLATFORM_STRING(" - Idle");
-  const static PLATFORM_STRING_TYPE RehostingSuffix = PLATFORM_STRING(" | Auto-rehosting");
+  const static PLATFORM_STRING_TYPE ColumnSeparator = PLATFORM_STRING(" | ");
+  const static PLATFORM_STRING_TYPE RehostingFragment = PLATFORM_STRING("Auto-rehosting");
   const static PLATFORM_STRING_TYPE EmptyString = PLATFORM_STRING("");
+  const static PLATFORM_STRING_TYPE FPSUnits = PLATFORM_STRING(" FPS");
   const bool showDetails = detailsGame != nullptr;
 
   PLATFORM_STRING_TYPE titleText = PLATFORM_STRING(AURA_APP_NAME);
@@ -330,8 +334,16 @@ inline PLATFORM_STRING_TYPE GetAuraTitle(shared_ptr<CGame> detailsGame, size_t l
   } else {
     titleText += HyphenConnector + ToDecStringCPlatform(gameCount) + (gameCount > 1 ? PluralGameSuffix : SingleGameSuffix);
   }
-  
-  return titleText + (hasRehost ? RehostingSuffix : EmptyString);
+
+  if (fps.has_value()) {
+    titleText += ColumnSeparator + ToDecStringCPlatform(fps.value()) + FPSUnits;
+  }
+
+  if (hasRehost) {
+    titleText += ColumnSeparator + RehostingFragment;
+  }
+
+  return titleText;
 }
 
 //
@@ -511,15 +523,12 @@ CAura::CAura(CConfig& CFG, const CCLI& nCLI)
     m_IRC(CIRC(CFG)),
     m_Net(CNet(CFG)),
     m_Config(CBotConfig(CFG)),
-#ifndef PROFILING
-    m_ConfigPath(CFG.GetFile())
-#else
     m_ConfigPath(CFG.GetFile()),
     m_PerfMetrics(
       APP_METRICS_LOBBY_SAMPLE_RATE, APP_METRICS_LOBBY_CAPACITY,
-      APP_METRICS_GAME_SAMPLE_RATE, APP_METRICS_GAME_CAPACITY
+      APP_METRICS_GAME_SAMPLE_RATE, APP_METRICS_GAME_CAPACITY,
+      APP_METRICS_FRAME_SAMPLE_RATE, APP_METRICS_FRAME_CAPACITY
     )
-#endif
 {
   m_Discord.m_Aura = this;
   m_IRC.m_Aura = this;
@@ -870,6 +879,16 @@ CAura::~CAura()
   delete m_DB;
 }
 
+optional<size_t> CAura::GetFPS() const
+{
+  auto timeStamps = m_PerfMetrics.globalFrames.GetData();
+  if (timeStamps.size() < 2) return nullopt;
+  int64_t deltaTicks = timeStamps.back() - timeStamps.front();
+  if (deltaTicks < 0) return nullopt;
+  size_t fps = static_cast<size_t>(round((double)((int64_t)(timeStamps.size() - 1) * (int64_t)(m_PerfMetrics.globalFrames.GetRate()) * (int64_t)1000) / (double)(deltaTicks)));
+  return {fps};
+}
+
 vector<Version> CAura::GetSupportedVersionsCrossPlayRangeHeads() const
 {
   set<Version> versionHeads;
@@ -1156,6 +1175,7 @@ bool CAura::Update()
     // Intentionally execute on every loop turn after graceful exit is flagged.
     GracefulExit();
   }
+  m_PerfMetrics.globalFrames.TrySample(m_LoopTicks);
 
   // 1. pending actions
   bool skipActions = false;
@@ -2037,7 +2057,7 @@ void CAura::UpdateWindowTitle()
   } else if (m_Lobbies.empty() && m_StartedGames.size() == 1) {
     detailsGame = m_StartedGames.back();
   }
-  PLATFORM_STRING_TYPE windowTitle = GetAuraTitle(detailsGame, m_Lobbies.size(), m_StartedGames.size(), m_AutoRehostGameSetup != nullptr);
+  PLATFORM_STRING_TYPE windowTitle = GetAuraTitle(detailsGame, m_Lobbies.size(), m_StartedGames.size(), m_AutoRehostGameSetup != nullptr, GetFPS());
   SetWindowTitle(windowTitle);
 }
 

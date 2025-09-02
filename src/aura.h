@@ -84,10 +84,12 @@ struct AppMetrics
 {
   UniformlySampledTimedData lobbies;
   UniformlySampledTimedData games;
+  UniformlySampledData<int64_t> globalFrames;
 
-  AppMetrics(int lobbyRate, size_t lobbyCapacity, int gameRate, size_t gameCapacity)
+  AppMetrics(int lobbyRate, size_t lobbyCapacity, int gameRate, size_t gameCapacity, int globalFramesRate, size_t globalFramesCapacity)
    : lobbies(UniformlySampledTimedData(lobbyRate, lobbyCapacity)),
-     games(UniformlySampledTimedData(gameRate, gameCapacity))
+     games(UniformlySampledTimedData(gameRate, gameCapacity)),
+     globalFrames(UniformlySampledTimedData(globalFramesRate, globalFramesCapacity))
   {
   }
 
@@ -178,14 +180,13 @@ public:
   std::map<uint8_t, std::weak_ptr<CRealm>>           m_RealmsByHostCounter;
   std::map<std::string, std::weak_ptr<CRealm>>       m_RealmsByInputID;
 
-#ifdef PROFILING
   AppMetrics                                         m_PerfMetrics;
-#endif
 
   explicit CAura(CConfig& CFG, const CCLI& nCLI);
   ~CAura();
   CAura(CAura&) = delete;
 
+  [[nodiscard]] std::optional<size_t> GetFPS() const;
   [[nodiscard]] std::vector<Version> GetSupportedVersionsCrossPlayRangeHeads() const;
   [[nodiscard]] std::shared_ptr<CGame> GetMostRecentLobby(bool allowPending = false) const;
   [[nodiscard]] std::shared_ptr<CGame> GetMostRecentLobbyFromCreator(const std::string& fromName) const;

@@ -3255,6 +3255,22 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
       break;
     }
 
+    case HashCode("fps"): {
+      if (!GetIsSudo()) {
+        ErrorReply("Requires sudo permissions.");
+        break;
+      }
+
+      optional<double> fps = m_Aura->GetFPS();
+      if (!fps.has_value()) {
+        ErrorReply("FPS could not be measured.");
+        break;
+      }
+
+      SendReply(Concat("Aura running at ", ToFormattedString(fps.value()), " FPS"));
+      break;
+    }
+
     //
     // !OPEN (open slot)
     //
