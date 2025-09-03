@@ -71,8 +71,8 @@
 #include <windows.h>
 #endif
 
-#define AURA_VERSION "11.3.4"
-#define AURA_APP_NAME "Aura 11.3.4"
+#define AURA_VERSION "11.4.0"
+#define AURA_APP_NAME "Aura 11.4.0"
 #define AURA_REPOSITORY_URL "https://gitlab.com/ivojulca/aura-bot"
 #define AURA_ISSUES_URL "https://gitlab.com/ivojulca/aura-bot/-/issues"
 
@@ -108,7 +108,6 @@ public:
   bool                                               m_ExitingSoon;                // set to true to let aura gracefully stop all services and network traffic, and shutdown once done
   bool                                               m_Ready;                      // indicates if there's lacking configuration info so we can quit
   bool                                               m_AutoReHosted;               // whether our autorehost game setup has been used for one of the active lobbies
-  bool                                               m_MetaDataNeedsUpdate;
 
   LogLevel                                           m_LogLevel;
   int64_t                                            m_LoopTicks;
@@ -145,6 +144,7 @@ public:
 
   std::optional<int64_t>                             m_LastGameHostedTicks;
   std::optional<int64_t>                             m_LastGameAutoHostedTicks;
+  std::optional<int64_t>                             m_LastMetaDataUpdateTime;
 
   std::string                                        m_SudoAuthTarget;
   std::string                                        m_SudoExecCommand;

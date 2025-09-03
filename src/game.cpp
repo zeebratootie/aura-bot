@@ -1368,22 +1368,24 @@ string CGame::GetGameSpectatorName() const
 
 string CGame::GetStatusDescription() const
 {
-  if (m_IsMirror)
-     return Concat("[", GetMap()->GetMapTitle(), "] (Mirror) \"", GetShortNameLAN(), "\"");
+  string gameName = SanitizeUTF8(GetShortNameLAN());
+  if (m_IsMirror) {
+     return Concat(SanitizeWrapUTF8(GetMap()->GetMapTitle()), " (Mirror) \"", gameName, "\"");
+  }
 
-  string Description = Concat(
-    "[", GetMap()->GetMapTitle(), "] \"", GetShortNameLAN(), "\" - ", m_OwnerName, " - ",
+  string description = Concat(
+    SanitizeWrapUTF8(GetMap()->GetMapTitle()), " \"", gameName, "\" - ", SanitizeUTF8(m_OwnerName), " - ",
     ToDecString(GetNumJoinedPlayersOrFake()),
     "/",
     ToDecString(m_GameLoading || m_GameLoaded ? m_ControllersWithMap : static_cast<uint8_t>(m_Slots.size()))
   );
 
   if (m_GameLoading || m_GameLoaded)
-    Description += Concat(" : ", to_string((m_EffectiveTicks / 1000) / 60), "min");
+    description += Concat(" : ", to_string((m_EffectiveTicks / 1000) / 60), "min");
   else
-    Description += Concat(" : ", to_string((m_Aura->GetClockTime() - m_CreationTime) / 60), "min");
+    description += Concat(" : ", to_string((m_Aura->GetClockTime() - m_CreationTime) / 60), "min");
 
-  return Description;
+  return description;
 }
 
 string CGame::GetEndDescription(shared_ptr<const CRealm> realm) const

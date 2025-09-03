@@ -110,11 +110,11 @@ bool                  gRestart     = false;
 volatile sig_atomic_t gGracefulExit = 0;
 
 constexpr int APP_METRICS_LOBBY_SAMPLE_RATE = 10;
-constexpr size_t APP_METRICS_LOBBY_CAPACITY = 1000;
+constexpr size_t APP_METRICS_LOBBY_CAPACITY = 100;
 constexpr int APP_METRICS_GAME_SAMPLE_RATE = 10;
-constexpr size_t APP_METRICS_GAME_CAPACITY = 1000;
+constexpr size_t APP_METRICS_GAME_CAPACITY = 100;
 constexpr int APP_METRICS_FRAME_SAMPLE_RATE = 10;
-constexpr size_t APP_METRICS_FRAME_CAPACITY = 200;
+constexpr size_t APP_METRICS_FRAME_CAPACITY = 100;
 
 inline unsigned int GetThreadPoolSize()
 {
@@ -315,9 +315,7 @@ inline PLATFORM_STRING_TYPE GetAuraTitle(shared_ptr<CGame> detailsGame, size_t l
     string detailsText = detailsGame->GetStatusDescription();
 #ifdef _WIN32
     PLATFORM_STRING_TYPE detailsTextPlatform;
-    if (utf8::is_valid(detailsText.begin(), detailsText.end())) {
-      utf8::utf8to16(detailsText.begin(), detailsText.end(), back_inserter(detailsTextPlatform));
-    }
+    utf8::utf8to16(detailsText.begin(), detailsText.end(), back_inserter(detailsTextPlatform));
 #else
     PLATFORM_STRING_TYPE& detailsTextPlatform = detailsText;
 #endif
@@ -506,7 +504,6 @@ CAura::CAura(CConfig& CFG, const CCLI& nCLI)
     m_ExitingSoon(false),
     m_Ready(true),
     m_AutoReHosted(false),
-    m_MetaDataNeedsUpdate(false),
 
     m_LogLevel(LogLevel::kDebug),
     m_LoopTicks(APP_MIN_TICKS),
@@ -1128,7 +1125,7 @@ AppActionStatus CAura::HandleAction(const AppAction& action)
         return AppActionStatus::kError;
       }
       if (MergePendingLobbies()) {
-        m_MetaDataNeedsUpdate = true;
+        m_LastMetaDataUpdateTime.reset();
       }
       return AppActionStatus::kDone;
     }
@@ -1328,7 +1325,7 @@ bool CAura::Update()
         EventGameStarted(*it);
       }
       it = m_Lobbies.erase(it);
-      m_MetaDataNeedsUpdate = true;
+      m_LastMetaDataUpdateTime.reset();
     } else {
       (*it)->UpdatePost(&m_SendFDs);
       ++it;
@@ -1354,7 +1351,7 @@ bool CAura::Update()
         EventGameRemake(*it);
       }
       it = m_StartedGames.erase(it);
-      m_MetaDataNeedsUpdate = true;
+      m_LastMetaDataUpdateTime.reset();
     } else {
       (*it)->UpdatePost(&m_SendFDs);
       ++it;
@@ -1380,10 +1377,10 @@ bool CAura::Update()
   // move stuff from pending vectors to their intended places
   m_Net.MergeDownGradedConnections();
   if (MergePendingLobbies()) {
-    m_MetaDataNeedsUpdate = true;
+    m_LastMetaDataUpdateTime.reset();
   }
 
-  if (m_MetaDataNeedsUpdate) {
+  if (GetTimeIsFirstOrAfterDelay(m_LastMetaDataUpdateTime, 3)) {
     UpdateMetaData();
 #ifndef DISABLE_DPP
     if (m_Discord.GetIsEnabled()) {
@@ -2097,6 +2094,7 @@ void CAura::UpdateWindowTitle()
 void CAura::UpdateMetaData()
 {
   UpdateWindowTitle();
+  m_LastMetaDataUpdateTime = GetClockTime();
 }
 
 void CAura::UpdateCFGCacheEntries()
