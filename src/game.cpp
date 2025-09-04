@@ -1368,13 +1368,13 @@ string CGame::GetGameSpectatorName() const
 
 string CGame::GetStatusDescription() const
 {
-  string_view gameName = SanitizeUTF8(GetShortNameLAN());
+  string gameName = GetShortNameLAN();
   if (m_IsMirror) {
-     return Concat(SanitizeWrapUTF8(GetMap()->GetMapTitle()), " (Mirror) \"", gameName, "\"");
+     return Concat(SanitizeWrapUTF8(GetMap()->GetMapTitle()), " (Mirror) \"", SanitizeUTF8(gameName), "\"");
   }
 
   string description = Concat(
-    SanitizeWrapUTF8(GetMap()->GetMapTitle()), " \"", gameName, "\" - ", SanitizeUTF8(m_OwnerName), " - ",
+    SanitizeWrapUTF8(GetMap()->GetMapTitle()), " \"", SanitizeUTF8(gameName), "\" - ", SanitizeUTF8(m_OwnerName), " - ",
     ToDecString(GetNumJoinedPlayersOrFake()),
     "/",
     ToDecString(m_GameLoading || m_GameLoaded ? m_ControllersWithMap : static_cast<uint8_t>(m_Slots.size()))
