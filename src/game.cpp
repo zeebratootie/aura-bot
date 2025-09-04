@@ -1368,7 +1368,7 @@ string CGame::GetGameSpectatorName() const
 
 string CGame::GetStatusDescription() const
 {
-  string gameName = SanitizeUTF8(GetShortNameLAN());
+  string_view gameName = SanitizeUTF8(GetShortNameLAN());
   if (m_IsMirror) {
      return Concat(SanitizeWrapUTF8(GetMap()->GetMapTitle()), " (Mirror) \"", gameName, "\"");
   }
