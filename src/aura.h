@@ -1,3 +1,4 @@
+
 /*
 
   Copyright [2024-2025] [Leonardo Julca]
@@ -71,8 +72,8 @@
 #include <windows.h>
 #endif
 
-#define AURA_VERSION "11.4.2"
-#define AURA_APP_NAME "Aura 11.4.2"
+#define AURA_VERSION "11.5.0"
+#define AURA_APP_NAME "Aura 11.5.0"
 #define AURA_REPOSITORY_URL "https://gitlab.com/ivojulca/aura-bot"
 #define AURA_ISSUES_URL "https://gitlab.com/ivojulca/aura-bot/-/issues"
 
