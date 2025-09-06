@@ -98,7 +98,7 @@ protected:
   std::vector<CGameSlot>                                 m_Slots;                         // std::vector of slots
   std::vector<CGameController*>                          m_GameControllers;               // std::vector of potential gameuser data for the database
   UserList                                               m_Users;                         // std::vector of players
-  CircleDoubleLinkedList<CQueuedActionsFrame>            m_Actions;            // actions to be sent
+  CircleDoubleLinkedList<CQueuedActionsFrame>            m_Actions;                       // actions to be sent
   QueuedActionsFrameNode*                                m_CurrentActionsFrame;
   std::vector<std::string>                               m_Reserved;                      // std::vector of player names with reserved slots (from the !hold command)
   std::set<std::string>                                  m_ReportedJoinFailNames;         // set of player names to NOT print ban messages for when joining because they've already been printed
@@ -220,6 +220,7 @@ protected:
   bool                                                   m_Remade;
   uint8_t                                                m_SaveOnLeave;
   GameResultSourceSelect                                 m_GameResultSourceOfTruth;
+  std::optional<Version>                                 m_LoadedVersion;
   bool                                                   m_IsSinglePlayer;
   bool                                                   m_Rated;
   std::string                                            m_UnratedReason;

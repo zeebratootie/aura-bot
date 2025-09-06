@@ -117,7 +117,8 @@ struct GameFrame
 struct GameHistory
 {
   bool                                                   m_Desynchronized;
-  bool                                                   m_SoftDesynchronized;            // desynchronizes spectators
+  bool                                                   m_SoftDesynchronizedSameVersion;          // spectators desynced (same version)
+  bool                                                   m_SoftDesynchronizedCrossPlay;            // spectators desynced (crossplay)
   uint8_t                                                m_GProxyEmptyActions;
   std::optional<int64_t>                                 m_StartedTicks;
   std::optional<int64_t>                                 m_FinishedTicks;
@@ -145,8 +146,10 @@ struct GameHistory
   [[nodiscard]] inline size_t GetNumCheckSums() const { return m_CheckSums.size(); }
   inline void SetDesynchronized(const bool nDesynchronized = true) { m_Desynchronized = nDesynchronized; }
   [[nodiscard]] inline bool GetDesynchronized() const { return m_Desynchronized; }
-  inline void SetSoftDesynchronized(const bool nSoftDesynchronized = true) { m_SoftDesynchronized = nSoftDesynchronized; }
-  [[nodiscard]] inline bool GetSoftDesynchronized() const { return m_SoftDesynchronized; }
+  inline void SetSoftDesynchronizedCrossPlay(const bool nSoftDesynchronizedCrossPlay = true) { m_SoftDesynchronizedCrossPlay = nSoftDesynchronizedCrossPlay; }
+  [[nodiscard]] inline bool GetSoftDesynchronizedCrossPlay() const { return m_SoftDesynchronizedCrossPlay; }
+  inline void SetSoftDesynchronizedSameVersion(const bool nSoftDesynchronizedSameVersion = true) { m_SoftDesynchronizedSameVersion = nSoftDesynchronizedSameVersion; }
+  [[nodiscard]] inline bool GetSoftDesynchronizedSameVersion() const { return m_SoftDesynchronizedSameVersion; }
   inline void SetDefaultLatency(const int64_t nLatency) { m_DefaultLatency = signed_cast_lossy<uint16_t>(nLatency); }
   [[nodiscard]] inline uint16_t GetDefaultLatency() const { return m_DefaultLatency; }
   inline void SetActiveLatency(const int64_t nLatency) { m_ActiveLatency = signed_cast_lossy<uint16_t>(nLatency); }

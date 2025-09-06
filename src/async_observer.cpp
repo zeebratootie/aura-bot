@@ -598,8 +598,13 @@ void CAsyncObserver::EventDesync()
   Print(text);
   m_Aura->LogPersistent(text);
 
-  if (!m_GameHistory->GetSoftDesynchronized()) {
-    m_GameHistory->SetSoftDesynchronized();
+  auto game = m_Game.lock();
+  if (game) {
+    if (game->GetVersion() == GetGameVersion()) {
+      m_GameHistory->SetSoftDesynchronizedSameVersion();
+    } else {
+      m_GameHistory->SetSoftDesynchronizedCrossPlay();
+    }
   }
   if (m_Game.expired() || m_Game.lock()->GetAllowsDesync()) {
     SendChat("Desync detected!! Your game client failed to replicate the game state.");

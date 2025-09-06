@@ -6446,7 +6446,7 @@ void CGame::EventUserChat(GameUser::CGameUser* user, const CIncomingMessageOrSet
           didRelay = true;
         }
         SendCommandsHelp(m_Config.m_BroadcastCmdToken.empty() ? m_Config.m_PrivateCmdToken : m_Config.m_BroadcastCmdToken, user, false);
-      } else if (textContent == "/p" || textContent == "/ping" || textContent == "/game") {
+      } else if (textContent == "/p" || textContent == "/ping" || textContent == "/game" || textContent == "/apm") {
         isCommand = true;
         shouldRelay = shouldRelay && !GetIsHiddenPlayerNames();
         // Note that when the WC3 client is connected to a realm, all slash commands are sent to the bnet server.
@@ -7303,6 +7303,20 @@ void CGame::EventGameLoaded()
 
   m_IsSinglePlayer = GetIsSinglePlayerMode();
 
+  if (!m_Users.empty()) {
+    bool success = true;
+    Version gameVersion = m_Users[0]->GetGameVersion();
+    for (const auto& user : m_Users) {
+      if (user->GetGameVersion() != gameVersion) {
+        success = false;
+        break;
+      }
+    }
+    if (success) {
+      m_LoadedVersion = gameVersion;
+    }
+  }
+
   // send shortest, longest, and personal load times to each user
 
   const GameUser::CGameUser* Shortest = nullptr;
@@ -7572,6 +7586,7 @@ void CGame::Remake()
   m_SentPriorityWhois = false;
   m_Remaking = false;
   m_Remade = true;
+  m_LoadedVersion.reset();
   m_IsSinglePlayer = false;
   m_Rated = false;
   m_HMCEnabled = false;
@@ -10594,6 +10609,18 @@ bool CGame::GetHasReferees() const
 bool CGame::GetIsSupportedGameVersion(const Version& version) const
 {
   if (!GetIsValidVersion(version)) return false;
+  if (m_GameLoaded) {
+    switch (m_Config.m_CrossPlayMode) {
+      case CrossPlayMode::kForce:
+      case CrossPlayMode::kOptimistic:
+        break;
+      default:
+        if (!m_LoadedVersion.has_value() || m_LoadedVersion.value() != version) {
+          return false;
+        }
+        break;
+    }
+  }
   return m_SupportedGameVersions.test(ToVersionOrdinal(version));
 }
 
@@ -10952,7 +10979,8 @@ bool CGame::GetIsStageAcceptingJoins() const
   // we only want to broadcast if the countdown hasn't started (or if the game has loaded and join-in-progress is enabled)
   if (!m_CountDownStarted) return true;
   if (!m_GameLoaded) return false;
-  if (m_GameHistory->GetSoftDesynchronized()) return false;
+  if (!m_LoadedVersion.has_value()) return false;
+  //if (m_GameHistory->GetSoftDesynchronizedSameVersion()) return false;
   return m_Config.m_EnableJoinObserversInProgress || m_Config.m_EnableJoinPlayersInProgress;
 }
 

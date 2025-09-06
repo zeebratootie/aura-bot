@@ -218,7 +218,8 @@ bool CQueuedActionsFrame::GetHasActionsBy(const uint8_t UID) const
 
 GameHistory::GameHistory()
  : m_Desynchronized(false),
-   m_SoftDesynchronized(false),
+   m_SoftDesynchronizedSameVersion(false),
+   m_SoftDesynchronizedCrossPlay(false),
    m_GProxyEmptyActions(0),
    m_NumActionFrames(0),
    m_NumSpectatorActionFrames(0),
