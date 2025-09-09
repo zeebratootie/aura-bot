@@ -85,7 +85,7 @@ CAsyncObserver::CAsyncObserver(shared_ptr<CGame> nGame, CConnection* nConnection
     m_LastProgressReportLog(0),
     m_Name(nName)
 {
-  m_IsObserver = m_Color == nGame->GetMap()->GetVersionMaxSlots();
+  m_IsObserver = m_Color == nGame->GetObserverColor();
   m_Socket->SetLogErrors(true);
 }
 

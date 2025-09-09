@@ -1473,7 +1473,7 @@ void CAuraDB::SaveDotAStats(Dota::CDotaStats* dotaStats)
 
         if (!((Color >= 1 && Color <= 5) || (Color >= 7 && Color <= 11)))
         {
-          Print(dotaStats->GetLogPrefix() + "discarding dotaPlayer data, invalid colour found");
+          Print(dotaStats->GetLogPrefix() + "discarding dotaPlayer data, invalid color found");
           delete dotaStats->m_Players[i];
           dotaStats->m_Players[i] = nullptr;
           continue;
@@ -1483,7 +1483,7 @@ void CAuraDB::SaveDotAStats(Dota::CDotaStats* dotaStats)
         {
           if (dotaStats->m_Players[j] && Color == dotaStats->m_Players[j]->GetNewColor())
           {
-            Print(dotaStats->GetLogPrefix() + "discarding dotaPlayer data, duplicate colour found");
+            Print(dotaStats->GetLogPrefix() + "discarding dotaPlayer data, duplicate color found");
             delete dotaStats->m_Players[j];
             dotaStats->m_Players[j] = nullptr;
           }

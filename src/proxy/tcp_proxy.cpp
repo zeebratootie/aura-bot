@@ -95,7 +95,6 @@ TCPProxyStatus CTCPProxy::TransferBuffer(fd_set* fd, CStreamIOSocket* fromSocket
 
   if (fromSocket->DoRecv(fd)) {
     AppendSwapString(fromSocket->m_RecvBuffer, toSocket->m_SendBuffer); 
-    vector<uint8_t> byteArray = vector<uint8_t>(toSocket->m_SendBuffer.begin(), toSocket->m_SendBuffer.end());
     return TCPProxyStatus::kOk;
   }
   if (m_Aura->GetTicksIsAfterDelay(fromSocket->GetLastRecv(), timeout)) {

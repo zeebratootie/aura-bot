@@ -81,6 +81,9 @@ CMap::CMap(CAura* nAura, CConfig* CFG)
     m_MapRequiresExpansion(false),
     m_MapIsLua(CFG->GetBool("map.lua", false)),
     m_MapIsMelee(false),
+    m_EnableModernPlayers(false),
+    m_EnableModernColors(false),
+    m_EnableModernTeams(false),
     m_MapMinGameVersion(GAMEVER(1u, 0u)),
     m_MapMinSuggestedGameVersion(GAMEVER(1u, 0u)),
     m_MapNumControllers(0),
@@ -418,49 +421,6 @@ bool CMap::GetMapFileIsFromManagedFolder() const
   if (m_UseStandardPaths) return false;
   if (m_MapServerPath.empty()) return false;
   return m_MapServerPath == m_MapServerPath.filename();
-}
-
-bool CMap::IsObserverSlot(const CGameSlot* slot) const
-{
-  if (slot->GetUID() != 0 || slot->GetDownloadStatus() != 255) {
-    return false;
-  }
-  if (slot->GetSlotStatus() != SLOTSTATUS_OPEN || !slot->GetIsSelectable()) {
-    return false;
-  }
-  return slot->GetTeam() >= m_MapNumControllers && slot->GetColor() >= m_MapNumControllers;
-}
-
-bool CMap::NormalizeSlots()
-{
-  uint8_t i = static_cast<uint8_t>(m_Slots.size());
-
-  bool updated = false;
-  bool anyNonObserver = false;
-  while (i--) {
-    const CGameSlot slot = m_Slots[i];
-    if (!IsObserverSlot(&slot)) {
-      anyNonObserver = true;
-      break;
-    }
-  }
-
-  i = static_cast<uint8_t>(m_Slots.size());
-  while (i--) {
-    CGameSlot slot = m_Slots[i];
-    if (anyNonObserver && IsObserverSlot(&slot)) {
-      m_Slots.erase(m_Slots.begin() + i);
-      updated = true;
-      continue;
-    }
-    uint8_t race = GetLobbyRace(&slot);
-    if (race != slot.GetRace()) {
-      slot.SetRace(race);
-      updated = true;
-    }
-  }
-
-  return updated;
 }
 
 bool CMap::SetGameObservers(const GameObserversMode observerMode)
@@ -977,7 +937,7 @@ optional<MapEssentials> CMap::ParseMPQ()
         {
           CGameSlot Slot(SLOTTYPE_AUTO, 0, SLOTPROG_RST, SLOTSTATUS_OPEN, SLOTCOMP_NO, 0, 1, SLOTRACE_RANDOM);
           uint32_t  Color = 0, Type = 0, Race = 0;
-          ISS.read(reinterpret_cast<char*>(&Color), 4); // colour
+          ISS.read(reinterpret_cast<char*>(&Color), 4); // color
           Slot.SetColor(static_cast<uint8_t>(Color));
           ISS.read(reinterpret_cast<char*>(&Type), 4); // type
 
@@ -1239,8 +1199,8 @@ optional<MapEssentials> CMap::ParseMPQ()
 
   fileContents.clear();
 
-  if (mapEssentials->minCompatibleGameVersion < GAMEVER(1u, 29u) && (mapEssentials->slots.size() > 12 || mapEssentials->numPlayers > 12 || mapEssentials->numTeams > 12)) {
-    mapEssentials->minCompatibleGameVersion = GAMEVER(1u, 29u);
+  if (mapEssentials->slots.size() > 12 || mapEssentials->numPlayers > 12 || mapEssentials->numTeams > 12) {
+    mapEssentials->minCompatibleGameVersion = max(mapEssentials->minCompatibleGameVersion, Get24PlayersMinGameVersion());
   }
 
   if (mapEssentials->editorVersion > 0) {
@@ -1717,7 +1677,30 @@ void CMap::Load(CConfig* CFG)
     CFG->SetString("map.game_version.min", ToVersionString(m_MapMinGameVersion));
   }
 
-  if (m_MapMinGameVersion >= GAMEVER(1u, 29u)) {
+  m_EnableModernPlayers = GetIs24PlayersGameVersion(m_MapMinGameVersion);
+  m_EnableModernColors = m_MapTargetGameVersion.has_value() ? GetIs24PlayersGameVersion(m_MapTargetGameVersion.value()) : m_EnableModernPlayers;
+  m_EnableModernTeams = m_EnableModernPlayers;
+
+  if (CFG->Exists("map.slot_constraints.modern_players.allowed")) {
+    m_EnableModernPlayers = CFG->GetBool("map.slot_constraints.modern_players.allowed", m_EnableModernPlayers);
+  } else {
+    //CFG->SetBool("map.slot_constraints.modern_players.allowed", m_EnableModernPlayers);
+  }
+
+  if (CFG->Exists("map.slot_constraints.modern_colors.allowed")) {
+    // Editable because some legacy maps may not support modern colors
+    m_EnableModernColors = CFG->GetBool("map.slot_constraints.modern_colors.allowed", m_EnableModernColors);
+  } else {
+    //CFG->SetBool("map.slot_constraints.modern_colors.allowed", m_EnableModernColors);
+  }
+
+  if (CFG->Exists("map.slot_constraints.modern_teams.allowed")) {
+    m_EnableModernTeams = CFG->GetBool("map.slot_constraints.modern_teams.allowed", m_EnableModernTeams);
+  } else {
+    //CFG->SetBool("map.slot_constraints.modern_teams.allowed", m_EnableModernTeams);
+  }
+
+  if (m_EnableModernPlayers) {
     m_MapVersionMaxSlots = static_cast<uint8_t>(MAX_SLOTS_MODERN);
   } else {
     m_MapVersionMaxSlots = static_cast<uint8_t>(MAX_SLOTS_LEGACY);
@@ -1774,8 +1757,8 @@ void CMap::Load(CConfig* CFG)
       m_MapMinSuggestedGameVersion = minVanillaVersionFromMapSize;
     }
 
-    if (m_Slots.size() > MAX_SLOTS_LEGACY && m_MapMinSuggestedGameVersion < GAMEVER(1u, 29u)) {
-      m_MapMinSuggestedGameVersion = GAMEVER(1u, 29u);
+    if (m_Slots.size() > MAX_SLOTS_LEGACY) {
+      m_MapMinSuggestedGameVersion = max(m_MapMinSuggestedGameVersion, Get24PlayersMinGameVersion());
     }
   }
 
@@ -2143,20 +2126,55 @@ string CMap::CheckProblems()
     }
   }
 
+  if (m_MapNumControllers > MAX_SLOTS_LEGACY && !m_EnableModernPlayers) {
+    m_Valid = false;
+    m_ErrorMessage = Concat("<map.num_players = ", to_string(m_MapNumControllers), "> requires <map.slot_constraints.modern_players.allowed = yes>");
+  }
+
+  if (m_MapNumTeams > MAX_SLOTS_LEGACY && !m_EnableModernTeams) {
+    m_Valid = false;
+    m_ErrorMessage = Concat("<map.num_teams = ", to_string(m_MapNumTeams), "> requires <map.slot_constraints.modern_teams.allowed = yes>");
+  }
+
   bitset<MAX_SLOTS_MODERN> usedTeams;
   uint8_t controllerSlotCount = 0;
   for (const auto& slot : m_Slots) {
-    if (slot.GetTeam() > m_MapVersionMaxSlots || slot.GetColor() > m_MapVersionMaxSlots) {
+    if (slot.GetTeam() > MAX_SLOTS_MODERN) {
       m_Valid = false;
       m_ErrorMessage = "map uses an invalid amount of players";
       return m_ErrorMessage;
     }
-    if (!m_Aura->m_SupportsModernSlots && (slot.GetTeam() > MAX_SLOTS_LEGACY || slot.GetColor() > MAX_SLOTS_LEGACY)) {
+    if (slot.GetColor() > MAX_SLOTS_MODERN) {
       m_Valid = false;
-      m_ErrorMessage = "map uses too many players - v1.29+ required";
+      m_ErrorMessage = "map uses invalid player colors";
       return m_ErrorMessage;
     }
-    if (slot.GetTeam() == m_MapVersionMaxSlots) {
+    if (slot.GetTeam() > m_MapVersionMaxSlots) {
+      m_Valid = false;
+      m_ErrorMessage = "map unexpectedly uses players with modern team numbers";
+      return m_ErrorMessage;
+    }
+    if (slot.GetColor() > m_MapVersionMaxSlots) {
+      m_Valid = false;
+      m_ErrorMessage = "map unexpectedly uses players with modern colors";
+      return m_ErrorMessage;
+    }
+    if (slot.GetTeam() > MAX_SLOTS_LEGACY && !m_EnableModernTeams) {
+      m_Valid = false;
+      m_ErrorMessage = "map uses modern team numbers - requires <map.slot_constraints.modern_teams.allowed = yes>";
+      return m_ErrorMessage;
+    }
+    if (slot.GetColor() > MAX_SLOTS_LEGACY && !m_EnableModernColors) {
+      m_Valid = false;
+      m_ErrorMessage = "map uses modern player colors - requires <map.slot_constraints.modern_teams.allowed = yes>";
+      return m_ErrorMessage;
+    }
+    if (!m_Aura->m_SupportsModernSlots && (slot.GetTeam() > MAX_SLOTS_LEGACY || slot.GetColor() > MAX_SLOTS_LEGACY)) {
+      m_Valid = false;
+      m_ErrorMessage = "map uses too many players - v1.29+ required but not configured";
+      return m_ErrorMessage;
+    }
+    if (slot.GetTeam() == m_MapVersionMaxSlots || slot.GetColor() == m_MapVersionMaxSlots) {
       continue;
     }
     if (slot.GetTeam() > m_MapNumTeams) {
@@ -2461,7 +2479,7 @@ void CMap::LoadMapSpecificConfig(CConfig& CFG)
   if (m_MapOptions & MAPOPT_CUSTOMFORCES) {
     // Custom observer-team (one-based)
     m_MapCustomizableObserverTeam = CFG.GetUint8("map.custom_forces.observer_team", m_MapCustomizableObserverTeam);
-    if (m_MapCustomizableObserverTeam == 0 || (m_MapNumTeams < m_MapCustomizableObserverTeam  && m_MapCustomizableObserverTeam != m_MapVersionMaxSlots + 1)) {
+    if (m_MapCustomizableObserverTeam == 0 || (m_MapNumTeams < m_MapCustomizableObserverTeam && m_MapCustomizableObserverTeam != m_MapVersionMaxSlots + 1)) {
       m_ErrorMessage = "<map.custom_forces.observer_team> invalid team number";
       CFG.SetFailed();
     }

@@ -366,6 +366,9 @@ public:
   template <int64_t factor>
   void                                                   UpdateSelectBlockTime(int64_t& blockTime) const;
 
+  uint8_t                                                GetObserverTeam() const;
+  uint8_t                                                GetObserverColor() const;
+  uint8_t                                                GetMinControllerInvalidColor() const;
   uint32_t                                               GetSlotsOccupied() const;
   uint32_t                                               GetSlotsOpen() const;
   bool                                                   HasSlotsOpen() const;
@@ -607,7 +610,7 @@ public:
   void                      EventUserChatOrPlayerSettings(GameUser::CGameUser* user, const CIncomingMessageOrSettingsView& incomingChatMessage);
   void                      EventUserChat(GameUser::CGameUser* user, const CIncomingMessageOrSettingsView& incomingChatMessage);
   void                      EventUserRequestTeam(GameUser::CGameUser* user, uint8_t team);
-  void                      EventUserRequestColor(GameUser::CGameUser* user, uint8_t colour);
+  void                      EventUserRequestColor(GameUser::CGameUser* user, uint8_t color);
   void                      EventUserRequestRace(GameUser::CGameUser* user, uint8_t race);
   void                      EventUserRequestHandicap(GameUser::CGameUser* user, uint8_t handicap);
   void                      EventUserDropRequest(GameUser::CGameUser* user);
@@ -655,7 +658,7 @@ public:
   GameUserSearchResult      GetUserFromNamePartial(const std::string& name) const;
   GameUserSearchResult      GetUserFromDisplayNamePartial(const std::string& name) const;
   BannableUserSearchResult  GetBannableFromNamePartial(const std::string& name) const;
-  GameUser::CGameUser*      GetUserFromColor(uint8_t colour) const;
+  GameUser::CGameUser*      GetUserFromColor(uint8_t color) const;
   uint8_t                   GetColorFromUID(uint8_t UID) const;
   uint8_t                   GetNewUID() const;
   uint8_t                   GetNewTeam() const;
@@ -727,7 +730,7 @@ public:
   bool CloseSlot();
   bool ComputerSlotInner(const uint8_t SID, const uint8_t skill, const bool ignoreLayout = false, const bool overrideComputers = false);
   bool ComputerSlot(const uint8_t SID, const uint8_t skill, bool kick);
-  bool SetSlotColor(const uint8_t SID, const uint8_t colour, const bool force);
+  bool SetSlotColor(const uint8_t SID, const uint8_t color, const bool force);
   bool SetSlotTeam(const uint8_t SID, const uint8_t team, const bool force);
   void SetSlotTeamAndColorAuto(const uint8_t SID);
 
@@ -905,7 +908,7 @@ public:
   [[nodiscard]] bool CheckGameResults(const GameResults& gameResults) const;
 
   void                      StoreGameControllers();
-  CGameController*          GetGameControllerFromColor(uint8_t colour) const;
+  CGameController*          GetGameControllerFromColor(uint8_t color) const;
   CGameController*          GetGameControllerFromSID(uint8_t SID) const;
   CGameController*          GetGameControllerFromUID(uint8_t UID) const;
 

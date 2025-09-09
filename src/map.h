@@ -382,6 +382,9 @@ private:
   bool                            m_MapRequiresExpansion;
   bool                            m_MapIsLua;
   bool                            m_MapIsMelee;
+  bool                            m_EnableModernPlayers;
+  bool                            m_EnableModernColors;
+  bool                            m_EnableModernTeams;
   Version                         m_MapMinGameVersion;
   Version                         m_MapMinSuggestedGameVersion;
   uint8_t                         m_MapNumControllers; // config value: max map number of players
@@ -502,6 +505,9 @@ public:
   [[nodiscard]] inline uint8_t                    GetMapNumTeams() const { return m_MapNumTeams; }
   [[nodiscard]] inline uint8_t                    GetMapCustomizableObserverTeam() const { return m_MapCustomizableObserverTeam; }
   [[nodiscard]] inline uint8_t                    GetVersionMaxSlots() const { return m_MapVersionMaxSlots; }
+  [[nodiscard]] inline bool                       GetModernPlayersEnabled() const { return m_EnableModernPlayers; }
+  [[nodiscard]] inline bool                       GetModernColorsEnabled() const { return m_EnableModernColors; }
+  [[nodiscard]] inline bool                       GetModernTeamsEnabled() const { return m_EnableModernTeams; }
   [[nodiscard]] inline std::vector<CGameSlot>     GetSlots() const { return m_Slots; }
   [[nodiscard]] inline const std::vector<CGameSlot>&     InspectSlots() const { return m_Slots; }
   [[nodiscard]] inline const std::vector<std::pair<std::string, std::string>>&   GetInitCommands() const { return m_InitCommands; }
@@ -518,8 +524,6 @@ public:
   bool                                            SetGameSpeed(const GameSpeed nGameSpeed);
   bool                                            SetGameObservers(const GameObserversMode nGameObservers);
   void                                            SetUseStandardPaths(const bool nValue) { m_UseStandardPaths = nValue; }
-  [[nodiscard]] bool                              IsObserverSlot(const CGameSlot* slot) const;
-  bool                                            NormalizeSlots();
   [[nodiscard]] inline std::string                GetErrorString() { return m_ErrorMessage; }
 
   void                                            UpdateCryptoModule(std::map<Version, MapCrypto>::iterator& versionCrypto, const std::string& fileContents) const; // common.j, blizzard.j
@@ -696,6 +700,16 @@ public:
     cursor += 0x400;
   }
   return checksum;
+}
+
+[[nodiscard]] inline Version Get24PlayersMinGameVersion()
+{
+  return GAMEVER(1u, 29u);
+}
+
+[[nodiscard]] inline bool GetIs24PlayersGameVersion(const Version& version)
+{
+  return version >= Get24PlayersMinGameVersion();
 }
 
 #undef ROTL

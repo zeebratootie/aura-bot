@@ -1484,7 +1484,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
         ErrorReply("This command is disabled in incognito mode games.");
         break;
       }
-      if (targetPlayer != GetGameUser() && !CheckPermissions(m_Config->m_ImportPermissions, COMMAND_PERMISSIONS_SUDO)) {
+      if (GetIsGameUser() && !GetGameUser()->GetIsObserver() && targetPlayer != GetGameUser() && !CheckPermissions(m_Config->m_ImportPermissions, COMMAND_PERMISSIONS_SUDO)) {
         ErrorReply("Not allowed to view other players' APM.");
         break;
       }
@@ -1492,6 +1492,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
         ErrorReply("[" + targetPlayer->GetName() + "] is an observer.");
         break;
       }
+      bool sendAll = GetGameSource().GetIsEmpty() || (GetIsGameUser() && GetGameUser()->GetCanUsePublicChat());
       string currentAPMFragment = "APM: " + to_string(static_cast<uint64_t>(round(targetPlayer->GetAPM())));
       string maxAPMFragment, holdActionsFragment;
       if (targetPlayer->GetHasAPMQuota()) {
@@ -1500,7 +1501,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
       if (targetPlayer->GetOnHoldActionsAny()) {
         holdActionsFragment = " - Restricted: " + to_string(targetPlayer->GetOnHoldActionsCount()) + " actions";
       }
-      SendReply("[" + targetPlayer->GetName() + "] " + currentAPMFragment + maxAPMFragment + holdActionsFragment);
+      SendReply("[" + targetPlayer->GetName() + "] " + currentAPMFragment + maxAPMFragment + holdActionsFragment, sendAll ? CHAT_SEND_TARGET_ALL : 0);
       break;
     }
 
@@ -5379,9 +5380,10 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
     }
 
     //
-    // !COLOR (computer colour change)
+    // !COLOR (computer color change)
     //
 
+    case HashCode("colour"):
     case HashCode("color"): {
       UseImplicitHostedGame();
       shared_ptr<CGame> targetGame = GetTargetGame();
@@ -5419,13 +5421,18 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
       GameUser::CGameUser* targetPlayer = searchResult.user;
 
       uint8_t color = ParseColor(Args[1]);
-      if (color >= targetGame->GetMap()->GetVersionMaxSlots()) {
+      if (color >= targetGame->GetObserverColor()) {
         color = ParseSID(Args[1]);
 
-        if (color >= targetGame->GetMap()->GetVersionMaxSlots()) {
+        if (color >= targetGame->GetObserverColor()) {
           ErrorReply("Color identifier \"" + Args[1] + "\" is not valid.");
           break;
         }
+      }
+
+      if (color >= targetGame->GetMinControllerInvalidColor()) {
+        ErrorReply("This map does not support modern colors. Please choose among the first 12 options.");
+        break;
       }
 
       if (!targetGame->SetSlotColor(SID, color, true)) {
@@ -5595,7 +5602,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
       }
 
       CGameSlot* slot = targetGame->GetSlot(SID);
-      if (!slot || slot->GetSlotStatus() != SLOTSTATUS_OCCUPIED || slot->GetTeam() == targetGame->GetMap()->GetVersionMaxSlots()) {
+      if (!slot || slot->GetSlotStatus() != SLOTSTATUS_OCCUPIED || slot->GetTeam() == targetGame->GetObserverTeam()) {
         ErrorReply("Slot " + ToDecString(ToBaseOne(SID)) + " is not playable.");
         break;
       }
@@ -5682,7 +5689,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
         // let them directly pick their team members with e.g. !team Arthas
         targetTeam = slot->GetTeam();
       }
-      if (targetTeam > targetGame->GetMap()->GetVersionMaxSlots() + 1) { // accept 13/25 as observer
+      if (targetTeam > targetGame->GetObserverTeam() + 1) { // accept 13/25 as observer
         ErrorReply("Usage: " + cmdToken + "team <PLAYER>");
         ErrorReply("Usage: " + cmdToken + "team <PLAYER> , <TEAM>");
         break;
@@ -5697,7 +5704,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
         break;
       }
 
-      if (targetTeam == targetGame->GetMap()->GetVersionMaxSlots()) {
+      if (targetTeam == targetGame->GetObserverTeam()) {
         if (targetGame->GetMap()->GetGameObservers() != GameObserversMode::kStartOrOnDefeat && targetGame->GetMap()->GetGameObservers() != GameObserversMode::kReferees) {
           ErrorReply("This game does not have observers enabled.");
           break;
@@ -5776,7 +5783,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
         break;
       }
 
-      if (!targetGame->SetSlotTeam(SID, targetGame->GetMap()->GetVersionMaxSlots(), true)) {
+      if (!targetGame->SetSlotTeam(SID, targetGame->GetObserverTeam(), true)) {
         if (targetPlayer) {
           ErrorReply("Cannot turn [" + targetPlayer->GetName() + "] into an observer.");
         } else {

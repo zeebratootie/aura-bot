@@ -66,7 +66,7 @@ private:
   uint8_t m_SlotStatus;     // slot status (0 = open, 1 = closed, 2 = occupied)
   uint8_t m_Computer;       // computer (0 = no, 1 = yes)
   uint8_t m_Team;           // team
-  uint8_t m_Color;          // colour
+  uint8_t m_Color;          // color
   uint8_t m_Race;           // race (1 = human, 2 = orc, 4 = night elf, 8 = undead, 32 = random, 64 = selectable)
   uint8_t m_ComputerType;   // computer type (0 = easy, 1 = human or normal comp, 2 = hard comp)
   uint8_t m_Handicap;       // handicap

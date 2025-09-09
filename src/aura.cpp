@@ -1896,7 +1896,7 @@ void CAura::OnLoadConfigs()
     if (version >= GAMEVER(1u, 30u) && m_MDNSDependency != OptionalDependencyMode::kRequired) {
       m_MDNSDependency = OptionalDependencyMode::kOptEnhancement;
     }
-    if (version >= GAMEVER(1u, 29u)) {
+    if (GetIs24PlayersGameVersion(version)) {
       m_SupportsModernSlots = true;
     }
   }

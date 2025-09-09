@@ -120,7 +120,7 @@ namespace GameProtocol
     CTH_MESSAGE_LOBBY  = 0u, // a lobby chat message
     CTH_MESSAGE_INGAME = 1u, // an in-game chat message (has extra flags)
     CTH_TEAMCHANGE     = 2u, // a team change request
-    CTH_COLOURCHANGE   = 3u, // a colour change request
+    CTH_COLOURCHANGE   = 3u, // a color change request
     CTH_RACECHANGE     = 4u, // a race change request
     CTH_HANDICAPCHANGE = 5u, // a handicap change request
   };

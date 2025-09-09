@@ -293,7 +293,7 @@ string CGameUser::GetConnectionErrorString() const
   return errorString;
 }
 
-// based on my limited testing it seems that the extra flags' first byte contains 3 plus the recipient's colour to denote a private message
+// based on my limited testing it seems that the extra flags' first byte contains 3 plus the recipient's color to denote a private message
 uint8_t CGameUser::GetChatChannel(bool forcePrivate) const
 {
   if (!m_FinishedLoading) return 0;

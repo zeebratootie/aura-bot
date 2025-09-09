@@ -438,7 +438,7 @@ namespace GameProtocol
             return CIncomingMessageOrSettingsView(fromUID, ToUIDs, discriminator, message);
           }
         } else if ((discriminator >= GameProtocol::Magic::ChatType::REQUEST_TEAM && discriminator <= GameProtocol::Magic::ChatType::REQUEST_HANDICAP) && data.size() >= i + 1u) { // 17-20
-          // team/colour/race/handicap change request 
+          // team/color/race/handicap change request 
 
           const uint8_t requestTarget = GetByteAt(data, i);
           return CIncomingMessageOrSettingsView(fromUID, ToUIDs, discriminator, requestTarget);
