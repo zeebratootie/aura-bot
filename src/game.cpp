@@ -2577,6 +2577,11 @@ vector<uint8_t> CGame::GetSlotInfo() const
   return GameProtocol::SEND_W3GS_SLOTINFO(m_SlotsConfig, m_RandomSeed, m_Map->GetMapNumControllers(), GetVersion());
 }
 
+vector<uint8_t> CGame::GetSlotInfo(const GameUser::CGameUser* user) const
+{
+  return GameProtocol::SEND_W3GS_SLOTINFO(m_SlotsConfig, m_RandomSeed, m_Map->GetMapNumControllers(), user->GetGameVersion());
+}
+
 vector<uint8_t> CGame::GetHandicaps() const
 {
   vector<uint8_t> handicaps;
@@ -2599,12 +2604,7 @@ void CGame::SendAllSlotInfo()
         return GetAreSameSlotProtocolGameVersions(user->GetGameVersion(), GetVersion());
       },
       [this](const GameUser::CGameUser* user) {
-        return GameProtocol::SEND_W3GS_SLOTINFO(
-          m_SlotsConfig,
-          m_RandomSeed,
-          m_Map->GetMapNumControllers(),
-          user->GetGameVersion()
-        );
+        return GetSlotInfo(user);
       }
     );
   }
