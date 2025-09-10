@@ -511,6 +511,12 @@ public:
     const std::function<std::vector<uint8_t>(const GameUser::CGameUser*)>& buildFirst,
     const std::function<std::vector<uint8_t>(const GameUser::CGameUser*)>& buildSecond
   ) const;
+
+  void SendAllVariant(
+    LazyVariantBytesStorage store,
+    const std::function<bool(const GameUser::CGameUser*)>& choicePredicate,
+    const std::function<std::vector<uint8_t>(const GameUser::CGameUser*)>& dataGenerator
+  ) const;
  
   // functions to send lobby chat to players
   // lobby chat is sent instantly

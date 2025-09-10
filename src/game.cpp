@@ -2299,6 +2299,27 @@ void CGame::SendAllVariant(
   }
 }
 
+void CGame::SendAllVariant(
+  LazyVariantBytesStorage store,
+  const function<bool(const GameUser::CGameUser*)>& choicePredicate,
+  const function<vector<uint8_t>(const GameUser::CGameUser*)>& dataGenerator
+) const
+{
+  for (auto& user : m_Users) {
+    if (choicePredicate(user)) {
+      if (!store.first.has_value()) {
+        store.first = dataGenerator(user);
+      }
+      user->Send(store.first.value());
+    } else {
+      if (!store.second.has_value()) {
+        store.second = dataGenerator(user);
+      }
+      user->Send(store.second.value());
+    }
+  }
+}
+
 void CGame::SendAllConnected(const std::vector<uint8_t>& data) const
 {
   // Note: Abuse of this function may desync GProxy-reconnected players
@@ -2577,12 +2598,6 @@ void CGame::SendAllSlotInfo()
       [this](const GameUser::CGameUser* user) {
         return GetAreSameSlotProtocolGameVersions(user->GetGameVersion(), GetVersion());
       },
-      // same protocol version
-      [this](const GameUser::CGameUser* user) {
-        return GetSlotInfo();
-      },
-      // different protocol version (there are only 2 versions: 12 players and 24 players)
-      // observers are either (zero-based) team 12 or team 24 accordingly
       [this](const GameUser::CGameUser* user) {
         return GameProtocol::SEND_W3GS_SLOTINFO(
           m_SlotsConfig,
