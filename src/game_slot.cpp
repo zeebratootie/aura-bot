@@ -102,3 +102,138 @@ CGameSlot::CGameSlot(const uint8_t nType, const uint8_t nUID, const uint8_t nDow
 }
 
 CGameSlot::~CGameSlot() = default;
+
+vector<uint8_t> CGameSlot::GetProtocolArray(const uint8_t sentinelObserverValue, const uint8_t actualObserverValue) const
+{
+  vector<uint8_t> bytes = GetProtocolArray();
+  if (sentinelObserverValue != actualObserverValue) {
+    for (size_t i = 4; i <= 5; ++i) { //  team, color
+      if (bytes[i] == sentinelObserverValue) {
+        bytes[i] = actualObserverValue;
+      }
+    }
+  }
+  return bytes;
+}
+
+// CGameSlotsConfig
+
+CGameSlotsConfig::CGameSlotsConfig()
+ : layout(0),
+   observerSentinel(0)
+{
+}
+
+CGameSlotsConfig::CGameSlotsConfig(uint8_t nLayout, uint8_t nObserverSentinel)
+ : layout(nLayout),
+   observerSentinel(nObserverSentinel)
+{
+}
+
+CGameSlotsConfig::~CGameSlotsConfig()
+{
+}
+
+uint8_t CGameSlotsConfig::GetOccupiedCount() const
+{
+  uint8_t count = 0;
+  for (const auto& slot : slots) {
+    if (slot.GetSlotStatus() == SLOTSTATUS_OCCUPIED)
+      ++count;
+  }
+  return count;
+}
+
+uint8_t CGameSlotsConfig::GetOpenCount() const
+{
+  uint8_t count = 0;
+  for (const auto& slot : slots) {
+    if (slot.GetSlotStatus() == SLOTSTATUS_OPEN)
+      ++count;
+  }
+  return count;
+}
+
+bool CGameSlotsConfig::GetIsAnyOpen() const
+{
+  for (const auto& slot : slots) {
+    if (slot.GetSlotStatus() == SLOTSTATUS_OPEN)
+      return true;
+  }
+  return false;
+}
+
+uint8_t CGameSlotsConfig::GetOccupiedControllersCount() const
+{
+  uint8_t count = 0;
+  for (const auto& slot : slots) {
+    if (slot.GetSlotStatus() == SLOTSTATUS_OCCUPIED && slot.GetTeam() != observerSentinel) {
+      ++count;
+    }
+  }
+  return count;
+}
+
+uint8_t CGameSlotsConfig::GetComputersCount() const
+{
+  uint8_t count = 0;
+  for (const auto& slot : slots) {
+    if (slot.GetSlotStatus() == SLOTSTATUS_OCCUPIED && slot.GetIsComputer()) {
+      ++count;
+    }
+  }
+  return count;
+}
+
+uint8_t CGameSlotsConfig::GetOccupiedTeamsCount() const
+{
+  std::bitset<MAX_SLOTS_MODERN> teams;
+  for (const auto& slot : slots) {
+    if (slot.GetSlotStatus() != SLOTSTATUS_OCCUPIED) continue;
+    if (slot.GetTeam() == observerSentinel) continue;
+    teams.set(slot.GetTeam());
+  }
+  return static_cast<uint8_t>(teams.count());
+}
+
+bool CGameSlotsConfig::GetHasAnyActiveTeam() const
+{
+  std::bitset<MAX_SLOTS_MODERN> usedTeams;
+  for (const auto& slot : slots) {
+    const uint8_t team = slot.GetTeam();
+    if (team == observerSentinel) continue;
+    if (slot.GetSlotStatus() == SLOTSTATUS_OCCUPIED) {
+      if (usedTeams.test(team)) {
+        return true;
+      } else {
+        usedTeams.set(team);
+      }
+    }
+  }
+  return false;
+}
+
+bool CGameSlotsConfig::GetIsObserver(const size_t SID) const
+{
+  return slots[SID].GetTeam() == observerSentinel;
+}
+
+bool CGameSlotsConfig::GetIsOpen(const size_t SID) const
+{
+  return slots[SID].GetSlotStatus() == SLOTSTATUS_OPEN;
+}
+
+bool CGameSlotsConfig::GetIsClosed(const size_t SID) const
+{
+  return slots[SID].GetSlotStatus() == SLOTSTATUS_CLOSED;
+}
+
+bool CGameSlotsConfig::GetIsOccupied(const size_t SID) const
+{
+  return slots[SID].GetSlotStatus() == SLOTSTATUS_OCCUPIED;
+}
+
+bool CGameSlotsConfig::GetIsComputer(const size_t SID) const
+{
+  return slots[SID].GetIsComputer();
+}

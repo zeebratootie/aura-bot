@@ -80,7 +80,7 @@ void CMDNS::Destroy(DNSServiceRef service)
 
 vector<uint8_t> CMDNS::GetGameBroadcastData(shared_ptr<const CGame> game, const string& gameName)
 {
-  uint8_t slotsOff = integer_cast_lossy<uint8_t>(game->GetNumSlots() == game->GetSlotsOpen() ? game->GetNumSlots() : game->GetSlotsOpen() + 1u);
+  uint8_t slotsOff = integer_cast_lossy<uint8_t>(game->GetNumSlots() == game->GetNumSlotsOpen() ? game->GetNumSlots() : game->GetNumSlotsOpen() + 1u);
   uint32_t slotsTotal = game->GetNumSlots();
   uint16_t hostPort = game->GetHostPortFromType(GAME_DISCOVERY_INTERFACE_IPV4);
 

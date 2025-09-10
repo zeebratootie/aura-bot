@@ -1704,21 +1704,21 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
 
       // copy the m_Users vector so we can sort by descending ping so it's easier to find players with high pings
 
-      vector<GameUser::CGameUser*> SortedPlayers = targetGame->m_Users;
+      vector<GameUser::CGameUser*> sortedPlayers = targetGame->m_Users;
       if (targetGame->GetGameLoaded()) {
-        sort(begin(SortedPlayers), end(SortedPlayers), &GameUser::SortUsersByKeepAlivesAscending);
+        sort(begin(sortedPlayers), end(sortedPlayers), &GameUser::SortUsersByKeepAlivesAscending);
       } else {
-        sort(begin(SortedPlayers), end(SortedPlayers), &GameUser::SortUsersByLatencyDescending);
+        sort(begin(sortedPlayers), end(sortedPlayers), &GameUser::SortUsersByLatencyDescending);
       }
       bool anyPing = false;
       vector<string> pingsText;
       uint32_t maxPing = 0;
-      for (auto i = begin(SortedPlayers); i != end(SortedPlayers); ++i) {
+      for (auto i = begin(sortedPlayers); i != end(sortedPlayers); ++i) {
         pingsText.push_back((*i)->GetDisplayName() + ": " + (*i)->GetDelayText(false));
-        uint32_t ping = (*i)->GetRTT();
-        if (ping == 0) continue; // also skips this iteration if there is no ping data
+        optional<uint32_t> ping = (*i)->GetRTT();
+        if (!ping.has_value()) continue;
         anyPing = true;
-        if (ping > maxPing) maxPing = ping;
+        if (*ping > maxPing) maxPing = *ping;
       }
 
       bool sendAll = GetGameSource().GetIsEmpty() || (GetIsGameUser() && GetGameUser()->GetCanUsePublicChat());
@@ -2749,7 +2749,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
         break;
       }
 
-      if (target.size() > targetGame->m_Slots.size()) {
+      if (target.size() > targetGame->GetNumSlots()) {
         ErrorReply("Unable to set mode (HCL) because it's too long - it must not exceed the amount of occupied game slots");
         break;
       }
@@ -5431,7 +5431,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
       }
 
       if (color >= targetGame->GetMinControllerInvalidColor()) {
-        ErrorReply("This map does not support modern colors. Please choose among the first 12 options.");
+        ErrorReply("This lobby does not support modern colors. Please choose among the first 12 options.");
         break;
       }
 
@@ -5699,7 +5699,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
         break;
       }
 
-      if (targetGame->GetSlot(SID)->GetSlotStatus() != SLOTSTATUS_OCCUPIED) {
+      if (targetGame->InspectSlot(SID)->GetSlotStatus() != SLOTSTATUS_OCCUPIED) {
         ErrorReply("Slot " + Args[0] + " is empty.");
         break;
       }
@@ -5709,7 +5709,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
           ErrorReply("This game does not have observers enabled.");
           break;
         }
-        if (targetGame->m_Slots[SID].GetIsComputer()) {
+        if (targetGame->m_SlotsConfig.GetIsComputer(SID)) {
           ErrorReply("Computer slots cannot be moved to observers team.");
           break;
         }
@@ -5774,11 +5774,11 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
         ErrorReply("This lobby does not allow observers.");
         break;
       }
-      if (targetGame->m_Slots[SID].GetSlotStatus() != SLOTSTATUS_OCCUPIED) {
+      if (!targetGame->m_SlotsConfig.GetIsOccupied(SID)) {
         ErrorReply("Slot " + target + " is empty.");
         break;
       }
-      if (targetGame->m_Slots[SID].GetIsComputer()) {
+      if (targetGame->m_SlotsConfig.GetIsComputer(SID)) {
         ErrorReply("Computer slots cannot be moved to observers team.");
         break;
       }

@@ -192,9 +192,9 @@ namespace GameUser
     CGameUser(std::shared_ptr<CGame> game, CConnection* connection, uint8_t nUID, const bool gameVersionIsExact, const Version& gameVersion, uint32_t nJoinedRealmInternalId, std::string nJoinedRealm, std::string_view nName, std::array<uint8_t, 4> nInternalIP, bool nReserved);
     ~CGameUser() final;
 
-    [[nodiscard]] uint32_t GetOperationalRTT() const;
-    [[nodiscard]] uint32_t GetDisplayRTT() const;
-    [[nodiscard]] uint32_t GetRTT() const;
+    [[nodiscard]] std::optional<uint32_t>         GetOperationalRTT() const;
+    [[nodiscard]] std::optional<uint32_t>         GetDisplayRTT() const;
+    [[nodiscard]] std::optional<uint32_t>         GetRTT() const;
     [[nodiscard]] std::string GetConnectionErrorString() const;
     [[nodiscard]] inline bool                     GetIsReady() const { return m_Ready; }
     [[nodiscard]] inline uint8_t                  GetSID() const { return m_SID; }

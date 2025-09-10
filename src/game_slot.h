@@ -77,23 +77,24 @@ public:
   CGameSlot(const uint8_t nType, const uint8_t nUID, const uint8_t nDownloadStatus, const uint8_t nSlotStatus, const uint8_t nComputer, const uint8_t nTeam, const uint8_t nColor, const uint8_t nRace, const uint8_t nComputerType = 1, const uint8_t nHandicap = 100);
   ~CGameSlot();
 
-  inline uint8_t              GetUID() const { return m_UID; }
-  inline uint8_t              GetDownloadStatus() const { return m_DownloadStatus; }
-  inline uint8_t              GetSlotStatus() const { return m_SlotStatus; }
-  inline uint8_t              GetComputer() const { return m_Computer; } // computer bit
-  inline uint8_t              GetTeam() const { return m_Team; }
-  inline uint8_t              GetColor() const { return m_Color; }
-  inline uint8_t              GetRace() const { return m_Race; }
-  inline uint8_t              GetRaceFixed() const { return m_Race & NOT_SLOTRACE_SELECTABLE; }
-  inline uint8_t              GetRaceSelectable() const { return (m_Race & SLOTRACE_SELECTABLE) ? SLOTRACE_RANDOM | SLOTRACE_SELECTABLE : m_Race; }
-  inline uint8_t              GetComputerType() const { return m_ComputerType; }
-  inline uint8_t              GetHandicap() const { return m_Handicap; }
-  inline uint8_t              GetType() const { return m_Type; }
-  inline bool                 GetIsPlayerOrFake() const { return m_SlotStatus == SLOTSTATUS_OCCUPIED && m_Computer == SLOTCOMP_NO; }
-  inline bool                 GetIsComputer() const { return m_SlotStatus == SLOTSTATUS_OCCUPIED && m_Computer == SLOTCOMP_YES; }
-  inline bool                 GetIsSelectable() const { return m_Type <= SLOTTYPE_USER; }
-  inline std::vector<uint8_t> GetProtocolArray() const { return std::vector<uint8_t>{m_UID, m_DownloadStatus, m_SlotStatus, m_Computer, m_Team, m_Color, m_Race, m_ComputerType, m_Handicap}; }
-  inline std::vector<uint8_t> GetByteArray() const { return std::vector<uint8_t>{m_UID, m_DownloadStatus, m_SlotStatus, m_Computer, m_Team, m_Color, m_Race, m_ComputerType, m_Handicap, m_Type}; }
+  [[nodiscard]] inline uint8_t              GetUID() const { return m_UID; }
+  [[nodiscard]] inline uint8_t              GetDownloadStatus() const { return m_DownloadStatus; }
+  [[nodiscard]] inline uint8_t              GetSlotStatus() const { return m_SlotStatus; }
+  [[nodiscard]] inline uint8_t              GetComputer() const { return m_Computer; } // computer bit
+  [[nodiscard]] inline uint8_t              GetTeam() const { return m_Team; }
+  [[nodiscard]] inline uint8_t              GetColor() const { return m_Color; }
+  [[nodiscard]] inline uint8_t              GetRace() const { return m_Race; }
+  [[nodiscard]] inline uint8_t              GetRaceFixed() const { return m_Race & NOT_SLOTRACE_SELECTABLE; }
+  [[nodiscard]] inline uint8_t              GetRaceSelectable() const { return (m_Race & SLOTRACE_SELECTABLE) ? SLOTRACE_RANDOM | SLOTRACE_SELECTABLE : m_Race; }
+  [[nodiscard]] inline uint8_t              GetComputerType() const { return m_ComputerType; }
+  [[nodiscard]] inline uint8_t              GetHandicap() const { return m_Handicap; }
+  [[nodiscard]] inline uint8_t              GetType() const { return m_Type; }
+  [[nodiscard]] inline bool                 GetIsPlayerOrFake() const { return m_SlotStatus == SLOTSTATUS_OCCUPIED && m_Computer == SLOTCOMP_NO; }
+  [[nodiscard]] inline bool                 GetIsComputer() const { return m_SlotStatus == SLOTSTATUS_OCCUPIED && m_Computer == SLOTCOMP_YES; }
+  [[nodiscard]] inline bool                 GetIsSelectable() const { return m_Type <= SLOTTYPE_USER; }
+  [[nodiscard]] inline std::vector<uint8_t> GetProtocolArray() const { return std::vector<uint8_t>{m_UID, m_DownloadStatus, m_SlotStatus, m_Computer, m_Team, m_Color, m_Race, m_ComputerType, m_Handicap}; }
+  [[nodiscard]] std::vector<uint8_t>        GetProtocolArray(const uint8_t sentinelObserverValue, const uint8_t actualObserverValue) const;
+  [[nodiscard]] inline std::vector<uint8_t> GetByteArray() const { return std::vector<uint8_t>{m_UID, m_DownloadStatus, m_SlotStatus, m_Computer, m_Team, m_Color, m_Race, m_ComputerType, m_Handicap, m_Type}; }
 
   inline void SetUID(uint8_t nUID) { m_UID = nUID; }
   inline void SetDownloadStatus(uint8_t nDownloadStatus) { m_DownloadStatus = nDownloadStatus; }
@@ -107,7 +108,51 @@ public:
   inline void SetType(uint8_t nType) { m_Type = nType; }
 };
 
-inline uint8_t ParseSID(const std::string& input)
+//
+// CGameSlotsConfig
+//
+
+class CGameSlotsConfig
+{
+  uint8_t layout;
+  uint8_t observerSentinel;
+
+public:
+  std::vector<CGameSlot> slots;
+
+  CGameSlotsConfig();
+  CGameSlotsConfig(uint8_t nLayout, uint8_t nObserverSentinel);
+  ~CGameSlotsConfig();  
+
+  [[nodiscard]] inline uint8_t GetLayout() const { return layout; }
+  [[nodiscard]] inline uint8_t GetObserverSentinel() const { return observerSentinel; }
+  inline void SetLayout(uint8_t nLayout) { layout = nLayout; }
+  inline void SetObserverSentinel(uint8_t nObserverSentinel) { observerSentinel = nObserverSentinel; }  
+
+  [[nodiscard]] inline std::vector<CGameSlot>& GetAll() { return slots; }
+  [[nodiscard]] inline const std::vector<CGameSlot>& InspectAll() const { return slots; }
+  [[nodiscard]] CGameSlot* GetSafe(const size_t SID) { return SID > slots.size() ? nullptr : &(slots[SID]); }
+  [[nodiscard]] const CGameSlot* InspectSafe(const size_t SID) const { return SID > slots.size() ? nullptr : &(slots[SID]); }
+  [[nodiscard]] CGameSlot& Get(const size_t SID) { return slots[SID]; }
+  [[nodiscard]] const CGameSlot& Inspect(const size_t SID) const { return slots[SID]; }
+  [[nodiscard]] inline size_t GetCount() const { return slots.size(); }
+
+  [[nodiscard]] uint8_t GetOccupiedCount() const;
+  [[nodiscard]] uint8_t GetOpenCount() const;
+  [[nodiscard]] bool GetIsAnyOpen() const;
+  [[nodiscard]] uint8_t GetOccupiedControllersCount() const;
+  [[nodiscard]] uint8_t GetComputersCount() const;
+  [[nodiscard]] uint8_t GetOccupiedTeamsCount() const;
+  [[nodiscard]] bool GetHasAnyActiveTeam() const;
+
+  [[nodiscard]] bool GetIsObserver(const size_t SID) const;
+  [[nodiscard]] bool GetIsOpen(const size_t SID) const;
+  [[nodiscard]] bool GetIsClosed(const size_t SID) const;
+  [[nodiscard]] bool GetIsOccupied(const size_t SID) const;
+  [[nodiscard]] bool GetIsComputer(const size_t SID) const;
+};
+
+[[nodiscard]] inline uint8_t ParseSID(const std::string& input)
 {
   int32_t SID = 0xFF;
   if (input.length() > 2) {
@@ -123,7 +168,7 @@ inline uint8_t ParseSID(const std::string& input)
   return signed_cast_lossy<uint8_t>(SID - 1);
 }
 
-inline uint8_t ParseComputerSkill(const std::string& skill)
+[[nodiscard]] inline uint8_t ParseComputerSkill(const std::string& skill)
 {
   std::string inputLower = skill;
   std::transform(std::begin(inputLower), std::end(inputLower), std::begin(inputLower), [](unsigned char c) {
@@ -146,7 +191,7 @@ inline uint8_t ParseComputerSkill(const std::string& skill)
   }
 }
 
-inline uint8_t ParseRace(const std::string& race)
+[[nodiscard]] inline uint8_t ParseRace(const std::string& race)
 {
   std::string inputLower = race;
   std::transform(std::begin(inputLower), std::end(inputLower), std::begin(inputLower), [](unsigned char c) {
@@ -174,7 +219,7 @@ inline uint8_t ParseRace(const std::string& race)
   }
 }
 
-inline uint8_t ParseColor(const std::string& color)
+[[nodiscard]] inline uint8_t ParseColor(const std::string& color)
 {
   std::string inputLower = color;
   std::transform(std::begin(inputLower), std::end(inputLower), std::begin(inputLower), [](unsigned char c) {
@@ -238,7 +283,7 @@ inline uint8_t ParseColor(const std::string& color)
   }
 }
 
-inline std::string GetRaceName(const uint8_t race) {
+[[nodiscard]] inline std::string GetRaceName(const uint8_t race) {
   switch (race) {
   case SLOTRACE_HUMAN:
     return "Human";
@@ -255,7 +300,7 @@ inline std::string GetRaceName(const uint8_t race) {
   }
 }
 
-inline std::string GetColorName(const uint8_t color)
+[[nodiscard]] inline std::string GetColorName(const uint8_t color)
 {
   switch (color) {
     case 0:
@@ -310,6 +355,30 @@ inline std::string GetColorName(const uint8_t color)
       return "ObserverDoNotUse";
     default:
       return "Unknown";
+  }
+}
+
+[[nodiscard]] inline Version Get24PlayersMinGameVersion()
+{
+  return GAMEVER(1u, 29u);
+}
+
+[[nodiscard]] inline bool GetIs24PlayersGameVersion(const Version& version)
+{
+  return version >= Get24PlayersMinGameVersion();
+}
+
+[[nodiscard]] inline bool GetAreSameSlotProtocolGameVersions(const Version& a, const Version& b)
+{
+  return GetIs24PlayersGameVersion(a) == GetIs24PlayersGameVersion(b);
+}
+
+[[nodiscard]] inline uint8_t GetMaxPlayersForGameVersion(const Version& version)
+{
+  if (GetIs24PlayersGameVersion(version)) {
+    return integer_cast_lossy<uint8_t>(MAX_SLOTS_MODERN);
+  } else {
+    return integer_cast_lossy<uint8_t>(MAX_SLOTS_LEGACY);
   }
 }
 

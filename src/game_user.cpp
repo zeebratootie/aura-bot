@@ -216,10 +216,10 @@ CGameUser::~CGameUser()
   }
 }
 
-uint32_t CGameUser::GetOperationalRTT() const
+optional<uint32_t> CGameUser::GetOperationalRTT() const
 {
   if (m_MeasuredRTT.has_value()) {
-    return m_MeasuredRTT.value().second;
+    return {m_MeasuredRTT.value().second};
   }
 
   // weighted average of stored pings (max 6 stored = 25-30 seconds)
@@ -240,23 +240,25 @@ uint32_t CGameUser::GetOperationalRTT() const
   }
 
   if (totalWeight == 0) {
-    return 0;
+    return nullopt;
   }
 
-  return weightedSum / totalWeight;
+  return {weightedSum / totalWeight};
 }
 
-uint32_t CGameUser::GetDisplayRTT() const
+optional<uint32_t> CGameUser::GetDisplayRTT() const
 {
   return GetOperationalRTT();
 }
 
-uint32_t CGameUser::GetRTT() const
+optional<uint32_t> CGameUser::GetRTT() const
 {
+  optional<uint32_t> maybeRTT = GetOperationalRTT();
   if (m_Game.get().m_Aura->m_Net.m_Config.m_LiteralRTT) {
-    return GetOperationalRTT();
+    return maybeRTT;
   }
-  return GetOperationalRTT() * 2;
+  maybeRTT = maybeRTT.value() * 2;
+  return maybeRTT;
 }
 
 bool CGameUser::GetIsDownloading() const
@@ -1079,15 +1081,15 @@ string CGameUser::GetDelayText(bool displaySync) const
   string pingText, syncText;
   // Note: When someone is lagging, we actually clear their ping data.
   const bool anyPings = GetIsRTTMeasured();
-  if (!anyPings) {
+  optional<uint32_t> rtt = GetOperationalRTT();
+  if (!anyPings || !rtt.has_value()) {
     pingText = "?";
   } else {
-    uint32_t rtt = GetOperationalRTT();
     uint32_t equalizerDelay = GetPingEqualizerDelay();
     if (GetIsRTTMeasuredConsistent()) {
-      pingText = to_string(rtt);
+      pingText = to_string(rtt.value());
     } else {
-      pingText = Concat("*", to_string(rtt));
+      pingText = Concat("*", to_string(rtt.value()));
     }
     if (equalizerDelay > 0) {
       if (!m_Game.get().m_Aura->m_Net.m_Config.m_LiteralRTT) equalizerDelay /= 2;
@@ -1103,7 +1105,7 @@ string CGameUser::GetDelayText(bool displaySync) const
   if (m_SyncCounterOffset == 0) {
     // Expect clients to always be at least one RTT behind.
     // The "sync delay" is defined as the additional delay they got.
-    syncDelay -= static_cast<float>(GetRTT() + GetPingEqualizerDelay());
+    syncDelay -= static_cast<float>(GetRTT().value_or(0) + GetPingEqualizerDelay());
   }
 
   if (!anyPings) {

@@ -307,4 +307,3 @@ void GameDiscoveryInterface::AddMDNS(CAura* nAura, const CGame* game, const Vers
 {
   SetMDNS(version, make_shared<CMDNS>(nAura, game, type, port, version));
 }
-

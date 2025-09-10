@@ -108,7 +108,7 @@ public:
   [[nodiscard]] std::string_view GetMapPath( )                             { return m_MapPath; }
   [[nodiscard]] const std::vector<uint8_t>& GetMapScriptsBlizzHash( )                     { return m_MapScriptsBlizzHash; }
   [[nodiscard]] uint32_t GetSlotsTotal( )                             { return m_SlotsTotal; }
-  [[nodiscard]] uint32_t GetSlotsOpen( )                              { return m_SlotsOpen; }
+  [[nodiscard]] uint32_t GetNumSlotsOpen( )                              { return m_SlotsOpen; }
   [[nodiscard]] const std::array<uint8_t, 4>& GetIP( )                         { return m_IP; }
   [[nodiscard]] uint16_t GetPort( )                                   { return m_Port; }
   [[nodiscard]] uint32_t GetHostCounter( )                            { return m_HostCounter; }

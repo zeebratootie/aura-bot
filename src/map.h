@@ -509,7 +509,7 @@ public:
   [[nodiscard]] inline bool                       GetModernColorsEnabled() const { return m_EnableModernColors; }
   [[nodiscard]] inline bool                       GetModernTeamsEnabled() const { return m_EnableModernTeams; }
   [[nodiscard]] inline std::vector<CGameSlot>     GetSlots() const { return m_Slots; }
-  [[nodiscard]] inline const std::vector<CGameSlot>&     InspectSlots() const { return m_Slots; }
+  [[nodiscard]] inline const std::vector<CGameSlot>&     InspectAll() const { return m_Slots; }
   [[nodiscard]] inline const std::vector<std::pair<std::string, std::string>>&   GetInitCommands() const { return m_InitCommands; }
   [[nodiscard]] uint8_t                           GetLobbyRace(const CGameSlot* slot) const;
   [[nodiscard]] bool                              GetUseStandardPaths() const { return m_UseStandardPaths; }
@@ -700,16 +700,6 @@ public:
     cursor += 0x400;
   }
   return checksum;
-}
-
-[[nodiscard]] inline Version Get24PlayersMinGameVersion()
-{
-  return GAMEVER(1u, 29u);
-}
-
-[[nodiscard]] inline bool GetIs24PlayersGameVersion(const Version& version)
-{
-  return version >= Get24PlayersMinGameVersion();
 }
 
 #undef ROTL

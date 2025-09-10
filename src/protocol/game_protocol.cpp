@@ -527,19 +527,19 @@ namespace GameProtocol
     return packet;
   }
 
-  std::vector<uint8_t> SEND_W3GS_SLOTINFOJOIN(uint8_t UID, const std::array<uint8_t, 2>& port, const std::array<uint8_t, 4>& externalIP, const vector<CGameSlot>& slots, uint32_t randomSeed, uint8_t layoutStyle, uint8_t playerSlots)
+  std::vector<uint8_t> SEND_W3GS_SLOTINFOJOIN(uint8_t UID, const std::array<uint8_t, 2>& port, const std::array<uint8_t, 4>& externalIP, const CGameSlotsConfig& slotConfig, uint32_t randomSeed, uint8_t maxControllers, const Version& version)
   {
     // NOTE: UID must not be 0
     std::vector<uint8_t> packet;
 
     const uint8_t              Zeros[]  = {0, 0, 0, 0};
-    const std::vector<uint8_t> SlotInfo = EncodeSlotInfo(slots, randomSeed, layoutStyle, playerSlots);
-    packet.push_back(GameProtocol::Magic::W3GS_HEADER);                    // W3GS header constant
+    const std::vector<uint8_t> SlotInfo = EncodeSlotInfo(slotConfig, randomSeed, maxControllers, version);
+    packet.push_back(GameProtocol::Magic::W3GS_HEADER);        // W3GS header constant
     packet.push_back(GameProtocol::Magic::SLOTINFOJOIN);       // W3GS_SLOTINFOJOIN
     packet.push_back(0);                                       // packet length will be assigned later
     packet.push_back(0);                                       // packet length will be assigned later
     AppendNumberLE(packet, static_cast<uint16_t>(SlotInfo.size())); // SlotInfo length
-    AppendContainer(packet, SlotInfo);                     // SlotInfo
+    AppendContainer(packet, SlotInfo);                         // SlotInfo
     packet.push_back(UID);                                     // UID
     packet.push_back(2);                                       // AF_INET
     packet.push_back(0);                                       // AF_INET continued...
@@ -633,13 +633,13 @@ namespace GameProtocol
     return std::vector<uint8_t>();
   }
 
-  std::vector<uint8_t> SEND_W3GS_SLOTINFO(const vector<CGameSlot>& slots, uint32_t randomSeed, uint8_t layoutStyle, uint8_t playerSlots)
+  std::vector<uint8_t> SEND_W3GS_SLOTINFO(const CGameSlotsConfig& slotConfig, uint32_t randomSeed, uint8_t maxControllers, const Version& version)
   {
-    const std::vector<uint8_t> SlotInfo     = EncodeSlotInfo(slots, randomSeed, layoutStyle, playerSlots);
+    const std::vector<uint8_t> SlotInfo     = EncodeSlotInfo(slotConfig, randomSeed, maxControllers, version);
     const uint16_t             SlotInfoSize = static_cast<uint16_t>(SlotInfo.size());
 
     std::vector<uint8_t> packet = {GameProtocol::Magic::W3GS_HEADER, GameProtocol::Magic::SLOTINFO, 0, 0};
-    AppendNumberLE(packet, SlotInfoSize); // SlotInfo length
+    AppendNumberLE(packet, SlotInfoSize);     // SlotInfo length
     AppendContainer(packet, SlotInfo);        // SlotInfo
     AssignLength(packet);
     return packet;
@@ -1083,14 +1083,14 @@ namespace GameProtocol
     const uint8_t virtualHostUID = 1;
     const uint8_t joinedPlayerUID = 2;
     Version version = GAMEVER(1u, 0u);
-    vector<CGameSlot> slots;
-    slots.emplace_back(SLOTTYPE_USER, virtualHostUID, SLOTPROG_RST, SLOTSTATUS_OCCUPIED, SLOTCOMP_NO, static_cast<uint8_t>(0u), static_cast<uint8_t>(0u), SLOTRACE_RANDOM);
-    slots.emplace_back(SLOTTYPE_USER, joinedPlayerUID, SLOTPROG_RST, SLOTSTATUS_OCCUPIED, SLOTCOMP_NO, static_cast<uint8_t>(1u), static_cast<uint8_t>(1u), SLOTRACE_RANDOM);
+    CGameSlotsConfig slotConfig(MAPLAYOUT_FIXED_PLAYERS, MAX_SLOTS_LEGACY); // FIXME(TODO): hardcoded MAX_SLOTS_LEGACY
+    slotConfig.slots.emplace_back(SLOTTYPE_USER, virtualHostUID, SLOTPROG_RST, SLOTSTATUS_OCCUPIED, SLOTCOMP_NO, static_cast<uint8_t>(0u), static_cast<uint8_t>(0u), SLOTRACE_RANDOM);
+    slotConfig.slots.emplace_back(SLOTTYPE_USER, joinedPlayerUID, SLOTPROG_RST, SLOTSTATUS_OCCUPIED, SLOTCOMP_NO, static_cast<uint8_t>(1u), static_cast<uint8_t>(1u), SLOTRACE_RANDOM);
 
     PacketWrapper packetWrapper;
     packetWrapper.count = 2;
     AppendContainer(packetWrapper.data,
-      GameProtocol::SEND_W3GS_SLOTINFOJOIN(joinedPlayerUID, playerPort, playerIP, slots, 0, MAPLAYOUT_FIXED_PLAYERS, 2)
+      GameProtocol::SEND_W3GS_SLOTINFOJOIN(joinedPlayerUID, playerPort, playerIP, slotConfig, 0 /* seed */, 2 /* player count */, version)
     );
     AppendContainer(
       packetWrapper.data, GameProtocol::SEND_W3GS_PLAYERINFO_EXCLUDE_IP(version, virtualHostUID, " ")
@@ -1132,19 +1132,21 @@ namespace GameProtocol
   // OTHER FUNCTIONS //
   /////////////////////
 
-  std::vector<uint8_t> EncodeSlotInfo(const vector<CGameSlot>& slots, uint32_t randomSeed, uint8_t layoutStyle, uint8_t playerSlots)
+  std::vector<uint8_t> EncodeSlotInfo(const CGameSlotsConfig& slotConfig, uint32_t randomSeed, uint8_t maxControllers, const Version& version)
   {
+    size_t slotCount = slotConfig.GetCount();
     std::vector<uint8_t> slotInfo;
-    slotInfo.reserve(7 + 9 * slots.size());
-    slotInfo.push_back(static_cast<uint8_t>(slots.size())); // number of slots
+    slotInfo.reserve(7 + 9 * slotCount);
+    slotInfo.push_back(static_cast<uint8_t>(slotCount));
+    uint8_t maxPlayersForGameVersion = GetMaxPlayersForGameVersion(version);
 
-    for (auto& slot : slots) {
-      AppendContainer(slotInfo, slot.GetProtocolArray());
+    for (auto& slot : slotConfig.slots) {
+      AppendContainer(slotInfo, slot.GetProtocolArray(slotConfig.GetObserverSentinel(), maxPlayersForGameVersion));
     }
 
-    AppendNumberLE(slotInfo, randomSeed); // random seed
-    slotInfo.push_back(layoutStyle);              // LayoutStyle (0 = melee, 1 = custom forces, 3 = custom forces + fixed player settings)
-    slotInfo.push_back(playerSlots);              // number of player slots (non observer)
+    AppendNumberLE(slotInfo, randomSeed);         // random seed
+    slotInfo.push_back(slotConfig.GetLayout());   // LayoutStyle (0 = melee, 1 = custom forces, 3 = custom forces + fixed player settings)
+    slotInfo.push_back(maxControllers);           // max controller slots supported by the map
     return slotInfo;
   }
 

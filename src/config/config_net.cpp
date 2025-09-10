@@ -138,8 +138,10 @@ CNetConfig::CNetConfig(CConfig& CFG)
   m_VLANEnabled                  = CFG.GetBool("net.tcp_extensions.gproxy.vlan.enabled", false);
   m_VLANPort                     = CFG.GetUint16("net.tcp_extensions.gproxy.vlan.port", onlyHostPort.value_or(6112u));
 
+  // These are actually stored in int64_t
   m_ReconnectWaitTicks           = CFG.GetUint16("net.tcp_extensions.gproxy.reconnect_wait", 5);
   m_ReconnectWaitTicksLegacy     = CFG.GetUint16("net.tcp_extensions.gproxy_legacy.reconnect_wait", 3);
+  if (m_ReconnectWaitTicksLegacy > 9) m_ReconnectWaitTicksLegacy = 9;
 
   m_ReconnectWaitTicks = 60000 * m_ReconnectWaitTicks;
   m_ReconnectWaitTicksLegacy = 60000 * m_ReconnectWaitTicksLegacy;

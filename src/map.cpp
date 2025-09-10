@@ -120,7 +120,7 @@ CMap::CMap(CAura* nAura, CConfig* CFG)
       m_GameLocaleMod = CFG->GetEnumSensitive<W3ModLocale>("map.locale.mod", TO_ARRAY("enUS", "deDE", "esES", "esMX", "frFR", "itIT", "koKR", "plPL", "ptBR", "ruRU", "zhCN", "zhTW"), W3ModLocale::kENUS);
       deductedLangId = CMap::GetLocaleInt(m_GameLocaleMod.value());
     } else {
-      PRINT_IF(LogLevel::kDebug, "[MAP] " + CFG->GetKeyValue("map.locale.mod") + " not supported - game version >= v1.30 is required");
+      DPRINT_IF(LogLevel::kTrace, "[MAP] " + CFG->GetKeyValue("map.locale.mod") + " ignored - not targetting v1.30+");
     }
   }
 

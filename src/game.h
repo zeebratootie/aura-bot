@@ -95,7 +95,7 @@ protected:
   Dota::CDotaStats*                                      m_DotaStats;                     // class to keep track of game stats such as kills/deaths/assists in dota
   CGameInteractiveHost*                                  m_GameInteractiveHost;
   std::shared_ptr<CSaveGame>                             m_RestoredGame;
-  std::vector<CGameSlot>                                 m_Slots;                         // std::vector of slots
+  CGameSlotsConfig                                       m_SlotsConfig;                         // std::vector of slots
   std::vector<CGameController*>                          m_GameControllers;               // std::vector of potential gameuser data for the database
   UserList                                               m_Users;                         // std::vector of players
   CircleDoubleLinkedList<CQueuedActionsFrame>            m_Actions;                       // actions to be sent
@@ -296,7 +296,7 @@ public:
   std::string                                            GetCreationCounterText(std::shared_ptr<const CRealm> realm) const;
   std::string                                            GetNextCreationCounterText(std::shared_ptr<const CRealm> realm) const;
   inline uint64_t                                        GetGameID() const { return m_PersistentId; }
-  inline uint8_t                                         GetNumSlots() const { return integer_cast_lossy<uint8_t>(m_Slots.size()); }
+  inline uint8_t                                         GetNumSlots() const { return integer_cast_lossy<uint8_t>(m_SlotsConfig.GetCount()); }
   std::string                                            GetIndexHostName() const;
   std::string                                            GetLobbyVirtualHostName() const;
   std::string                                            GetCustomGameNameTemplate(std::shared_ptr<const CRealm> realm = nullptr, bool forceLobby = false) const;
@@ -359,19 +359,24 @@ public:
   inline bool                                            GetIsPaused() const { return m_IsPaused; }
   inline bool                                            GetIsGameOver() const { return m_GameOver != GAME_ONGOING; }
   inline bool                                            GetIsGameOverTrusted() const { return m_GameOver == GAME_OVER_TRUSTED; }
-  uint8_t                                                GetLayout() const;
+  uint8_t                                                CalcSlotsLayout() const;
   uint8_t                                                GetCustomLayout() const { return m_CustomLayout; }
   bool                                                   GetIsCustomForces() const;
 
   template <int64_t factor>
   void                                                   UpdateSelectBlockTime(int64_t& blockTime) const;
 
+  uint8_t                                                CalcObserverTeam() const;
+  uint8_t                                                CalcObserverColor() const;
   uint8_t                                                GetObserverTeam() const;
   uint8_t                                                GetObserverColor() const;
   uint8_t                                                GetMinControllerInvalidColor() const;
-  uint32_t                                               GetSlotsOccupied() const;
-  uint32_t                                               GetSlotsOpen() const;
+  uint32_t                                               GetNumSlotsOccupied() const;
+  uint32_t                                               GetNumSlotsOpen() const;
   bool                                                   HasSlotsOpen() const;
+  bool                                                   GetArePlayersSameVersion() const;
+  bool                                                   GetArePlayersSameVersionRange() const;
+  bool                                                   GetArePlayersSameSlotsProtocol() const;
   bool                                                   GetIsSinglePlayerMode() const;
   bool                                                   GetHasAnyFullObservers() const;
   bool                                                   GetHasChatSendHost() const;
@@ -388,7 +393,6 @@ public:
   uint8_t                                                GetNumFakePlayers() const;
   uint8_t                                                GetNumFakeObservers() const;
   size_t                                                 GetNumSpectators() const;
-  uint8_t                                                GetNumOccupiedSlots() const;
   uint8_t                                                GetNumPotentialControllers() const;
   uint8_t                                                GetNumControllers() const;
   uint8_t                                                GetNumComputers() const;
@@ -411,7 +415,10 @@ public:
   std::string                                            GetCategory() const;
   uint32_t                                               GetGameType() const;
   inline uint32_t                                        GetGameFlags() const { return m_GameFlags; }
-  uint32_t                                               CalcGameFlags() const;
+  void                                                   InitGameVersions();
+  void                                                   InitGameFlags();
+  void                                                   InitHCL(std::shared_ptr<const CGameSetup> nGameSetup);
+  void                                                   InitAutoStart(std::shared_ptr<const CGameSetup> nGameSetup);
   std::string_view                                       GetSourceFilePath() const;
   std::array<uint8_t, 4>                                 GetSourceFileHashBlizz(const Version& version) const;
   std::array<uint8_t, 20>                                GetMapSHA1(const Version& version) const;
@@ -494,8 +501,16 @@ public:
 
   void                                                   Send(CConnection* player, const std::vector<uint8_t>& data) const;
   void                                                   Send(uint8_t UID, const std::vector<uint8_t>& data) const;
+
   void                                                   SendAll(const std::vector<uint8_t>& data) const;
   void                                                   SendAllConnected(const std::vector<uint8_t>& data) const;
+
+  void SendAllVariant(
+    LazyVariantBytesStorage store,
+    const std::function<bool(const GameUser::CGameUser*)>& choicePredicateIsFirst,
+    const std::function<std::vector<uint8_t>(const GameUser::CGameUser*)>& buildFirst,
+    const std::function<std::vector<uint8_t>(const GameUser::CGameUser*)>& buildSecond
+  ) const;
  
   // functions to send lobby chat to players
   // lobby chat is sent instantly
