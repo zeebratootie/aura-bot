@@ -659,6 +659,21 @@ Map
 - Type: uint32
 - Error handling: Use default value
 
+## \`map.slot_constraints.modern_colors.allowed\`
+- Type: bool
+- Default value: Empty
+- Error handling: Use default value
+
+## \`map.slot_constraints.modern_players.allowed\`
+- Type: bool
+- Default value: Empty
+- Error handling: Use default value
+
+## \`map.slot_constraints.modern_teams.allowed\`
+- Type: bool
+- Default value: Empty
+- Error handling: Use default value
+
 ## \`map.speed\`
 - Type: enum\<gamespeed\>
 - Default value: GameSpeed::kFast

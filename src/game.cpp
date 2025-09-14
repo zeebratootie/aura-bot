@@ -1057,7 +1057,7 @@ bool CGame::GetArePlayersSameVersion() const
       return false;
     }
   }
-  return false;
+  return true;
 }
 
 bool CGame::GetArePlayersSameVersionRange() const
@@ -1069,7 +1069,7 @@ bool CGame::GetArePlayersSameVersionRange() const
       return false;
     }
   }
-  return false;
+  return true;
 }
 
 bool CGame::GetArePlayersSameSlotsProtocol() const
@@ -1081,7 +1081,7 @@ bool CGame::GetArePlayersSameSlotsProtocol() const
       return false;
     }
   }
-  return false;
+  return true;
 }
 
 bool CGame::GetIsSinglePlayerMode() const

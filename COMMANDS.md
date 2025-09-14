@@ -76,6 +76,7 @@ Commands
 ## \`closeall\`
 
 ## \`color\`
+- Aliases: colour
 - Syntax: color \<PLAYER\> , \<COLOR\> - Color goes from 1 to 12
 
 ## \`comp\`
