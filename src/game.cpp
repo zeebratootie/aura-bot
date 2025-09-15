@@ -1854,17 +1854,18 @@ void CGame::UpdateLoadedOrLoadInGame()
     for (const CTargetedInGameChatMessage& chatMessage : m_PendingChatMessages) {
       GameProtocol::PacketWrapper packetWrapper = chatMessage.GetPacket();
       for (const uint8_t targetUID : chatMessage.GetToUIDs()) {
-        GameUser::CGameUser* targetUser = GetUserFromUID(targetUID);
-        if (!targetUser) continue;
-        if (targetUser->GetFinishedLoading()) {
-          targetUser->Send(packetWrapper);
-        } else {
-          targetUser->m_OnLoadChatMessages.Push(move(packetWrapper));
-        }
         if (m_JoinInProgressVirtualUser.has_value() && targetUID == m_JoinInProgressVirtualUser->GetUID()) {
           if (m_BufferingEnabled & BUFFERING_ENABLED_PLAYING) {
             GameFrame& frame = m_GameHistory->m_PlayingBuffer.emplace_back(GAME_FRAME_TYPE_CHAT_PUBLIC);
             frame.m_Bytes = vector<uint8_t>(begin(packetWrapper.data), begin(packetWrapper.data) + static_cast<ptrdiff_t>(packetWrapper.data.size()));
+          }
+        } else {
+          GameUser::CGameUser* targetUser = GetUserFromUID(targetUID);
+          if (!targetUser) continue;
+          if (targetUser->GetFinishedLoading()) {
+            targetUser->Send(packetWrapper);
+          } else {
+            targetUser->m_OnLoadChatMessages.Push(move(packetWrapper));
           }
         }
       }
