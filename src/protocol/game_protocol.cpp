@@ -1083,7 +1083,7 @@ namespace GameProtocol
     const uint8_t virtualHostUID = 1;
     const uint8_t joinedPlayerUID = 2;
     Version version = GAMEVER(1u, 0u);
-    CGameSlotsConfig slotConfig(MAPLAYOUT_FIXED_PLAYERS, MAX_SLOTS_LEGACY); // FIXME(TODO): hardcoded MAX_SLOTS_LEGACY
+    CGameSlotsConfig slotConfig(MAPLAYOUT_FIXED_PLAYERS, MAX_SLOTS_LEGACY);
     slotConfig.slots.emplace_back(SLOTTYPE_USER, virtualHostUID, SLOTPROG_RST, SLOTSTATUS_OCCUPIED, SLOTCOMP_NO, static_cast<uint8_t>(0u), static_cast<uint8_t>(0u), SLOTRACE_RANDOM);
     slotConfig.slots.emplace_back(SLOTTYPE_USER, joinedPlayerUID, SLOTPROG_RST, SLOTSTATUS_OCCUPIED, SLOTCOMP_NO, static_cast<uint8_t>(1u), static_cast<uint8_t>(1u), SLOTRACE_RANDOM);
 
