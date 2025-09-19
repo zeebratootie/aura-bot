@@ -570,7 +570,7 @@ bool CAsyncObserver::CheckClientGameState()
 void CAsyncObserver::UpdateDownloadProgression(const uint8_t downloadProgression)
 {
   if (m_Game.expired()) return;
-  vector<uint8_t> slotInfo = m_Game.lock()->GetSlotInfo();
+  vector<uint8_t> slotInfo = m_Game.lock()->GetSlotInfo(this);
   constexpr static size_t fixedOffset = (
     2 /* W3GS type headers */ +
     2 /* W3GS packet byte size */ +

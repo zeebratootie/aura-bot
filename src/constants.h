@@ -62,6 +62,12 @@ enum class NullTerminatorPolicy : bool
   kOptional = false,
 };
 
+enum class GameSlotsProtocolVersion : bool
+{
+  k24 = true,
+  k12 = false,
+};
+
 constexpr uint8_t BYTE_ZERO = 0u;
 constexpr uint8_t BYTE_ONE = 1u;
 constexpr uint8_t TINY_ZERO = 0u;

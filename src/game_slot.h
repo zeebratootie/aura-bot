@@ -363,6 +363,11 @@ public:
   return GAMEVER(1u, 29u);
 }
 
+[[nodiscard]] inline GameSlotsProtocolVersion GetSlotsProtocolVersion(const Version& version)
+{
+  return version >= Get24PlayersMinGameVersion() ? GameSlotsProtocolVersion::k24 : GameSlotsProtocolVersion::k12;
+}
+
 [[nodiscard]] inline bool GetIs24PlayersGameVersion(const Version& version)
 {
   return version >= Get24PlayersMinGameVersion();

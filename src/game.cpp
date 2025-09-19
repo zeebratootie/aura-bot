@@ -2279,12 +2279,12 @@ void CGame::SendAll(const std::vector<uint8_t>& data) const
 }
 
 void CGame::SendAllVariant(
-  LazyVariantBytesStorage store,
   const function<bool(const GameUser::CGameUser*)>& choicePredicateIsFirst,
   const function<vector<uint8_t>(const GameUser::CGameUser*)>& buildFirst,
   const function<vector<uint8_t>(const GameUser::CGameUser*)>& buildSecond
 ) const
 {
+  LazyVariantBytesStorage store;
   for (auto& user : m_Users) {
     if (choicePredicateIsFirst(user)) {
       if (!store.first.has_value()) {
@@ -2301,11 +2301,11 @@ void CGame::SendAllVariant(
 }
 
 void CGame::SendAllVariant(
-  LazyVariantBytesStorage store,
   const function<bool(const GameUser::CGameUser*)>& choicePredicate,
   const function<vector<uint8_t>(const GameUser::CGameUser*)>& dataGenerator
 ) const
 {
+  LazyVariantBytesStorage store;
   for (auto& user : m_Users) {
     if (choicePredicate(user)) {
       if (!store.first.has_value()) {
@@ -2573,14 +2573,14 @@ void CGame::UpdateReadyCounters()
   }
 }
 
-vector<uint8_t> CGame::GetSlotInfo() const
-{
-  return GameProtocol::SEND_W3GS_SLOTINFO(m_SlotsConfig, m_RandomSeed, m_Map->GetMapNumControllers(), GetVersion());
-}
-
 vector<uint8_t> CGame::GetSlotInfo(const GameUser::CGameUser* user) const
 {
   return GameProtocol::SEND_W3GS_SLOTINFO(m_SlotsConfig, m_RandomSeed, m_Map->GetMapNumControllers(), user->GetGameVersion());
+}
+
+vector<uint8_t> CGame::GetSlotInfo(const CAsyncObserver* observer) const
+{
+  return GameProtocol::SEND_W3GS_SLOTINFO(m_SlotsConfig, m_RandomSeed, m_Map->GetMapNumControllers(), observer->GetGameVersion());
 }
 
 vector<uint8_t> CGame::GetHandicaps() const
@@ -2598,9 +2598,7 @@ void CGame::SendAllSlotInfo()
     return;
 
   if (!m_Users.empty()) {
-    LazyVariantBytesStorage store;
     SendAllVariant(
-      store,
       [this](const GameUser::CGameUser* user) {
         return GetAreSameSlotProtocolGameVersions(user->GetGameVersion(), GetVersion());
       },
@@ -5666,6 +5664,9 @@ void CGame::JoinObserver(CConnection* connection, const CIncomingJoinRequest& jo
   string realmHostName;
   if (fromRealm) realmHostName = fromRealm->GetServer();
   LOG_APP_IF(LogLevel::kInfo, Concat("spectator joined [", joinRequest.GetName(), "@", realmHostName, "#", to_string(observer->GetUID()), "] ", observer->GetGameVersionString() , " from [", observer->GetIPString(), "]"));
+  if (!GetAreSameSlotProtocolGameVersions(observer->GetGameVersion(), GetVersion())) {
+    LOG_APP_IF(LogLevel::kDebug, Concat("spectator ", SanitizeWrapUTF8(joinRequest.GetName()), " joined v", ToVersionString(GetVersion()), " game using compatibility mode"));
+  }
 }
 
 void CGame::EventObserverMapSize(CAsyncObserver* user, const CIncomingMapFileSize& clientMap)
@@ -7409,6 +7410,9 @@ void CGame::EventGameLoaded()
     if (GetArePlayersSameVersion()) {
       m_LoadedVersion = m_Users[0]->GetGameVersion();
     }
+    if (GetArePlayersSameSlotsProtocol()) {
+      m_LoadedSlotsProtocol = GetSlotsProtocolVersion(m_Users[0]->GetGameVersion());
+    }
   }
 
   // send shortest, longest, and personal load times to each user
@@ -7686,6 +7690,7 @@ void CGame::Remake()
   m_Remaking = false;
   m_Remade = true;
   m_LoadedVersion.reset();
+  m_LoadedSlotsProtocol.reset();
   m_IsSinglePlayer = false;
   m_Rated = false;
   m_HMCEnabled = false;
@@ -10699,7 +10704,12 @@ bool CGame::GetIsSupportedGameVersion(const Version& version) const
   if (m_GameLoaded) {
     switch (m_Config.m_CrossPlayMode) {
       case CrossPlayMode::kForce:
+        break;
       case CrossPlayMode::kOptimistic:
+        if (!m_LoadedSlotsProtocol.has_value() || m_LoadedSlotsProtocol.value() != GetSlotsProtocolVersion(version)) {
+          // Different slots will cause insta-desync otherwise
+          return false;
+        }
         break;
       default:
         if (!m_LoadedVersion.has_value() || m_LoadedVersion.value() != version) {
@@ -11066,7 +11076,7 @@ bool CGame::GetIsStageAcceptingJoins() const
   // we only want to broadcast if the countdown hasn't started (or if the game has loaded and join-in-progress is enabled)
   if (!m_CountDownStarted) return true;
   if (!m_GameLoaded) return false;
-  if (!m_LoadedVersion.has_value()) return false;
+  if (!m_LoadedSlotsProtocol.has_value()) return false;
   //if (m_GameHistory->GetSoftDesynchronizedSameVersion()) return false;
   return m_Config.m_EnableJoinObserversInProgress || m_Config.m_EnableJoinPlayersInProgress;
 }

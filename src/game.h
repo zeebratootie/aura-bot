@@ -221,6 +221,7 @@ protected:
   uint8_t                                                m_SaveOnLeave;
   GameResultSourceSelect                                 m_GameResultSourceOfTruth;
   std::optional<Version>                                 m_LoadedVersion;
+  std::optional<GameSlotsProtocolVersion>                m_LoadedSlotsProtocol;
   bool                                                   m_IsSinglePlayer;
   bool                                                   m_Rated;
   std::string                                            m_UnratedReason;
@@ -506,14 +507,12 @@ public:
   void                                                   SendAllConnected(const std::vector<uint8_t>& data) const;
 
   void SendAllVariant(
-    LazyVariantBytesStorage store,
     const std::function<bool(const GameUser::CGameUser*)>& choicePredicateIsFirst,
     const std::function<std::vector<uint8_t>(const GameUser::CGameUser*)>& buildFirst,
     const std::function<std::vector<uint8_t>(const GameUser::CGameUser*)>& buildSecond
   ) const;
 
   void SendAllVariant(
-    LazyVariantBytesStorage store,
     const std::function<bool(const GameUser::CGameUser*)>& choicePredicate,
     const std::function<std::vector<uint8_t>(const GameUser::CGameUser*)>& dataGenerator
   ) const;
@@ -576,8 +575,8 @@ public:
   std::vector<uint8_t>                                   GetGameDiscoveryInfo(const Version& gameVersion, const uint16_t hostPort);
   std::vector<uint8_t>*                                  GetGameDiscoveryInfoTemplate();
   std::vector<uint8_t>                                   GetGameDiscoveryInfoTemplateInner(uint16_t* gameVersionOffset, uint16_t* dynamicInfoOffset) const;
-  std::vector<uint8_t>                                   GetSlotInfo() const;
   std::vector<uint8_t>                                   GetSlotInfo(const GameUser::CGameUser* user) const;
+  std::vector<uint8_t>                                   GetSlotInfo(const CAsyncObserver* observer) const;
   std::vector<uint8_t>                                   GetHandicaps() const;
   std::vector<uint8_t>                                   GetFakeUsersLobbyInfo() const;
   std::vector<uint8_t>                                   GetFakeUsersLoadedInfo() const;
