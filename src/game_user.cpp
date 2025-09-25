@@ -254,6 +254,7 @@ optional<uint32_t> CGameUser::GetDisplayRTT() const
 optional<uint32_t> CGameUser::GetRTT() const
 {
   optional<uint32_t> maybeRTT = GetOperationalRTT();
+  if (!maybeRTT.has_value()) return nullopt;
   if (m_Game.get().m_Aura->m_Net.m_Config.m_LiteralRTT) {
     return maybeRTT;
   }
