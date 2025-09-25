@@ -7516,6 +7516,7 @@ void CGame::EventGameLoaded()
   if (m_Config.m_EnableJoinObserversInProgress || m_Config.m_EnableJoinPlayersInProgress) {
     m_GameDiscoveryInfoChanged |= GAME_DISCOVERY_CHANGED_MAJOR;
     ChangeGameName(GetGameSpectatorName());
+    m_EntryKey = GetRandomUInt32();
     m_HostCounter = m_Aura->NextHostCounter();
     m_Aura->TrackGameJoinInProgress(shared_from_this());
 
