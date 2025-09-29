@@ -392,6 +392,12 @@ optional<int64_t> GetMaybeModifiedTime(const filesystem::path& file)
   return result;
 }
 
+int64_t GetFSTodayTime()
+{
+  filesystem::file_time_type nowTime = filesystem::file_time_type::clock::now();
+  return chrono::duration_cast<chrono::seconds>(nowTime.time_since_epoch()).count();
+}
+
 filesystem::path CaseInsensitiveFileExists(const filesystem::path& path, const string& file)
 {
   std::string mutated_file = file;

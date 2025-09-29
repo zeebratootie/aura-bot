@@ -133,6 +133,7 @@ bool FileWrite(const std::filesystem::path& file, const uint8_t* data, size_t le
 bool FileAppend(const std::filesystem::path& file, const uint8_t* data, size_t length);
 bool FileDelete(const std::filesystem::path& file);
 [[nodiscard]] std::optional<int64_t> GetMaybeModifiedTime(const std::filesystem::path& file);
+[[nodiscard]] int64_t GetFSTodayTime();
 [[nodiscard]] std::filesystem::path CaseInsensitiveFileExists(const std::filesystem::path& path, const std::string& file);
 [[nodiscard]] std::vector<std::pair<std::string, int>> FuzzySearchFiles(const std::filesystem::path& directory, const std::vector<PLATFORM_STRING_TYPE>& baseExtensions, const std::string& rawPattern);
 
