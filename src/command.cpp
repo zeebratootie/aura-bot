@@ -3891,7 +3891,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
         break;
 
       if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
-        ErrorReply("You are not the game owner, and therefore cannot unhost this game lobby.");
+        ErrorReply("You are not the game owner, and therefore cannot start downloads in this game lobby.");
         break;
       }
 
