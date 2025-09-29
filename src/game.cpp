@@ -166,7 +166,7 @@ CGame::CGame(CAura* nAura, shared_ptr<CGameSetup> nGameSetup)
     m_LatencyTicks(0),
     m_NextLatencyTicks(0),
     m_LastActionSentTicks(0),
-    m_LastActionLateBy(0),
+    m_LastActionExpectedTicks(0),
     m_LastPausedTicks(0),
     m_PausedTicksDeltaSum(0),
     m_StartedLaggingTime(0),
@@ -988,14 +988,14 @@ void CGame::UpdateSelectBlockTime(int64_t& blockTime) const
   if (!m_GameLoaded || m_IsLagging || blockTime == 0)
     return;
 
-  const int64_t ticksSinceLastUpdate = m_Aura->GetClockTicks() - m_LastActionSentTicks;
+  const int64_t ticksSinceLastUpdateExpected = m_Aura->GetClockTicks() - m_LastActionExpectedTicks;
 
-  if (ticksSinceLastUpdate > m_LatencyTicks - m_LastActionLateBy) {
+  if (ticksSinceLastUpdateExpected > m_LatencyTicks) {
     blockTime = 0;
     return;
   }
 
-  int64_t maybeBlockTime = (m_LatencyTicks - m_LastActionLateBy - ticksSinceLastUpdate) * factor;
+  int64_t maybeBlockTime = (m_LatencyTicks - ticksSinceLastUpdateExpected) * factor;
   if (maybeBlockTime < blockTime) {
     blockTime = maybeBlockTime;
   }
@@ -1776,8 +1776,8 @@ void CGame::UpdateLoaded()
 
     if (playersLaggingCounter == 0) {
       m_IsLagging = false;
-      m_LastActionSentTicks = hiResTicks - m_LatencyTicks;
-      m_LastActionLateBy = 0;
+      m_LastActionExpectedTicks = hiResTicks - m_LatencyTicks;
+      m_LastActionSentTicks = 0;
       m_PingReportedSinceLagTimes = 0;
       LOG_APP_IF(LogLevel::kInfo, Concat("stopped lagging after ", ToFormattedString(static_cast<double>(m_Aura->GetClockTime() - m_StartedLaggingTime)), " seconds"));
     }
@@ -1786,7 +1786,7 @@ void CGame::UpdateLoaded()
   if (m_IsLagging) {
     // reset m_LastActionSentTicks because we want the game to stop running while the lag screen is up
     // exact timing is relevant for scheduler
-    m_LastActionSentTicks = hiResTicks;
+    m_LastActionExpectedTicks = hiResTicks;
 
     // keep track of the last lag screen time so we can avoid timing out users
     m_LastLagScreenTime = m_Aura->GetClockTime();
@@ -1951,7 +1951,7 @@ bool CGame::Update(fd_set* fd, fd_set* send_fd)
   // actions are at the heart of every Warcraft 3 game but luckily we don't need to know their contents to relay them
   // we queue user actions in EventUserIncomingAction then just resend them in batches to all users here
 
-  if (m_GameLoaded && !m_IsLagging && hiResTicks - m_LastActionSentTicks >= m_LatencyTicks - m_LastActionLateBy) {
+  if (m_GameLoaded && !m_IsLagging && hiResTicks - m_LastActionExpectedTicks >= m_LatencyTicks) {
     UpdateLoadedOrLoadInGame();
     SendAllActions();
   } else if ((m_GameLoaded || (m_GameLoading && m_Config.m_LoadInGame)) && m_Aura->GetTicksIsFirstOrAfterDelay(m_LastInGameChatFlushTicks, 300)) {
@@ -2119,7 +2119,7 @@ void CGame::CheckLobbyTimeouts()
 void CGame::RunActionsScheduler()
 {
   const int64_t oldLatency = GetActiveLatency();
-  const int64_t actionLateBy = GetLastActionLateBy(oldLatency);
+  const int64_t actionLateBy = GetLastActionLateBy();
 #ifdef PROFILING
   const size_t i = GetFrameDriftBucket(actionLateBy);
   ++m_FrameDrifts[i];
@@ -2145,14 +2145,11 @@ void CGame::RunActionsScheduler()
 
 void CGame::RunActionsSchedulerInner(const int64_t newLatency, const uint8_t maxNewEqualizerOffset, const int64_t oldLatency, const uint8_t maxOldEqualizerOffset, const int64_t actionLateBy)
 {
-  const int64_t hiResTicks = GetTicks();
-  if (m_LastActionSentTicks != 0) {
-    if (actionLateBy > m_Config.m_PerfThreshold && !m_IsSinglePlayer) {
-      m_Aura->LogPerformanceWarning(TaskType::kGameFrame, this, actionLateBy, oldLatency, newLatency);
-    }
-    m_LastActionLateBy = actionLateBy;
+  // Lag screen result in GetLastActionLateBy() == 0,
+  // because it sets m_LastActionSentTicks = 0
+  if (actionLateBy > m_Config.m_PerfThreshold && !m_IsSinglePlayer) {
+    m_Aura->LogPerformanceWarning(TaskType::kGameFrame, this, actionLateBy, oldLatency, newLatency);
   }
-  m_LastActionSentTicks = hiResTicks;
 
   if (maxNewEqualizerOffset < maxOldEqualizerOffset) {
     // No longer are that many frames needed.
@@ -4131,6 +4128,7 @@ void CGame::SendGProxyEmptyActions()
 
 void CGame::SendAllActions()
 {
+  const int64_t hiResTicks = GetTicks();
   const int64_t activeLatency = GetActiveLatency();
   if (!m_IsPaused) {
     m_EffectiveTicks += activeLatency;
@@ -4151,6 +4149,9 @@ void CGame::SendAllActions()
     m_GameHistory->EventActionFramePushed();
     m_GameHistory->UpdateSpectatorActions((int64_t)m_Config.m_SpectatorDelay);
   }
+
+  m_LastActionSentTicks = hiResTicks;
+  m_LastActionExpectedTicks += activeLatency;
 
   SendAllActionsCallback();
 
@@ -7394,7 +7395,7 @@ void CGame::EventGameBeforeLoaded()
 
 void CGame::EventGameLoaded()
 {
-  m_LastActionSentTicks = GetTicks(); // high-res ticks for actions scheduler
+  m_LastActionExpectedTicks = GetTicks(); // high-res ticks for actions scheduler
   m_FinishedLoadingTicks = m_Aura->GetClockTicks();
   m_MapGameStartTime = CGameInteractiveHost::GetMapTime();
   m_GameLoading = false;
@@ -7629,7 +7630,7 @@ void CGame::Remake()
   m_FinishedLoadingTicks = 0;
   m_MapGameStartTime = 0;
   m_LastActionSentTicks = 0;
-  m_LastActionLateBy = 0;
+  m_LastActionExpectedTicks = 0;
   m_LastPausedTicks = 0;
   m_PausedTicksDeltaSum = 0;
   m_StartedLaggingTime = 0;
@@ -11211,12 +11212,10 @@ int64_t CGame::GetNextLatency(int64_t frameDrift) const
   return min(latency, maxLatency);
 }
 
-int64_t CGame::GetLastActionLateBy(int64_t oldLatency) const
+int64_t CGame::GetLastActionLateBy() const
 {
   if (m_LastActionSentTicks == 0) return 0;
-  const int64_t actualSendInterval = GetTicks() - m_LastActionSentTicks;
-  const int64_t expectedSendInterval = oldLatency - m_LastActionLateBy;
-  return actualSendInterval - expectedSendInterval;
+  return m_LastActionSentTicks - m_LastActionExpectedTicks;
 }
 
 size_t CGame::GetSyncLimit(bool isObserver) const

@@ -136,8 +136,8 @@ protected:
   int64_t                                                m_EffectiveTicks;                // ingame ticks excluding paused time
   int64_t                                                m_LatencyTicks;                  // ticks between last update and next
   int64_t                                                m_NextLatencyTicks;              // ticks between last update and next
-  int64_t                                                m_LastActionSentTicks;           // when the last action packet was sent
-  int64_t                                                m_LastActionLateBy;              // the number of ticks we were late sending the last action packet by
+  int64_t                                                m_LastActionSentTicks;           // when the last action packet was sent - used only for frame drifts and adaptation on CPU spike detection
+  int64_t                                                m_LastActionExpectedTicks;       // when the last action packet should have been sent
   int64_t                                                m_LastPausedTicks;               // when the game was last paused
   int64_t                                                m_PausedTicksDeltaSum;           // Sum of GetTicks deltas for every game pause
   int64_t                                                m_StartedLaggingTime;            // when the last lag screen started
@@ -353,7 +353,7 @@ public:
   uint8_t                                                CalcMaxEqualizerDelayFrames() const;
   int64_t                                                GetActiveLatency() const;
   int64_t                                                GetNextLatency(int64_t frameDrift = 0) const;
-  int64_t                                                GetLastActionLateBy(int64_t oldLatency) const;
+  int64_t                                                GetLastActionLateBy() const;
   size_t                                                 GetSyncLimit(bool isObserver) const;
   size_t                                                 GetSyncLimitSafe(bool isObserver) const;
   inline bool                                            GetIsLagging() const { return m_IsLagging; }
