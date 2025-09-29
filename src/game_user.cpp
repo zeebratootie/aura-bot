@@ -755,7 +755,7 @@ bool CGameUser::Update(fd_set* fd, int64_t timeout)
           }
 
           case GameProtocol::Magic::MAPPART_ERR: {
-            LOG_APP_CUSTOM(LogLevel::kNotice, Concat("player [", m_Name, "] sent GameProtocol::Magic::MAPPART_ERR"), LOG_C | LOG_P);
+            LOG_APP_CUSTOM(LogLevel::kWarning, Concat("map download unexpectedly failed for [", m_Name, "] due to hash mismatch"), LOG_C | LOG_P);
             break;
           }
 
