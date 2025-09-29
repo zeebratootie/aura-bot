@@ -1278,7 +1278,7 @@ void CMap::Load(CConfig* CFG)
           m_Aura->m_Config.m_CFGCacheRevalidateAlgorithm == CacheRevalidationMethod::kModified && (
             !fileModifiedTime.has_value() || (
               cachedModifiedTime.has_value() && fileModifiedTime.has_value() &&
-              fileModifiedTime.value() <= cachedModifiedTime.value()
+              fileModifiedTime.value() == cachedModifiedTime.value()
             )
           )
         )
@@ -1491,9 +1491,11 @@ void CMap::Load(CConfig* CFG)
     m_MapScriptsSHA1[version] = scriptsHashSHA1;
   }
 
+  m_MapContentMismatch.swap(mapContentMismatch);
   if (HasMismatch()) {
-    m_MapContentMismatch.swap(mapContentMismatch);
-    PRINT_IF(LogLevel::kWarning, "[CACHE] error - map content mismatch");
+    // There are many courses of action that may be taken now.
+    // Currently: allow hosting (CFG prevails), but disable transferring the map to players.
+    PRINT_IF(LogLevel::kWarning, "[CACHE] warning - map content mismatch - this map config issue will prevent map downloads in the lobby");
   } else if (crc32.has_value() && sha1.has_value()) {
     m_MapFileIsValid = true;
   }
