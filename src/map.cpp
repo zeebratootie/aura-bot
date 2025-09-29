@@ -841,48 +841,75 @@ optional<MapEssentials> CMap::ParseMPQ()
       uint32_t RawGameDataSet = MAP_DATASET_DEFAULT;
       uint32_t RawScriptingLanguage = 0;
 
-      ISS.read(reinterpret_cast<char*>(&FileFormat), 4); // file format (18 = ROC, 25 = TFT, 28 = TFT+, 31 = RF)
+      ISS.read(reinterpret_cast<char*>(&FileFormat), 4); // file format (18 = ROC, 25 = TFT, 28 = TFT+, 31+ = RF)
 
-      if (FileFormat == 18 || FileFormat == 25 || FileFormat == 28 || FileFormat == 31) {
-        ISS.seekg(4, ios::cur);            // number of saves
+      if (
+        // ROC Beta - these maps cannot be hosted in (most?) retail versions
+        // also note that many v15 maps are broken (ints stored as TRIGSTR_NUM in w3i),
+        // some maps with file format <= 15 may not conform
+        (FileFormat == 8 || FileFormat == 10 || FileFormat == 11 || FileFormat == 15) ||
+        FileFormat == 18 || /* ROC */
+        (23 <= FileFormat && FileFormat <= 28) || /* TFT (25 and 28 are retail classic and pre-RF respectively) */
+        (31 <= FileFormat && FileFormat <= 33) /* RF */
+      ) {
+        if (FileFormat >= 18) {
+          ISS.seekg(4, ios::cur);          // number of saves
+        }
         if (FileFormat >= 28) {
           ISS.seekg(16, ios::cur);         // game version
         }
-        ISS.read(reinterpret_cast<char*>(&RawEditorVersion), 4); // editor version
+        if (FileFormat >= 18) {
+          ISS.read(reinterpret_cast<char*>(&RawEditorVersion), 4); // editor version
+        }
+        if (FileFormat == 27) {
+          ISS.seekg(16, ios::cur);              // game version
+        }
         getline(ISS, RawMapName, '\0');         // map name
         getline(ISS, RawMapAuthor, '\0');       // map author
         getline(ISS, RawMapDescription, '\0');  // map description
         getline(ISS, GarbageString, '\0');      // players recommended
         ISS.seekg(32, ios::cur);                // camera bounds
-        ISS.seekg(16, ios::cur);                // camera bounds complements
+        if (FileFormat <= 10 || FileFormat >= 15) {
+          ISS.seekg(16, ios::cur);              // camera bounds complements
+          if (FileFormat == 8) {
+            ISS.seekg(8, ios::cur);             // ??
+          }
+        }
         ISS.read(reinterpret_cast<char*>(&RawMapWidth), 4);  // map width
         ISS.read(reinterpret_cast<char*>(&RawMapHeight), 4); // map height
         ISS.read(reinterpret_cast<char*>(&RawMapFlags), 4);  // flags
+        if (FileFormat == 8) {
+          ISS.seekg(4, ios::cur);               // ?? more flags ?
+        }
         ISS.seekg(1, ios::cur);                 // map main ground type
 
-        if (FileFormat >= 25) {
+        if (FileFormat >= 23) {
           ISS.seekg(4, ios::cur);                   // loading screen background number
           getline(ISS, RawMapLoadingScreen, '\0');  // path of custom loading screen model
-        } else {
-          ISS.seekg(4, ios::cur);                   // campaign background number
+        } else if (FileFormat >= 10) {
+          ISS.seekg(FileFormat >= 11 ? 4 : 2, ios::cur); // campaign background number
         }
 
-        getline(ISS, GarbageString, '\0'); // map loading screen text
-        getline(ISS, GarbageString, '\0'); // map loading screen title
-        getline(ISS, GarbageString, '\0'); // map loading screen subtitle
+        if (FileFormat >= 18) {
+          getline(ISS, GarbageString, '\0'); // map loading screen text
+          getline(ISS, GarbageString, '\0'); // map loading screen title
+          getline(ISS, GarbageString, '\0'); // map loading screen subtitle
+        }
 
-        if (FileFormat >= 25) {
+        if (FileFormat >= 23) {
           ISS.read(reinterpret_cast<char*>(&RawGameDataSet), 4);  // used game data set
           getline(ISS, RawMapPrologue, '\0');                     // prologue screen path
-        } else {
+        } else if (FileFormat >= 15) {
           ISS.seekg(4, ios::cur);                                 // map loading screen number
         }
 
-        getline(ISS, GarbageString, '\0'); // prologue screen text
-        getline(ISS, GarbageString, '\0'); // prologue screen title
-        getline(ISS, GarbageString, '\0'); // prologue screen subtitle
+        if (FileFormat >= 18) {
+          getline(ISS, GarbageString, '\0'); // prologue screen text
+          getline(ISS, GarbageString, '\0'); // prologue screen title
+          getline(ISS, GarbageString, '\0'); // prologue screen subtitle
+        }
 
-        if (FileFormat >= 25) {
+        if (FileFormat >= 23) {
           ISS.seekg(4, ios::cur);            // uses terrain fog
           ISS.seekg(4, ios::cur);            // fog start z height
           ISS.seekg(4, ios::cur);            // fog end z height
@@ -894,6 +921,9 @@ optional<MapEssentials> CMap::ParseMPQ()
           ISS.seekg(4, ios::cur);            // global weather id
           getline(ISS, GarbageString, '\0'); // custom sound environment
           ISS.seekg(1, ios::cur);            // tileset id of the used custom light environment
+        }
+
+        if (FileFormat >= 25) {
           ISS.seekg(1, ios::cur);            // custom water tinting red value
           ISS.seekg(1, ios::cur);            // custom water tinting green value
           ISS.seekg(1, ios::cur);            // custom water tinting blue value
@@ -920,7 +950,7 @@ optional<MapEssentials> CMap::ParseMPQ()
 
         mapEssentials->dataSet = static_cast<uint8_t>(RawGameDataSet);
         mapEssentials->editorVersion = RawEditorVersion;
-        mapEssentials->isExpansion = FileFormat >= 25;
+        mapEssentials->isExpansion = FileFormat >= 23;
         mapEssentials->isLua = RawScriptingLanguage > 0;
         mapEssentials->name = RawMapName;
         mapEssentials->author = RawMapAuthor;
@@ -1063,8 +1093,7 @@ optional<MapEssentials> CMap::ParseMPQ()
 #endif
         }
       } else {
-        // Some rare maps with other file formats exist 8 10 11 15 23 24 26 27
-        // See https://www.hiveworkshop.com/threads/parsing-metadata-from-w3m-w3x-w3n.322007/
+        // Some rare maps with other file formats may exist
         m_Valid = false;
         m_ErrorMessage = "unsupported map file format " + to_string(FileFormat);
       }
@@ -2194,7 +2223,11 @@ string CMap::CheckProblems()
   }
   if ((m_MapOptions & MAPOPT_CUSTOMFORCES) && usedTeams.count() <= 1) {
     m_Valid = false;
-    m_ErrorMessage = "invalid <map.slot_N> detected";
+    if (usedTeams.count() == 0) {
+      m_ErrorMessage = "custom forces enabled, but no forces are defined";
+    } else {
+      m_ErrorMessage = "custom forces enabled, but only one force is defined";
+    }
     return m_ErrorMessage;
   }
 
