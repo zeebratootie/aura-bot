@@ -178,18 +178,10 @@ bool CConfig::Read(const filesystem::path& file, CConfig* adapterConfig)
 
   Print("[CONFIG] loading file [" + PathToString(file) + "]");
 
+  SkipUTF8BOM(in);
+
   string rawLine;
-  int lineCount = 0;
-
-  while (!in.eof()) {
-    lineCount++;
-    getline(in, rawLine);
-
-    // Strip UTF-8 BOM
-    if (lineCount == 1 && rawLine.length() >= 3 && rawLine[0] == '\xEF' && rawLine[1] == '\xBB' && rawLine[2] == '\xBF') {
-      rawLine = rawLine.substr(3);
-    }
-
+  while (getline(in, rawLine)) {
     // ignore blank lines and comments
     if (rawLine.empty() || rawLine[0] == '#' || rawLine[0] == ';' || rawLine == "\n") {
       continue;
@@ -1177,21 +1169,14 @@ std::string CConfig::ReadString(const std::filesystem::path& file, const std::st
   ifstream in;
   in.open(file.native().c_str(), ios::in);
 
-  if (in.fail())
+  if (in.fail()) {
     return cfgValue;
+  }
+
+  SkipUTF8BOM(in);
 
   string rawLine;
-
-  bool isFirstLine = true;
-  while (!in.eof()) {
-    getline(in, rawLine);
-
-    if (isFirstLine) {
-      if (rawLine.length() >= 3 && rawLine[0] == '\xEF' && rawLine[1] == '\xBB' && rawLine[2] == '\xBF')
-        rawLine = rawLine.substr(3);
-      isFirstLine = false;
-    }
-
+  while (getline(in, rawLine)) {
     // ignore blank lines and comments
     if (rawLine.empty() || rawLine[0] == '#' || rawLine[0] == ';' || rawLine == "\n") {
       continue;

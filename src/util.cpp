@@ -2160,12 +2160,29 @@ string_view SanitizeUTF8(string_view unsafeInput, string_view fallback)
   return fallback;
 }
 
+string SanitizeUTF8PieceWise(string_view unsafeInput)
+{
+  return utf8::replace_invalid(unsafeInput, '?');
+}
+
 string_view SanitizeASCII(string_view unsafeInput, string_view fallback)
 {
   if (IsASCII(unsafeInput)) {
     return unsafeInput;
   }
   return fallback;
+}
+
+string SanitizeASCIIPieceWise(string_view unsafeInput)
+{
+  string output;
+  output.reserve(unsafeInput.size());
+  for (auto& c : unsafeInput) {
+    if ((c & 0x80) == 0) {
+      output += c;
+    }
+  }
+  return output;
 }
 
 string SanitizeWrapUTF8(string_view unsafeInput, string_view fallback)
@@ -2176,12 +2193,22 @@ string SanitizeWrapUTF8(string_view unsafeInput, string_view fallback)
   return string(fallback);
 }
 
+string SanitizeWrapUTF8PieceWise(string_view unsafeInput)
+{
+  return Concat("[", SanitizeUTF8PieceWise(unsafeInput), "]");
+}
+
 string SanitizeWrapASCII(string_view unsafeInput, string_view fallback)
 {
   if (IsASCII(unsafeInput)) {
     return "[" + string(unsafeInput) + "]";
   }
   return string(fallback);
+}
+
+string SanitizeWrapASCIIPieceWise(string_view unsafeInput)
+{
+  return Concat("[", SanitizeASCIIPieceWise(unsafeInput), "]");
 }
 
 uint32_t ASCIIHexToNum(const array<uint8_t, 8>& data, bool reverse)
@@ -2323,6 +2350,16 @@ void NormalizeDirectory(filesystem::path& filePath)
   if (filePath.empty()) return;
   filePath += filePath.preferred_separator;
   filePath = filePath.lexically_normal();
+}
+
+void SkipUTF8BOM(std::istream& in)
+{
+  char bom[3];
+  in.read(bom, 3);
+  if (in.gcount() < 3 || memcmp(bom, "\xEF\xBB\xBF", 3) != 0) {
+    in.clear();
+    in.seekg(0, ios::beg);
+  }
 }
 
 template <size_t SIZE>

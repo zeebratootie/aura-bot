@@ -59,6 +59,7 @@ constexpr int dlopen_flags = RTLD_NOW | RTLD_LOCAL;
 #endif
 
 #ifdef _WIN32
+[[nodiscard]] std::optional<std::string> MaybeReadRegistryRaw(const wchar_t* mainKey, const wchar_t* subKey);
 [[nodiscard]] std::optional<std::wstring> MaybeReadRegistry(const wchar_t* mainKey, const wchar_t* subKey);
 [[nodiscard]] std::optional<std::filesystem::path> MaybeReadRegistryPath(const wchar_t* mainKey, const wchar_t* subKey);
 bool DeleteUserRegistryKey(const wchar_t* subKey);

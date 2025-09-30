@@ -257,11 +257,11 @@ namespace GameProtocol
       case JoinRequestError::kOk:
         return std::string_view();
       case JoinRequestError::kTooLong:
-        return "Your username is too long. The limit is 31 English/Latin characters (15 or less in other languages.)";
+        return "Your username is too long. Please use 31 letters/numbers or fewer (15 in some languages). Emojis and symbols count too.";
       case JoinRequestError::kBadEncoding:
-        return "Your username has technical issues. Please type it again, or copy it from an UTF8-aware app. This is NOT censorship.";
+        return "Your username has hidden or broken characters. Erase it completely—even past the end if it looks empty—then type it again by hand. Do NOT paste it.";
       case JoinRequestError::kUnsafeCodePoints:
-        return "Your username has technical issues. Please type it again, avoiding strange characters.";
+        return "Your username has unusual characters. Erase it fully—even if the box looks empty—then type it again using only regular letters or numbers.";
       case JoinRequestError::kCannotParse:
       default:
         return "Critical error";

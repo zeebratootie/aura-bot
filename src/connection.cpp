@@ -107,7 +107,7 @@ IncomingConnectionStatus CConnection::Update(fd_set* fd, fd_set* send_fd, int64_
 
   IncomingConnectionStatus result = IncomingConnectionStatus::kOk;
   bool Abort = false;
-  if (m_Type == IncomingConnectionType::kKickedPlayer) {
+  if (m_Type == IncomingConnectionType::kKickedPlayer || m_Type == IncomingConnectionType::kGhostLobby) {
     m_Socket->Discard(fd);
   } else if (m_Socket->DoRecv(fd)) {
     CStreamIOSocket* socket = m_Socket;
@@ -135,12 +135,14 @@ IncomingConnectionStatus CConnection::Update(fd_set* fd, fd_set* send_fd, int64_
           if (packetType == GameProtocol::Magic::REQJOIN) {
             CIncomingJoinRequest joinRequest = GameProtocol::RECEIVE_W3GS_REQJOIN(packet);
             if (!joinRequest.GetIsValid()) {
-              DPRINT_IF(LogLevel::kTrace2, "[AURA] Got invalid REQJOIN <" + GetStringBytesHex(packet) + ">");
               if (joinRequest.GetError() != JoinRequestError::kCannotParse) {
+                DPRINT_IF(LogLevel::kTrace, "[AURA] Got invalid REQJOIN from " + SanitizeWrapUTF8PieceWise(joinRequest.GetName()) + " (error " + ToDecString(static_cast<uint8_t>(joinRequest.GetError())) + ") <" + GetStringBytesHex(packet) + ">");
                 Send(GameProtocol::SENDWRAP_W3GS_GHOST_LOBBY_ERROR(GameProtocol::JoinRequestErrorToString(joinRequest.GetError())));
                 SetTimeoutAtLatest(m_Aura->GetClockTicks() + 8000);
                 result = IncomingConnectionStatus::kDestroyDelayed;
-                m_Type = IncomingConnectionType::kKickedPlayer;
+                m_Type = IncomingConnectionType::kGhostLobby;
+              } else {
+                DPRINT_IF(LogLevel::kTrace2, "[AURA] Got invalid REQJOIN <" + GetStringBytesHex(packet) + ">");
               }
               Abort = true;
               break;
@@ -186,7 +188,7 @@ IncomingConnectionStatus CConnection::Update(fd_set* fd, fd_set* send_fd, int64_
               }
               case JoinRequestResult::kFailDelayed: {
                 result = IncomingConnectionStatus::kDestroyDelayed;
-                m_Type = IncomingConnectionType::kKickedPlayer;
+                m_Type = IncomingConnectionType::kGhostLobby;
                 SetTimeoutAtLatest(m_Aura->GetClockTicks() + 8000);
                 break;
               }
@@ -281,7 +283,7 @@ IncomingConnectionStatus CConnection::Update(fd_set* fd, fd_set* send_fd, int64_
   }
 
   /*
-  if (result == IncomingConnectionStatus::kPROMOTED || result == IncomingConnectionStatus::kPROMOTED_PASSTHROUGH || result == IncomingConnectionStatus::kRECONNECTED) {
+  if (result == IncomingConnectionStatus::kPromoted || result == IncomingConnectionStatus::kPromotedPassThrough || result == IncomingConnectionStatus::kReconnected) {
     return result;
   }
   */
@@ -292,6 +294,10 @@ IncomingConnectionStatus CConnection::Update(fd_set* fd, fd_set* send_fd, int64_
   }
 
   m_Socket->DoSend(send_fd);
+
+  if (result == IncomingConnectionStatus::kDestroyDelayed) {
+    return result;
+  }
 
   if (m_Type == IncomingConnectionType::kKickedPlayer && !m_Socket->GetIsSendPending()) {
     return IncomingConnectionStatus::kDestroy;

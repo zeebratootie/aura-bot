@@ -33,6 +33,31 @@
 using namespace std;
 
 #ifdef _WIN32
+optional<string> MaybeReadRegistryRaw(const wchar_t* mainKey, const wchar_t* subKey)
+{
+  optional<string> result;
+  HKEY hKey;
+  LPCWSTR registryPath = mainKey;
+  LPCWSTR keyName = subKey;
+  result.emplace();
+  result->resize(2048, '\xFF');
+
+  if (RegOpenKeyExW(HKEY_CURRENT_USER, registryPath, 0, KEY_READ, &hKey) == ERROR_SUCCESS) {
+    DWORD bufferSize = result->size();
+    DWORD valueType;
+    // Query the value of the desired registry entry
+    if (RegQueryValueExW(hKey, keyName, nullptr, &valueType, reinterpret_cast<BYTE*>(result->data()), &bufferSize) == ERROR_SUCCESS) {
+      if (!(0 < bufferSize && bufferSize < 2048)) {
+        result.reset();
+        Print("[REGISTRY] error - value too long");
+      }
+    }
+    // Close the key
+    RegCloseKey(hKey);
+  }
+  return result;
+}
+
 optional<wstring> MaybeReadRegistry(const wchar_t* mainKey, const wchar_t* subKey)
 {
   optional<wstring> result;
@@ -97,17 +122,27 @@ optional<string> GetUserMultiPlayerName()
     // Fallback to Battle.net name
     localName = MaybeReadRegistry(L"SOFTWARE\\Blizzard Entertainment\\Warcraft III\\String", L"userbnet");
   }
-  if (!localName.has_value()) return nullopt;
-
-  optional<string> result;
-  int size = WideCharToMultiByte(CP_UTF8, 0, &localName.value()[0], (int)localName.value().size(), nullptr, 0, nullptr, nullptr);
-  string multiByte(size, '\0');
-  WideCharToMultiByte(CP_UTF8, 0, &localName.value()[0], (int)localName.value().size(), &multiByte[0], size, nullptr, nullptr);
-  if (HasUnsafeUTF8CodePoints(multiByte)) {
+  if (!localName.has_value()) {
     return nullopt;
   }
-  result = multiByte;
-  return result;
+
+  optional<string> compatName;
+  compatName.emplace();
+  compatName->reserve(localName->size());
+  for (wchar_t c : localName.value()) {
+    if (c == 0) break;
+    // Client transmits low-bytes only.
+    compatName->push_back(static_cast<char>(c & 0xFF));
+  }
+
+  if (!IsArbitraryStringUTF8Safe(compatName.value())) {
+    Print("[AURA] warning - Your Warcraft III username is not encoded as valid ANSI (it's probably Unicode instead).");
+    Print("[AURA] warning - To ensure compatibility, paste your username through a tool or editor that converts text to ANSI.");
+    Print("[AURA] warning - This operation can be done using Notepad++, or UTFizer, among other tools.");
+    return nullopt;
+  }
+
+  return compatName;
 #else
   return nullopt;
 #endif

@@ -46,9 +46,10 @@ enum class IncomingConnectionType : uint8_t {
   kUDPTunnel = 1,
   kPlayer = 2,
   kKickedPlayer = 3,
-  kVLAN = 4,
-  kObserver = 5,
-  LAST = 6,
+  kGhostLobby = 4,
+  kVLAN = 5,
+  kObserver = 6,
+  LAST = 7,
 };
 
 //

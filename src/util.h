@@ -326,9 +326,13 @@ template<typename Container>
 [[nodiscard]] std::string ToLowerCasePreserveUTF8(std::string_view input);
 [[nodiscard]] bool IsArbitraryStringUTF8Safe(std::string_view unsafeInput);
 [[nodiscard]] std::string_view SanitizeUTF8(std::string_view unsafeInput, std::string_view = {});
+[[nodiscard]] std::string SanitizeUTF8PieceWise(std::string_view unsafeInput);
 [[nodiscard]] std::string_view SanitizeASCII(std::string_view unsafeInput, std::string_view = {});
+[[nodiscard]] std::string SanitizeASCIIPieceWise(std::string_view unsafeInput);
 [[nodiscard]] std::string SanitizeWrapUTF8(std::string_view unsafeInput, std::string_view = "REDACTED");
+[[nodiscard]] std::string SanitizeWrapUTF8PieceWise(std::string_view unsafeInput);
 [[nodiscard]] std::string SanitizeWrapASCII(std::string_view unsafeInput, std::string_view = "REDACTED");
+[[nodiscard]] std::string SanitizeWrapASCIIPieceWise(std::string_view unsafeInput);
 [[nodiscard]] uint32_t ASCIIHexToNum(const std::array<uint8_t, 8>& data, bool reverse);
 [[nodiscard]] std::array<uint8_t, 8> NumToASCIIHex(uint32_t num, bool reverse);
 [[nodiscard]] std::string PreparePatternForFuzzySearch(const std::string& rawPattern);
@@ -336,6 +340,7 @@ template<typename Container>
 [[nodiscard]] std::vector<std::string> ReadChatTemplate(const std::filesystem::path& filePath);
 [[nodiscard]] std::string GetNormalizedAlias(std::string_view alias);
 void NormalizeDirectory(std::filesystem::path& filePath);
+void SkipUTF8BOM(std::istream& in);
 template <size_t SIZE>
 uint8_t FindNextAvailableBit(std::bitset<SIZE> usedBits, uint32_t originalBit, uint32_t maxSize);
 [[nodiscard]] bool FindNextMissingElementBack(uint8_t& element, std::vector<uint8_t> counters);

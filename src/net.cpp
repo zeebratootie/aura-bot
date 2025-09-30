@@ -630,7 +630,7 @@ void CNet::UpdateBeforeGames(fd_set* fd, fd_set* send_fd)
     for (auto i = begin(serverConnections.second); i != end(serverConnections.second);) {
       // *i is a pointer to a CConnection
       IncomingConnectionStatus result = (*i)->Update(fd, send_fd, timeout);
-      if (result == IncomingConnectionStatus::kOk) {
+      if (result == IncomingConnectionStatus::kOk || result == IncomingConnectionStatus::kDestroyDelayed) {
         ++i;
         continue;
       }
