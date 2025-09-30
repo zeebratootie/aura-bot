@@ -982,11 +982,12 @@ void CGame::UpdateSelectBlockTime(int64_t& blockTime) const
 {
   // return the number of ticks (ms) until the next "timed action", which for our purposes is the next game update
   // the main Aura loop will make sure the next loop update happens at or before this value
-  // note: there's no reason this function couldn't take into account the game's other timers too but they're far less critical
-  // warning: this function must take into account when actions are not being sent (e.g. during loading or lagging)
+  // note: this function COULD take into account other timers in this game, but they're far less critical
+  // note: this function MUST take into account when actions are not being sent (e.g. during loading or lagging)
 
-  if (!m_GameLoaded || m_IsLagging || blockTime == 0)
+  if (!m_GameLoaded || m_IsLagging || blockTime == 0) {
     return;
+  }
 
   const int64_t ticksSinceLastUpdateExpected = m_Aura->GetClockTicks() - m_LastActionExpectedTicks;
 
@@ -1776,18 +1777,16 @@ void CGame::UpdateLoaded()
 
     if (playersLaggingCounter == 0) {
       m_IsLagging = false;
-      m_LastActionExpectedTicks = hiResTicks - m_LatencyTicks;
-      m_LastActionSentTicks = 0;
+      m_LastActionExpectedTicks = (
+        (hiResTicks - m_LatencyTicks) - /* Let CGame::Update() immediately send first few pending actions */
+        (m_LastActionSentTicks - m_LastActionExpectedTicks) /* CPU stalling correction term - e.g. if in Windows CMD, some text was selected */
+      );
       m_PingReportedSinceLagTimes = 0;
       LOG_APP_IF(LogLevel::kInfo, Concat("stopped lagging after ", ToFormattedString(static_cast<double>(m_Aura->GetClockTime() - m_StartedLaggingTime)), " seconds"));
     }
   }
 
   if (m_IsLagging) {
-    // reset m_LastActionSentTicks because we want the game to stop running while the lag screen is up
-    // exact timing is relevant for scheduler
-    m_LastActionExpectedTicks = hiResTicks;
-
     // keep track of the last lag screen time so we can avoid timing out users
     m_LastLagScreenTime = m_Aura->GetClockTime();
 
@@ -1796,6 +1795,7 @@ void CGame::UpdateLoaded()
       ReportAllPings();
       ++m_PingReportedSinceLagTimes;
     }
+
     if (m_Config.m_SyncNormalize) {
       if (m_PingReportedSinceLagTimes == 2 && !m_Aura->GetTicksIsAfterDelay(m_FinishedLoadingTicks, 60000)) {
         NormalizeSyncCounters();
@@ -2145,8 +2145,6 @@ void CGame::RunActionsScheduler()
 
 void CGame::RunActionsSchedulerInner(const int64_t newLatency, const uint8_t maxNewEqualizerOffset, const int64_t oldLatency, const uint8_t maxOldEqualizerOffset, const int64_t actionLateBy)
 {
-  // Lag screen result in GetLastActionLateBy() == 0,
-  // because it sets m_LastActionSentTicks = 0
   if (actionLateBy > m_Config.m_PerfThreshold && !m_IsSinglePlayer) {
     m_Aura->LogPerformanceWarning(TaskType::kGameFrame, this, actionLateBy, oldLatency, newLatency);
   }
@@ -5772,6 +5770,7 @@ bool CGame::CheckIPFlood(string_view joinName, const sockaddr_storage* sourceAdd
 JoinRequestResult CGame::EventRequestJoin(CConnection* connection, const CIncomingJoinRequest& joinRequest)
 {
   if (!GetIsStageAcceptingJoins()) {
+    DLOG_APP_IF(LogLevel::kTrace, Concat("user ", SanitizeWrapUTF8(joinRequest.GetName()), " failed to join (not accepting joins)"));
     connection->Send(GameProtocol::SEND_W3GS_REJECTJOIN(REJECTJOIN_STARTED));
     return JoinRequestResult::kFail;
   }
@@ -5779,6 +5778,7 @@ JoinRequestResult CGame::EventRequestJoin(CConnection* connection, const CIncomi
     joinRequest.GetName().empty() || joinRequest.GetName().size() > MAX_PLAYER_NAME_SIZE ||
     (joinRequest.GetIsCensored() && m_Config.m_UnsafeNameHandler == OnUnsafeNameHandler::kDeny)
   ) {
+    DLOG_APP_IF(LogLevel::kTrace, Concat("user ", SanitizeWrapUTF8(joinRequest.GetName()), " failed to join (unsafe username)"));
     connection->Send(GameProtocol::SENDWRAP_W3GS_GHOST_LOBBY_ERROR("Your username is not allowed."));
     return JoinRequestResult::kFailDelayed;
   }
@@ -5867,6 +5867,7 @@ JoinRequestResult CGame::EventRequestJoin(CConnection* connection, const CIncomi
   if (CheckScopeBanned(joinRequest.GetName(), JoinedRealm, connection->GetIPStringStrict()) ||
     CheckUserBanned(connection, joinRequest, matchingRealm, JoinedRealm) ||
     CheckIPBanned(connection, joinRequest, matchingRealm, JoinedRealm)) {
+    DLOG_APP_IF(LogLevel::kTrace, Concat("user ", SanitizeWrapUTF8(joinRequest.GetName()), " failed to join (banned)"));
     // let banned users "join" the game with an arbitrary UID then immediately close the connection
     // this causes them to be kicked back to the chat channel on battle.net
     optional<Version> maybeGameInfoVersion = GetIncomingPlayerVersion(connection, joinRequest, matchingRealm);
@@ -5973,6 +5974,7 @@ JoinRequestResult CGame::EventRequestJoin(CConnection* connection, const CIncomi
 
   if (SID >= GetNumSlots()) {
     connection->Send(GameProtocol::SEND_W3GS_REJECTJOIN(REJECTJOIN_FULL));
+    DLOG_APP_IF(LogLevel::kTrace, Concat("user [", joinRequest.GetName(), "@", JoinedRealm, "] failed to join (full)"));
     return JoinRequestResult::kFail;
   }
 
@@ -6933,8 +6935,7 @@ void CGame::EventUserPongToHost(GameUser::CGameUser* user)
   // see the Update function for where we send pings
 
   optional<uint32_t> latencyMs = user->GetOperationalRTT();
-  assert((latencyMs.has_value()) && "latencyMs should have a value in EventUserPongToHost");
-  if (!latencyMs.has_value()) return;
+  if (!latencyMs.has_value()) return; // if using system RTT
 
   if (*latencyMs >= m_Config.m_AutoKickPing && !user->GetIsReserved() && !user->GetIsOwner(nullopt)) {
     if (m_Users.size() > 1 && user->GetIsRTTMeasuredBadConsistent()) {
@@ -11214,7 +11215,6 @@ int64_t CGame::GetNextLatency(int64_t frameDrift) const
 
 int64_t CGame::GetLastActionLateBy() const
 {
-  if (m_LastActionSentTicks == 0) return 0;
   return m_LastActionSentTicks - m_LastActionExpectedTicks;
 }
 
