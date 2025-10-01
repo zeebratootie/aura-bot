@@ -136,7 +136,7 @@ IncomingConnectionStatus CConnection::Update(fd_set* fd, fd_set* send_fd, int64_
             CIncomingJoinRequest joinRequest = GameProtocol::RECEIVE_W3GS_REQJOIN(packet);
             if (!joinRequest.GetIsValid()) {
               if (joinRequest.GetError() != JoinRequestError::kCannotParse) {
-                DPRINT_IF(LogLevel::kTrace, "[AURA] Got invalid REQJOIN from " + SanitizeWrapUTF8PieceWise(joinRequest.GetName()) + " (error " + ToDecString(static_cast<uint8_t>(joinRequest.GetError())) + ") <" + GetStringBytesHex(packet) + ">");
+                DPRINT_IF(LogLevel::kTrace, "[AURA] Got invalid REQJOIN from " + SanitizeWrapUTF8(joinRequest.GetName()) + " (error " + ToDecString(static_cast<uint8_t>(joinRequest.GetError())) + ") <" + GetStringBytesHex(packet) + ">");
                 Send(GameProtocol::SENDWRAP_W3GS_GHOST_LOBBY_ERROR(GameProtocol::JoinRequestErrorToString(joinRequest.GetError())));
                 SetTimeoutAtLatest(m_Aura->GetClockTicks() + 8000);
                 result = IncomingConnectionStatus::kDestroyDelayed;

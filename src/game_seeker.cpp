@@ -148,7 +148,7 @@ GameSeekerStatus CGameSeeker::Update(fd_set* fd, fd_set* send_fd, int64_t timeou
           if (packetType == GameProtocol::Magic::REQJOIN) {
             CIncomingJoinRequest joinRequest = GameProtocol::RECEIVE_W3GS_REQJOIN(packet);
             if (!joinRequest.GetIsValid()) {
-              DPRINT_IF(LogLevel::kTrace2, "[AURA] Got invalid REQJOIN from " + SanitizeWrapUTF8PieceWise(joinRequest.GetName()) + " (error " + ToDecString(static_cast<uint8_t>(joinRequest.GetError())) + ") <" + GetStringBytesHex(packet) + ">");
+              DPRINT_IF(LogLevel::kTrace2, "[AURA] Got invalid REQJOIN from " + SanitizeWrapUTF8(joinRequest.GetName()) + " (error " + ToDecString(static_cast<uint8_t>(joinRequest.GetError())) + ") <" + GetStringBytesHex(packet) + ">");
               if (joinRequest.GetError() == JoinRequestError::kCannotParse) {
                 Abort = true;
               } else {

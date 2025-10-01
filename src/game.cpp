@@ -1335,11 +1335,11 @@ string CGame::GetStatusDescription() const
 {
   string gameName = GetShortNameLAN();
   if (m_IsMirror) {
-     return Concat(SanitizeWrapUTF8(GetMap()->GetMapTitle()), " (Mirror) \"", SanitizeUTF8(gameName), "\"");
+     return Concat(EnsureWrapUTF8(GetMap()->GetMapTitle()), " (Mirror) \"", EnsureUTF8(gameName), "\"");
   }
 
   string description = Concat(
-    SanitizeWrapUTF8(GetMap()->GetMapTitle()), " \"", SanitizeUTF8(gameName), "\" - ", SanitizeUTF8(m_OwnerName), " - ",
+    EnsureWrapUTF8(GetMap()->GetMapTitle()), " \"", EnsureUTF8(gameName), "\" - ", EnsureUTF8(m_OwnerName), " - ",
     ToDecString(GetNumJoinedPlayersOrFake()),
     "/",
     ToDecString(m_GameLoading || m_GameLoaded ? m_ControllersWithMap : static_cast<uint8_t>(GetNumSlots()))
@@ -3899,10 +3899,10 @@ void CGame::SendWelcomeMessage(GameUser::CGameUser* user)
       Line.replace(matchIndex, 26, m_Config.m_BroadcastCmdToken.empty() ? m_Config.m_PrivateCmdToken : m_Config.m_BroadcastCmdToken);
     }
     while ((matchIndex = Line.find("{URL}")) != string::npos) {
-      Line.replace(matchIndex, 5, SanitizeUTF8(GetMapSiteURL()));
+      Line.replace(matchIndex, 5, EnsureUTF8(GetMapSiteURL()));
     }
     while ((matchIndex = Line.find("{FILENAME}")) != string::npos) {
-      Line.replace(matchIndex, 10, SanitizeUTF8(GetClientFileName()));
+      Line.replace(matchIndex, 10, EnsureUTF8(GetClientFileName()));
     }
     while ((matchIndex = Line.find("{SHORTDESC}")) != string::npos) {
       Line.replace(matchIndex, 11, m_Map->GetMapShortDesc());
@@ -4262,7 +4262,7 @@ string CGame::GetAnnounceText(shared_ptr<const CRealm> realm) const
     capabilityWord = " hosted: ";
   }
 
-  return Concat(versionPrefix, typeWord, capabilityWord, SanitizeUTF8(m_Map->GetServerFileName()), startedPhrase);
+  return Concat(versionPrefix, typeWord, capabilityWord, EnsureUTF8(m_Map->GetServerFileName()), startedPhrase);
 }
 
 uint16_t CGame::CalcHostPortFromType(const uint8_t type) const
@@ -5624,10 +5624,10 @@ GameUser::CGameUser* CGame::JoinPlayer(CConnection* connection, const CIncomingJ
     LOG_APP_IF(LogLevel::kNotice, Concat("user joined (P", ToDecString(ToBaseOne(SID)), "): [", joinRequest.GetName(), "@", Player->GetRealmHostName(), "#", ToDecString(Player->GetUID()), "] ", Player->GetGameVersionString(), " from [", Player->GetIPString(), "] (", Player->GetSocket()->GetName(), ")", notifyString));
   }
   if (joinRequest.GetIsCensored()) {
-    LOG_APP_IF(LogLevel::kNotice, Concat("user ", SanitizeWrapUTF8(joinRequest.GetName()), " has censored name - was ", SanitizeWrapUTF8(joinRequest.GetOriginalName())));
+    LOG_APP_IF(LogLevel::kNotice, Concat("user ", EnsureWrapUTF8(joinRequest.GetName()), " has censored name - was ", EnsureWrapUTF8(joinRequest.GetOriginalName())));
   }
   if (!GetAreSameSlotProtocolGameVersions(Player->GetGameVersion(), GetVersion())) {
-    LOG_APP_IF(LogLevel::kDebug, Concat("user ", SanitizeWrapUTF8(joinRequest.GetName()), " joined v", ToVersionString(GetVersion()), " lobby using compatibility mode"));
+    LOG_APP_IF(LogLevel::kDebug, Concat("user ", EnsureWrapUTF8(joinRequest.GetName()), " joined v", ToVersionString(GetVersion()), " lobby using compatibility mode"));
   }
 
   return Player;
@@ -5664,7 +5664,7 @@ void CGame::JoinObserver(CConnection* connection, const CIncomingJoinRequest& jo
   if (fromRealm) realmHostName = fromRealm->GetServer();
   LOG_APP_IF(LogLevel::kInfo, Concat("spectator joined [", joinRequest.GetName(), "@", realmHostName, "#", to_string(observer->GetUID()), "] ", observer->GetGameVersionString() , " from [", observer->GetIPString(), "]"));
   if (!GetAreSameSlotProtocolGameVersions(observer->GetGameVersion(), GetVersion())) {
-    LOG_APP_IF(LogLevel::kDebug, Concat("spectator ", SanitizeWrapUTF8(joinRequest.GetName()), " joined v", ToVersionString(GetVersion()), " game using compatibility mode"));
+    LOG_APP_IF(LogLevel::kDebug, Concat("spectator ", EnsureWrapUTF8(joinRequest.GetName()), " joined v", ToVersionString(GetVersion()), " game using compatibility mode"));
   }
 }
 
@@ -5696,7 +5696,7 @@ void CGame::EventObserverMapSize(CAsyncObserver* user, const CIncomingMapFileSiz
       if (GetMapSiteURL().empty()) {
         user->SendChat(Concat("Spectator [", user->GetName(), "], please download the map before joining. (Kick in ", to_string(m_Config.m_LacksMapKickDelay / 1000), " seconds...)"));
       } else {
-        user->SendChat(Concat("Spectator [", user->GetName(), "], please download the map from <", SanitizeUTF8(GetMapSiteURL()), "> before joining. (Kick in ", to_string(m_Config.m_LacksMapKickDelay / 1000), " seconds...)"));
+        user->SendChat(Concat("Spectator [", user->GetName(), "], please download the map from <", EnsureUTF8(GetMapSiteURL()), "> before joining. (Kick in ", to_string(m_Config.m_LacksMapKickDelay / 1000), " seconds...)"));
       }
 
       if (!user->HasLeftReason()) {
@@ -5770,7 +5770,7 @@ bool CGame::CheckIPFlood(string_view joinName, const sockaddr_storage* sourceAdd
 JoinRequestResult CGame::EventRequestJoin(CConnection* connection, const CIncomingJoinRequest& joinRequest)
 {
   if (!GetIsStageAcceptingJoins()) {
-    DLOG_APP_IF(LogLevel::kTrace, Concat("user ", SanitizeWrapUTF8(joinRequest.GetName()), " failed to join (not accepting joins)"));
+    DLOG_APP_IF(LogLevel::kTrace, Concat("user ", EnsureWrapUTF8(joinRequest.GetName()), " failed to join (not accepting joins)"));
     connection->Send(GameProtocol::SEND_W3GS_REJECTJOIN(REJECTJOIN_STARTED));
     return JoinRequestResult::kFail;
   }
@@ -5778,7 +5778,7 @@ JoinRequestResult CGame::EventRequestJoin(CConnection* connection, const CIncomi
     joinRequest.GetName().empty() || joinRequest.GetName().size() > MAX_PLAYER_NAME_SIZE ||
     (joinRequest.GetIsCensored() && m_Config.m_UnsafeNameHandler == OnUnsafeNameHandler::kDeny)
   ) {
-    DLOG_APP_IF(LogLevel::kTrace, Concat("user ", SanitizeWrapUTF8(joinRequest.GetName()), " failed to join (unsafe username)"));
+    DLOG_APP_IF(LogLevel::kTrace, Concat("user ", EnsureWrapUTF8(joinRequest.GetName()), " failed to join (unsafe username)"));
     connection->Send(GameProtocol::SENDWRAP_W3GS_GHOST_LOBBY_ERROR("Your username is not allowed."));
     return JoinRequestResult::kFailDelayed;
   }
@@ -5867,7 +5867,7 @@ JoinRequestResult CGame::EventRequestJoin(CConnection* connection, const CIncomi
   if (CheckScopeBanned(joinRequest.GetName(), JoinedRealm, connection->GetIPStringStrict()) ||
     CheckUserBanned(connection, joinRequest, matchingRealm, JoinedRealm) ||
     CheckIPBanned(connection, joinRequest, matchingRealm, JoinedRealm)) {
-    DLOG_APP_IF(LogLevel::kTrace, Concat("user ", SanitizeWrapUTF8(joinRequest.GetName()), " failed to join (banned)"));
+    DLOG_APP_IF(LogLevel::kTrace, Concat("user ", EnsureWrapUTF8(joinRequest.GetName()), " failed to join (banned)"));
     // let banned users "join" the game with an arbitrary UID then immediately close the connection
     // this causes them to be kicked back to the chat channel on battle.net
     optional<Version> maybeGameInfoVersion = GetIncomingPlayerVersion(connection, joinRequest, matchingRealm);
@@ -6280,6 +6280,7 @@ bool CGame::EventUserIncomingAction(GameUser::CGameUser* user, CIncomingAction& 
       LOG_APP_IF(LogLevel::kInfo, Concat("[", user->GetName(), "] finished saving the game"));
       break;
     case ACTION_PAUSE:
+      // FIXME: This sniffing for ACTION_PAUSE is too unreliable
       LOG_APP_IF(LogLevel::kInfo, Concat("[", user->GetName(), "] paused the game"));
       if (!user->GetIsNativeReferee()) {
         user->DropRemainingPauses();
@@ -6404,7 +6405,7 @@ void CGame::EventChatTrigger(GameUser::CGameUser* user, string_view chatMessage,
 {
   bool canLogChatTriggers = m_Aura->m_Config.m_LogGameChat != LOG_GAME_CHAT_NEVER && (((m_Config.m_LogChatTypes & LOG_CHAT_TYPE_COMMANDS) > 0) || m_Aura->MatchLogLevel(LogLevel::kDebug));
   if (canLogChatTriggers && (m_Config.m_LogChatTypes & LOG_CHAT_TYPE_COMMANDS) > 0) {
-    m_Aura->LogPersistent(Concat(GetLogPrefix(), SanitizeWrapUTF8(m_Map->GetServerFileName()), " [CMD] ["+ user->GetExtendedName(), "] ", SanitizeWrapUTF8(chatMessage)));
+    m_Aura->LogPersistent(Concat(GetLogPrefix(), EnsureWrapUTF8(m_Map->GetServerFileName()), " [CMD] ["+ user->GetExtendedName(), "] ", EnsureWrapUTF8(chatMessage)));
   }
 
   // Enable --log-level debug to figure out HMC map-specific constants
@@ -6434,7 +6435,7 @@ void CGame::EventChatTrigger(GameUser::CGameUser* user, string_view chatMessage,
   //
 
   if (canLogChatTriggers) {
-    LOG_APP_IF(LogLevel::kDebug, Concat(SanitizeWrapUTF8(m_Map->GetServerFileName()), " Message by [", user->GetName(), "]: ", SanitizeWrapUTF8(chatMessage), " triggered : [0x", ToHexString(first), " | 0x", ToHexString(second), "]"));
+    LOG_APP_IF(LogLevel::kDebug, Concat(EnsureWrapUTF8(m_Map->GetServerFileName()), " Message by [", user->GetName(), "]: ", EnsureWrapUTF8(chatMessage), " triggered : [0x", ToHexString(first), " | 0x", ToHexString(second), "]"));
   }
 
   if (m_Map->GetMapType() == "microtraining") {
@@ -6842,7 +6843,7 @@ void CGame::EventUserMapSize(GameUser::CGameUser* user, const CIncomingMapFileSi
       if (isFirstCheck) {
         string fromURL, kickFragment;
         if (!GetMapSiteURL().empty()) {
-          fromURL = Concat(" from <", SanitizeUTF8(GetMapSiteURL()), ">");
+          fromURL = Concat(" from <", EnsureUTF8(GetMapSiteURL()), ">");
         }
         if (willKick) {
            kickFragment = Concat(" (Kick in ", to_string(m_Config.m_LacksMapKickDelay / 1000), " seconds...)");
@@ -7570,7 +7571,7 @@ void CGame::HandleGameLoadedStats()
   }
   m_Aura->m_DB->UpdateLatestHistoryGameId(m_PersistentId);
 
-  string mapClientPath(SanitizeUTF8(m_Map->GetClientPath()));
+  string mapClientPath(EnsureUTF8(m_Map->GetClientPath()));
   string mapServerPath = SanitizeUTF8Path(m_Map->GetServerPath());
 
   m_Aura->m_DB->GameAdd(

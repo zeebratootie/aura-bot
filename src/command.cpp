@@ -2073,7 +2073,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
       // so that they can be checked in successful whisper acks from the server (BNETProtocol::IncomingChatEvent::WHISPERSENT)
       // Note that the server doesn't provide any way to recognize whisper targets if the whisper fails.
       if (lastSlashIndex != string::npos && lastSlashIndex <= mapPath.length() - 6) {
-        m_ActionMessage = Concat(targetName, ", ", GetSender(), " invites you to play ", SanitizeWrapUTF8(mapPath.substr(lastSlashIndex + 1)), ". Join game \"", targetGame->GetCustomGameName(targetRealm), "\"");
+        m_ActionMessage = Concat(targetName, ", ", GetSender(), " invites you to play ", EnsureWrapUTF8(mapPath.substr(lastSlashIndex + 1)), ". Join game \"", targetGame->GetCustomGameName(targetRealm), "\"");
       } else {
         m_ActionMessage = Concat(targetName, ", ", GetSender(), " invites you to join game \"", targetGame->GetCustomGameName(targetRealm), "\"");
       }
@@ -2679,7 +2679,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
         if (targetGame->GetMapSiteURL().empty()) {
           SendAll("Download URL unknown.");
         } else {
-          SendAll(Concat("Visit <", SanitizeUTF8(targetGame->GetMapSiteURL()), "> to download ", SanitizeWrapUTF8(targetGame->GetClientFileName())));
+          SendAll(Concat("Visit <", EnsureUTF8(targetGame->GetMapSiteURL()), "> to download ", EnsureWrapUTF8(targetGame->GetClientFileName())));
         }
         break;
       }
@@ -3466,6 +3466,89 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
       m_Aura->m_GameSetup->AcquireCreator();
       m_Aura->m_GameSetup->SetOwner(targetName, targetRealm ? targetRealm : sourceRealm);
       m_Aura->m_GameSetup->RunHost();
+      break;
+    }
+
+    //
+    // !AUTOREHOST
+    //
+
+    case HashCode("rehost"):
+    case HashCode("autorehost"): {
+      UseImplicitHostedGame();
+      shared_ptr<CGame> targetGame = GetTargetGame();
+
+      if (!GetIsSudo()) {
+        ErrorReply("Requires sudo permissions.");
+        break;
+      }
+
+      switch (HashCode(ToLowerCase(target))) {
+        case HashCode("status"): {
+          switch (m_Aura->GetAutoReHostStatus()) {
+            case AutoReHostStatus::kNone:
+              SendReply("No map is being automatically rehosted.");
+              break;
+            case AutoReHostStatus::kAlready:
+              SendReply(Concat("The automatically rehosted map ", EnsureWrapUTF8(m_Aura->m_AutoRehostGameSetup->GetMap()->GetClientFileName()) , " is already being hosted."));
+              break;
+            case AutoReHostStatus::kPendingGameBusy:
+              SendReply(Concat("Automatic rehost of ", EnsureWrapUTF8(m_Aura->m_AutoRehostGameSetup->GetMap()->GetClientFileName()), " is on hold because of a pending game."));
+              break;
+            case AutoReHostStatus::kQuotaExceeded:
+              SendReply(Concat("Automatic rehost of ", EnsureWrapUTF8(m_Aura->m_AutoRehostGameSetup->GetMap()->GetClientFileName()), " is on hold because the quota of simultaneous games has been reached."));
+              SendReply(Concat(to_string(m_Aura->m_Lobbies.size()), " lobbies / ", to_string(m_Aura->m_JoinInProgressGames.size()), " join in progress / ", to_string(m_Aura->m_ReplacingLobbiesCounter), " replacing / ", to_string(m_Aura->m_Config.m_MaxLobbies), " max"));
+              SendReply(Concat(to_string(m_Aura->m_Lobbies.size()), " lobbies / ", to_string(m_Aura->m_StartedGames.size()), " started / ", to_string(m_Aura->m_Config.m_MaxTotalGames), " max"));
+              if (m_Aura->m_Config.m_AutoRehostQuotaConservative) {
+                SendReply("Quota is conservative.");
+              } else {
+                SendReply("Quota is optimistic.");
+              }
+              break;
+            case AutoReHostStatus::kThrottled:
+              SendReply(Concat("Automatic rehost of ", EnsureWrapUTF8(m_Aura->m_AutoRehostGameSetup->GetMap()->GetClientFileName()), " is on hold because it has just been hosted."));
+              break;
+            case AutoReHostStatus::kReady:
+              SendReply(Concat("Automatic rehost of ", EnsureWrapUTF8(m_Aura->m_AutoRehostGameSetup->GetMap()->GetClientFileName()), " is ready."));
+              break;
+          }
+          break;
+        }
+
+        case HashCode("clear"): {
+          if (!m_Aura->m_AutoRehostGameSetup) {
+            ErrorReply("No map is being automatically rehosted.");
+            break;
+          }
+          m_Aura->m_AutoRehostGameSetup->SetLobbyAutoRehosted(false);
+          m_Aura->m_AutoRehostGameSetup.reset();
+          SendReply(Concat("Automatic rehost of ", EnsureWrapUTF8(m_Aura->m_AutoRehostGameSetup->GetMap()->GetClientFileName()), " turned OFF."));
+          break;
+        }
+
+        case HashCode("start"): {
+          if (!targetGame) {
+            ErrorReply("No game is selected.");
+            break;
+          }
+          if (!targetGame->m_GameSetup) {
+            ErrorReply("Lobbies may only be configured for automatic rehost immediately after a remake.");
+            break;
+          }
+          if (m_Aura->m_GameSetup && (m_Aura->m_GameSetup->GetIsDownloading() || m_Aura->m_GameSetup->GetMirror().GetIsSearching())) {
+            ErrorReply("There is already a pending game. Please retry after it has been created.");
+            break;
+          }
+          m_Aura->m_AutoRehostGameSetup = targetGame->m_GameSetup;
+          m_Aura->m_AutoRehostGameSetup->SetLobbyAutoRehosted(true);
+          SendReply(Concat("Automatic rehost of ", EnsureWrapUTF8(m_Aura->m_AutoRehostGameSetup->GetMap()->GetClientFileName()), " turned ON."));
+          break;
+        }
+        default:
+          ErrorReply("Usage: !autorehost [status|clear|start]");
+          break;
+      }
+
       break;
     }
 

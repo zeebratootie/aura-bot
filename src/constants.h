@@ -263,6 +263,15 @@ enum class TaskType : uint8_t {
   LAST = 6,
 };
 
+enum class AutoReHostStatus : uint8_t {
+  kNone = 0,
+  kAlready = 1,
+  kPendingGameBusy = 2,
+  kQuotaExceeded = 3,
+  kThrottled = 4,
+  kReady = 5,
+};
+
 constexpr uint8_t LOG_C = 1u;
 constexpr uint8_t LOG_P = 2u;
 constexpr uint8_t LOG_R = 4u;

@@ -76,7 +76,7 @@ bool GameSearchQuery::GetIsMatch(const Version& gameVersion, const NetworkGameIn
       mismatchReasons.push_back("maps are different (registry expects sha1 hash: " + ByteArrayToDecString(gameInfo.GetMapScriptsSHA1()) + ")");
     }
     if (!CaseInsensitiveEquals(m_Map->GetClientFileName(), gameInfo.GetMapClientFileName())) {
-      mismatchReasons.push_back("filenames are different (registry: " + SanitizeWrapUTF8(gameInfo.GetMapClientFileName()) + " vs local: " + SanitizeWrapUTF8(m_Map->GetClientFileName()));
+      mismatchReasons.push_back("filenames are different (registry: " + EnsureWrapUTF8(gameInfo.GetMapClientFileName()) + " vs local: " + EnsureWrapUTF8(m_Map->GetClientFileName()));
     }
     if (!mismatchReasons.empty()) {
       Print(

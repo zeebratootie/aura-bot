@@ -128,7 +128,7 @@ namespace BNETProtocol
         //Print(Concat("[BNETPROTO] Game name was empty #", to_string(gameIndex + 1), " at " + gameInfo.GetHostDetails()));
         return games;
       }
-      //Print(Concat("[BNETPROTO] Got game #", to_string(gameIndex + 1), " name ", SanitizeWrapUTF8(gameName), " at ", gameInfo.GetHostDetails()));
+      //Print(Concat("[BNETPROTO] Got game #", to_string(gameIndex + 1), " name ", EnsureWrapUTF8(gameName), " at ", gameInfo.GetHostDetails()));
       gameInfo.SetGameName(gameName);
       cursor += gameName.size() + 1;
 

@@ -126,23 +126,15 @@ optional<string> GetUserMultiPlayerName()
     return nullopt;
   }
 
-  optional<string> compatName;
-  compatName.emplace();
-  compatName->reserve(localName->size());
-  for (wchar_t c : localName.value()) {
-    if (c == 0) break;
-    // Client transmits low-bytes only.
-    compatName->push_back(static_cast<char>(c & 0xFF));
-  }
-
-  if (!IsArbitraryStringUTF8Safe(compatName.value())) {
+  string compatName = WidenedUtf16ToAnsiCompat(localName.value());
+  if (!IsArbitraryStringUTF8Safe(compatName)) {
     Print("[AURA] warning - Your Warcraft III username is not encoded as valid ANSI (it's probably Unicode instead).");
     Print("[AURA] warning - To ensure compatibility, paste your username through a tool or editor that converts text to ANSI.");
     Print("[AURA] warning - This operation can be done using Notepad++, or UTFizer, among other tools.");
     return nullopt;
   }
 
-  return compatName;
+  return {compatName};
 #else
   return nullopt;
 #endif

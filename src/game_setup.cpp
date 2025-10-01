@@ -1245,7 +1245,7 @@ void CGameSetup::OnLoadMapSuccess()
 
   if (m_MapReadyCallbackAction == MAP_ONREADY_ALIAS) {
     if (m_Aura->m_DB->AliasAdd(m_MapReadyCallbackData, m_Map->GetServerFileName())) {
-      m_Ctx->SendReply("Alias " + SanitizeWrapUTF8(m_MapReadyCallbackData) + " added for " + SanitizeWrapUTF8(m_Map->GetServerFileName()));
+      m_Ctx->SendReply("Alias " + EnsureWrapUTF8(m_MapReadyCallbackData) + " added for " + EnsureWrapUTF8(m_Map->GetServerFileName()));
     } else {
       m_Ctx->ErrorReply("Failed to add alias.");
     }
@@ -1402,7 +1402,7 @@ bool CGameSetup::RestoreFromSaveFile()
     mismatchReasons.push_back("maps are different (save expects sha1 hash: " + ByteArrayToDecString(gameStat.GetMapScriptsSHA1()) + ")");
   }
   if (!CaseInsensitiveEquals(m_Map->GetClientFileName(), gameStat.GetMapClientFileName())) {
-    mismatchReasons.push_back("filenames are different (save file: " + SanitizeWrapUTF8(gameStat.GetMapClientFileName()) + " vs game: " + SanitizeWrapUTF8(m_Map->GetClientFileName()));
+    mismatchReasons.push_back("filenames are different (save file: " + EnsureWrapUTF8(gameStat.GetMapClientFileName()) + " vs game: " + EnsureWrapUTF8(m_Map->GetClientFileName()));
   }
   if (!mismatchReasons.empty()) {
     Print("[GAMESETUP] Save file is not valid, because " + JoinStrings(mismatchReasons));

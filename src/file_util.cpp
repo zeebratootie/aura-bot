@@ -161,13 +161,13 @@ string PathToAbsoluteString(const filesystem::path& inputPath) {
 string SanitizeUTF8Path(const filesystem::path& unsafePath, string_view fallback)
 {
   string unsafeInput = PathToString(unsafePath);
-  return string(SanitizeUTF8(unsafeInput, fallback));
+  return string(EnsureUTF8(unsafeInput, fallback));
 }
 
 string SanitizeWrapUTF8Path(const filesystem::path& unsafePath, string_view fallback)
 {
   string unsafeInput = PathToString(unsafePath);
-  return SanitizeWrapUTF8(unsafeInput, fallback);
+  return EnsureWrapUTF8(unsafeInput, fallback);
 }
 
 vector<filesystem::path> FilesMatch(const filesystem::path& path, const vector<PLATFORM_STRING_TYPE>& extensionList)
@@ -559,7 +559,7 @@ bool ReadMPQFile(void* MPQ, const char* packedFileName, Container& container, co
           container.shrink_to_fit();
         } catch (...) {}
         SFileCloseFile(subFile);
-        Print(Concat("[FILE] error - insufficient memory for loading from archive ", SanitizeWrapUTF8(packedFileName)));
+        Print(Concat("[FILE] error - insufficient memory for loading from archive ", EnsureWrapUTF8(packedFileName)));
         return false;
       }
 #ifdef _WIN32
@@ -570,7 +570,7 @@ bool ReadMPQFile(void* MPQ, const char* packedFileName, Container& container, co
 
       if (SFileReadFile(subFile, container.data(), fileLength, &bytesRead, nullptr)) {
         if (bytesRead < fileLength) {
-          Print(Concat("[FILE] error reading ", SanitizeWrapUTF8(packedFileName), " - bytes read is ", to_string(bytesRead), "; file length is ", to_string(fileLength)));
+          Print(Concat("[FILE] error reading ", EnsureWrapUTF8(packedFileName), " - bytes read is ", to_string(bytesRead), "; file length is ", to_string(fileLength)));
           container.clear();
           try {
             container.shrink_to_fit();
@@ -594,13 +594,13 @@ bool ExtractMPQFile(void* MPQ, const char* packedFileName, const filesystem::pat
   vector<uint8_t> container;
   ReadMPQFile(MPQ, packedFileName, container, locale);
   if (container.empty()) {
-    Print(Concat("[AURA] warning - unable to extract ", SanitizeWrapUTF8(packedFileName), " from MPQ archive"));
+    Print(Concat("[AURA] warning - unable to extract ", EnsureWrapUTF8(packedFileName), " from MPQ archive"));
     return false;
   } else if (FileWrite(outPath, container.data(), container.size())) {
-    Print(Concat("[AURA] extracted ", SanitizeWrapUTF8(packedFileName), " to ", SanitizeWrapUTF8Path(outPath)));
+    Print(Concat("[AURA] extracted ", EnsureWrapUTF8(packedFileName), " to ", SanitizeWrapUTF8Path(outPath)));
     return true;
   } else {
-    Print(Concat("[AURA] warning - unable to save extracted ", SanitizeWrapUTF8(packedFileName), " to ", SanitizeWrapUTF8Path(outPath)));
+    Print(Concat("[AURA] warning - unable to save extracted ", EnsureWrapUTF8(packedFileName), " to ", SanitizeWrapUTF8Path(outPath)));
     return false;
   }
 }

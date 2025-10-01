@@ -1228,14 +1228,10 @@ bool CAura::Update()
     assert(m_ReloadContext == nullptr && "m_ReloadContext should be reset");
   }
 
-  if (m_AutoRehostGameSetup && !m_AutoReHosted) {
-    if (!(m_GameSetup && (m_GameSetup->GetIsDownloading() || m_GameSetup->GetMirror().GetIsSearching())) &&
-      (GetNewGameIsInQuotaAutoReHost() && !GetIsAutoHostThrottled())
-    ) {
-      m_AutoRehostGameSetup->SetActive();
-      AppAction rehostAction = AppAction(AppActionType::kHostActiveMirror);
-      m_PendingActions.push(rehostAction);
-    }
+  if (GetAutoReHostStatus() == AutoReHostStatus::kReady) {
+    m_AutoRehostGameSetup->SetActive();
+    AppAction rehostAction = AppAction(AppActionType::kHostActiveMirror);
+    m_PendingActions.push(rehostAction);
   }
 
   bool isStandby = (
@@ -1613,9 +1609,9 @@ void CAura::EventGameRemake(shared_ptr<CGame> game)
   for (auto& realm : m_Realms) {
     realm->TrySetGameBroadcastPending(game);
     if (realm->GetAnnounceHostToChat()) {
-      realm->QueueChatChannel(Concat("Game remake: ", SanitizeUTF8(game->GetMap()->GetServerFileName())));
+      realm->QueueChatChannel(Concat("Game remake: ", EnsureUTF8(game->GetMap()->GetServerFileName())));
       if (game->MatchesCreatedFromRealm(realm)) {
-        realm->QueueWhisper(Concat("Game remake: ", SanitizeUTF8(game->GetMap()->GetServerFileName())), game->GetCreatorName());
+        realm->QueueWhisper(Concat("Game remake: ", EnsureUTF8(game->GetMap()->GetServerFileName())), game->GetCreatorName());
       }
     }
   }
@@ -1634,9 +1630,9 @@ void CAura::EventGameStarted(shared_ptr<CGame> game)
   /*
   for (auto& realm : m_Realms) {
     if (!realm->GetAnnounceHostToChat()) continue;
-    realm->QueueChatChannel(Concat("Game started: ", SanitizeUTF8(game->GetMap()->GetServerFileName())));
+    realm->QueueChatChannel(Concat("Game started: ", EnsureUTF8(game->GetMap()->GetServerFileName())));
     if (game->MatchesCreatedFromRealm(realm)) {
-      realm->QueueWhisper(Concat("Game started: ", SanitizeUTF8(game->GetMap()->GetServerFileName())), game->GetCreatorName());
+      realm->QueueWhisper(Concat("Game started: ", EnsureUTF8(game->GetMap()->GetServerFileName())), game->GetCreatorName());
     }
   }
   */
@@ -2314,21 +2310,21 @@ bool CAura::GetIsSupportedGameVersion(const Version& version) const
 
 bool CAura::GetNewGameIsInQuota() const
 {
-  if (m_Lobbies.size() + m_JoinInProgressGames.size() - m_ReplacingLobbiesCounter >= m_Config.m_MaxLobbies) return false;
+  if (m_Lobbies.size()/* + m_JoinInProgressGames.size()*/ - m_ReplacingLobbiesCounter >= m_Config.m_MaxLobbies) return false;
   if (m_Lobbies.size() + m_StartedGames.size() >= m_Config.m_MaxTotalGames) return false;
   return true;
 }
 
 bool CAura::GetNewGameIsInQuotaReplace() const
 {
-  if (m_Lobbies.size() + m_JoinInProgressGames.size() - m_ReplacingLobbiesCounter > m_Config.m_MaxLobbies) return false;
+  if (m_Lobbies.size()/* + m_JoinInProgressGames.size()*/ - m_ReplacingLobbiesCounter > m_Config.m_MaxLobbies) return false;
   if (m_Lobbies.size() + m_StartedGames.size() >= m_Config.m_MaxTotalGames) return false;
   return true;
 }
 
 bool CAura::GetNewGameIsInQuotaConservative() const
 {
-  if (m_Lobbies.size() + m_JoinInProgressGames.size() - m_ReplacingLobbiesCounter >= m_Config.m_MaxLobbies) return false;
+  if (m_Lobbies.size()/* + m_JoinInProgressGames.size()*/ - m_ReplacingLobbiesCounter >= m_Config.m_MaxLobbies) return false;
   if (m_StartedGames.size() >= m_Config.m_MaxStartedGames) return false;
   if (m_Lobbies.size() + m_StartedGames.size() >= m_Config.m_MaxTotalGames) return false;
   return true;
@@ -2347,6 +2343,22 @@ bool CAura::GetIsAutoHostThrottled() const
 {
   if (m_Realms.empty()) return false;
   return m_LastGameAutoHostedTicks.has_value() && m_LastGameAutoHostedTicks.value() + AUTO_REHOST_COOLDOWN_TICKS >= m_ClockTicks;
+}
+
+AutoReHostStatus CAura::GetAutoReHostStatus() const
+{
+  if (!m_AutoRehostGameSetup) return AutoReHostStatus::kNone;
+  if (m_AutoReHosted) return AutoReHostStatus::kAlready;
+  if (m_GameSetup && (m_GameSetup->GetIsDownloading() || m_GameSetup->GetMirror().GetIsSearching())) {
+    return AutoReHostStatus::kPendingGameBusy;
+  }
+  if (!GetNewGameIsInQuotaAutoReHost()) {
+    return AutoReHostStatus::kQuotaExceeded;
+  }
+  if (GetIsAutoHostThrottled()) {
+    return AutoReHostStatus::kThrottled;
+  }
+  return AutoReHostStatus::kReady;
 }
 
 bool CAura::CreateGame(shared_ptr<CGameSetup> gameSetup)
@@ -2478,13 +2490,13 @@ bool CAura::CreateGame(shared_ptr<CGameSetup> gameSetup)
   const uint32_t mapSize = createdLobby->GetMap()->GetMapSize();
   if (mapSize > MAX_MAP_SIZE_RF) {
     // Reforged
-    Print(Concat("[AURA] warning - hosting game beyond 512 MB map size limit: ", SanitizeWrapUTF8(createdLobby->GetMap()->GetServerFileName())));
+    Print(Concat("[AURA] warning - hosting game beyond 512 MB map size limit: ", EnsureWrapUTF8(createdLobby->GetMap()->GetServerFileName())));
   } else if (gameVersion <= GAMEVER(1u, 28u) && mapSize > MAX_MAP_SIZE_1_28) {
-    Print(Concat("[AURA] warning - hosting game beyond 128 MB map size limit: ", SanitizeWrapUTF8(createdLobby->GetMap()->GetServerFileName())));
+    Print(Concat("[AURA] warning - hosting game beyond 128 MB map size limit: ", EnsureWrapUTF8(createdLobby->GetMap()->GetServerFileName())));
   } else if (gameVersion <= GAMEVER(1u, 26u) && mapSize > MAX_MAP_SIZE_1_26) {
-    Print(Concat("[AURA] warning - hosting game beyond 8 MB map size limit: ", SanitizeWrapUTF8(createdLobby->GetMap()->GetServerFileName())));
+    Print(Concat("[AURA] warning - hosting game beyond 8 MB map size limit: ", EnsureWrapUTF8(createdLobby->GetMap()->GetServerFileName())));
   } else if (gameVersion <= GAMEVER(1u, 23u) && mapSize > MAX_MAP_SIZE_1_23) {
-    Print(Concat("[AURA] warning - hosting game beyond 4 MB map size limit: ", SanitizeWrapUTF8(createdLobby->GetMap()->GetServerFileName())));
+    Print(Concat("[AURA] warning - hosting game beyond 4 MB map size limit: ", EnsureWrapUTF8(createdLobby->GetMap()->GetServerFileName())));
   }
   if (gameVersion < createdLobby->GetMap()->GetMapMinSuggestedGameVersion()) {
     Print(Concat("[AURA] warning - hosting game that MAY require version ", ToVersionString(createdLobby->GetMap()->GetMapMinSuggestedGameVersion())));

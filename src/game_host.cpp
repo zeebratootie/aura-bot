@@ -213,7 +213,7 @@ bool NetworkGameInfo::SetBNETGameInfo(string_view gameStat, const Version& war3V
   }
 
   /*
-  Print(Concat("[BNETPROTO] Host: ", SanitizeWrapUTF8(m_HostName)));
+  Print(Concat("[BNETPROTO] Host: ", EnsureWrapUTF8(m_HostName)));
   Print(Concat("[BNETPROTO] Dimensions: ", to_string(m_Info.m_MapWidth), "x", to_string(m_Info.m_MapHeight)));
   Print(Concat("[BNETPROTO] Blizz Hash: <", ByteArrayToDecString(m_Info.m_MapScriptsBlizzHash), ">"));
   if (m_Info.m_MapScriptsSHA1.has_value()) {

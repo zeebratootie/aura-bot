@@ -53,7 +53,7 @@ string CGameInteractiveHost::GetProcedureDescription(const uint32_t interactionI
     optional<uint32_t> maybeRequestType = ToUint32(key);
     description.append(Concat(" request type ", to_string(*maybeRequestType)));
   } else {
-    description.append(Concat(" value ", SanitizeWrapUTF8(key)));
+    description.append(Concat(" value ", EnsureWrapUTF8(key)));
   }
 
   auto instanceMatch = m_Interactions.find(interactionId);

@@ -95,9 +95,10 @@ protected:
   Dota::CDotaStats*                                      m_DotaStats;                     // class to keep track of game stats such as kills/deaths/assists in dota
   CGameInteractiveHost*                                  m_GameInteractiveHost;
   std::shared_ptr<CSaveGame>                             m_RestoredGame;
-  CGameSlotsConfig                                       m_SlotsConfig;                         // std::vector of slots
+  CGameSlotsConfig                                       m_SlotsConfig;                   // std::vector of slots
   std::vector<CGameController*>                          m_GameControllers;               // std::vector of potential gameuser data for the database
   UserList                                               m_Users;                         // std::vector of players
+  std::shared_ptr<CGameSetup>                            m_GameSetup;
   CircleDoubleLinkedList<CQueuedActionsFrame>            m_Actions;                       // actions to be sent
   QueuedActionsFrameNode*                                m_CurrentActionsFrame;
   std::vector<std::string>                               m_Reserved;                      // std::vector of player names with reserved slots (from the !hold command)

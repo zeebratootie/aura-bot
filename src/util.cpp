@@ -2134,13 +2134,9 @@ string ToLowerCasePreserveUTF8(string_view input)
 
   while (it != end) {
     char32_t cp = utf8::unchecked::next(it);
-    if (cp >= 0x80) {
-      u32string_view sv(&cp, 1);
-      output += utf8::utf32to8(sv);
-    } else {
-      output += static_cast<char>(tolower(static_cast<unsigned char>(cp)));
-    }
+    utf8::unchecked::append(cp, back_inserter(output));
   }
+
   return output;
 }
 
@@ -2152,7 +2148,7 @@ bool IsArbitraryStringUTF8Safe(string_view unsafeInput)
   return !HasUnsafeUTF8CodePoints(unsafeInput);
 }
 
-string_view SanitizeUTF8(string_view unsafeInput, string_view fallback)
+string_view EnsureUTF8(string_view unsafeInput, string_view fallback)
 {
   if (IsArbitraryStringUTF8Safe(unsafeInput)) {
     return unsafeInput;
@@ -2160,12 +2156,35 @@ string_view SanitizeUTF8(string_view unsafeInput, string_view fallback)
   return fallback;
 }
 
-string SanitizeUTF8PieceWise(string_view unsafeInput)
-{
-  return utf8::replace_invalid(unsafeInput, '?');
+string SanitizeUTF8(string_view unsafeInput) {
+  string output;
+  output.reserve(unsafeInput.size());
+
+  auto it = unsafeInput.begin();
+  auto end = unsafeInput.end();
+
+  while (it != end) {
+    char32_t cp;
+    try {
+      cp = utf8::next(it, end);
+    } catch (...) {
+      output += '?';
+      ++it;
+      continue;
+    }
+
+    if (IsUnsafeCodePoint(cp)) {
+      output += '?';
+      continue;
+    }
+
+    utf8::append(cp, back_inserter(output));
+  }
+
+  return output;
 }
 
-string_view SanitizeASCII(string_view unsafeInput, string_view fallback)
+string_view EnsureASCII(string_view unsafeInput, string_view fallback)
 {
   if (IsASCII(unsafeInput)) {
     return unsafeInput;
@@ -2173,43 +2192,63 @@ string_view SanitizeASCII(string_view unsafeInput, string_view fallback)
   return fallback;
 }
 
-string SanitizeASCIIPieceWise(string_view unsafeInput)
+string SanitizeASCII(string_view unsafeInput)
 {
   string output;
   output.reserve(unsafeInput.size());
   for (auto& c : unsafeInput) {
     if ((c & 0x80) == 0) {
       output += c;
+    } else {
+      output += '?';
     }
   }
   return output;
 }
 
-string SanitizeWrapUTF8(string_view unsafeInput, string_view fallback)
+string EnsureWrapUTF8(string_view unsafeInput, string_view fallback)
 {
   if (IsArbitraryStringUTF8Safe(unsafeInput)) {
-    return "[" + string(unsafeInput) + "]";
+    return Concat("[", unsafeInput, "]");
   }
   return string(fallback);
 }
 
-string SanitizeWrapUTF8PieceWise(string_view unsafeInput)
+string SanitizeWrapUTF8(string_view unsafeInput)
 {
-  return Concat("[", SanitizeUTF8PieceWise(unsafeInput), "]");
+  return Concat("[", SanitizeUTF8(unsafeInput), "]");
 }
 
-string SanitizeWrapASCII(string_view unsafeInput, string_view fallback)
+string EnsureWrapASCII(string_view unsafeInput, string_view fallback)
 {
   if (IsASCII(unsafeInput)) {
-    return "[" + string(unsafeInput) + "]";
+    return Concat("[", unsafeInput, "]");
   }
   return string(fallback);
 }
 
-string SanitizeWrapASCIIPieceWise(string_view unsafeInput)
+string SanitizeWrapASCII(string_view unsafeInput)
 {
-  return Concat("[", SanitizeASCIIPieceWise(unsafeInput), "]");
+  return Concat("[", SanitizeASCII(unsafeInput), "]");
 }
+
+#ifdef _WIN32
+string WidenedUtf16ToAnsiCompat(const wstring& wstr)
+{
+  static_assert(sizeof(wchar_t) == 2, "WidenedUtf16ToAnsiCompat assumes wstring is UTF-16.");
+  string result;
+  result.reserve(wstr.size());
+  for (wchar_t c : wstr) {
+    if (c == 0) break;
+    if (c > 0xFF) {
+      result.push_back('?');
+    } else {
+      result.push_back(static_cast<char>(c & 0xFF));
+    }
+  }
+  return result;
+}
+#endif
 
 uint32_t ASCIIHexToNum(const array<uint8_t, 8>& data, bool reverse)
 {
