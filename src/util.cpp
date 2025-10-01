@@ -237,16 +237,16 @@ string ToFormattedRealm(const string& hostName)
 
 string ToFormattedTimeStampHHMMSS(const int64_t hh, const int64_t mm, const int64_t ss)
 {
-  if (hh > 0) return ToDecStringPadded(hh, 2) + ":" + ToDecStringPadded(mm, 2) + ":" + ToDecStringPadded(ss, 2);
-  return ToDecStringPadded(mm, 2) + ":" + ToDecStringPadded(ss, 2);
+  if (hh > 0) return Concat(ToDecStringPadded(hh, 2), ":", ToDecStringPadded(mm, 2), ":", ToDecStringPadded(ss, 2));
+  return Concat(ToDecStringPadded(mm, 2), ":", ToDecStringPadded(ss, 2));
 }
 
 string ToDurationStringHHMMSS(const int64_t hh, const int64_t mm, const int64_t ss)
 {
   string result;
-  if (hh > 0) result.append(to_string(hh) + " h ");
-  if (mm > 0) result.append(to_string(mm) + " min ");
-  if (ss > 0) result.append(to_string(ss) + " s ");
+  if (hh > 0) result.append(Concat(to_string(hh), " h "));
+  if (mm > 0) result.append(Concat(to_string(mm), " min "));
+  if (ss > 0) result.append(Concat(to_string(ss), " s "));
   if (result.empty()) return "Now";
   return TrimString(result);
 }
@@ -286,7 +286,7 @@ template string ToDurationString(const uint64_t seconds);
 
 string ToVersionString(const Version& version)
 {
-  return ToDecString(version.first) + "." + ToDecString(version.second);
+  return Concat(ToDecString(version.first), ".", ToDecString(version.second));
 }
 
 uint32_t ToVersionFlattened(const Version& version) // MDNS protocol
@@ -311,10 +311,10 @@ bool GetIsValidVersion(const Version& version)
 string ToOrdinalName(const size_t number)
 {
   switch (number % 10) {
-    case 1: return to_string(number) + "st";
-    case 2: return to_string(number) + "nd";
-    case 3: return to_string(number) + "rd";
-    default: return to_string(number) + "th";
+    case 1: return Concat(to_string(number), "st");
+    case 2: return Concat(to_string(number), "nd");
+    case 3: return Concat(to_string(number), "rd");
+    default: return Concat(to_string(number), "th");
   }
 }
 
@@ -751,25 +751,35 @@ template uint64_t ByteArrayToUInt64<Endianness::kBig>(const string_view b, const
 
 string ByteArrayToDecString(const vector<uint8_t>& b)
 {
-  if (b.empty())
+  if (b.empty()) {
     return string();
+  }
 
-  string result = to_string(b[0]);
+  string result;
+  result.reserve(4 * b.size() - 1);
 
-  for (auto i = cbegin(b) + 1; i != cend(b); ++i)
-    result += " " + to_string(*i);
+  result += to_string(b[0]);
+  for (auto i = cbegin(b) + 1; i != cend(b); ++i) {
+    result += ' ';
+    result += to_string(*i);
+  }
 
   return result;
 }
 
 string ByteArrayToDecString(const uint8_t* start, const size_t size)
 {
-  if (size == 0)
+  if (size == 0) {
     return string();
+  }
 
-  string result = to_string(start[0]);
+  string result;
+  result.reserve(4 * size - 1);
+
+  result += to_string(start[0]);
   for (size_t i = 1; i < size; ++i) {
-    result += " " + to_string(start[i]);
+    result += ' ';
+    result += to_string(start[i]);
   }
 
   return result;
@@ -778,10 +788,15 @@ string ByteArrayToDecString(const uint8_t* start, const size_t size)
 template <size_t SIZE>
 string ByteArrayToDecString(const array<uint8_t, SIZE>& b)
 {
-  string result = to_string(b[0]);
+  constexpr size_t maxSize = 4 * SIZE - 1;
+  string result;
+  result.reserve(maxSize);
 
-  for (auto i = cbegin(b) + 1; i != cend(b); ++i)
-    result += " " + to_string(*i);
+  result += to_string(b[0]);
+  for (auto i = cbegin(b) + 1; i != cend(b); ++i) {
+    result += ' ';
+    result += to_string(*i);
+  }
 
   return result;
 }
@@ -792,17 +807,22 @@ template string ByteArrayToDecString(const array<uint8_t, 20>& b);
 
 string ByteArrayToHexString(const vector<uint8_t>& b)
 {
-  if (b.empty())
+  if (b.empty()) {
     return string();
+  }
 
-  string result = ToHexString(b[0]);
+  string result;
+  result.reserve(3 * b.size() - 1);
 
-  for (auto i = cbegin(b) + 1; i != cend(b); ++i)
   {
-    if (*i < 0x10)
-      result += " 0" + ToHexString(*i);
-    else
-      result += " " + ToHexString(*i);
+    if (b[0] < 0x10) result += '0';
+    result += ToHexString(b[0]);
+  }
+
+  for (auto i = cbegin(b) + 1; i != cend(b); ++i) {
+    result += ' ';
+    if (*i < 0x10) result += '0';
+    result += ToHexString(*i);
   }
 
   return result;
@@ -810,15 +830,22 @@ string ByteArrayToHexString(const vector<uint8_t>& b)
 
 string ByteArrayToHexString(const uint8_t* start, const size_t size)
 {
-  if (size == 0)
+  if (size == 0) {
     return string();
+  }
 
-  string result = ToHexString(start[0]);
+  string result;
+  result.reserve(3 * size - 1);
+
+  {
+    if (start[0] < 0x10) result += '0';
+    result += ToHexString(start[0]);
+  }
+
   for (size_t i = 1; i < size; ++i) {
-    if (start[i] < 0x10) 
-      result += " 0" + ToHexString(start[i]);
-    else
-      result += " " + ToHexString(start[i]);
+    result += ' ';
+    if (start[i] < 0x10) result += '0';
+    result += ToHexString(start[i]);
   }
 
   return result;
@@ -827,14 +854,19 @@ string ByteArrayToHexString(const uint8_t* start, const size_t size)
 template <size_t SIZE>
 string ByteArrayToHexString(const array<uint8_t, SIZE>& b)
 {
-  string result = ToHexString(b[0]);
+  constexpr size_t maxSize = 3 * SIZE - 1;
+  string result;
+  result.reserve(maxSize);
 
-  for (auto i = cbegin(b) + 1; i != cend(b); ++i)
   {
-    if (*i < 0x10)
-      result += " 0" + ToHexString(*i);
-    else
-      result += " " + ToHexString(*i);
+    if (b[0] < 0x10) result += '0';
+    result += ToHexString(b[0]);
+  }
+
+  for (auto i = cbegin(b) + 1; i != cend(b); ++i) {
+    result += ' ';
+    if (*i < 0x10) result += '0';
+    result += ToHexString(*i);
   }
 
   return result;
@@ -847,20 +879,23 @@ string GetStringBytesHex(string_view sv)
 {
   if (sv.empty()) return string();
   string result;
+  result.reserve(3 * sv.size() - 1);
+
   {
     unsigned char b = static_cast<unsigned char>(sv[0]);
-    if (b < 0x10)
-      result += "0" + ToHexString((uint16_t)b);
-    else
+    if (b < 0x10) {
+      result += '0';
       result += ToHexString((uint16_t)b);
+    } else {
+      result += ToHexString((uint16_t)b);
+    }
   }
 
   for (auto i = cbegin(sv) + 1; i != cend(sv); ++i) {
     unsigned char b = static_cast<unsigned char>(*i);
-    if (b < 0x10)
-      result += " 0" + ToHexString((uint16_t)b);
-    else
-      result += " " + ToHexString((uint16_t)b);
+    result += ' ';
+    if (b < 0x10) result += '0';
+    result += ToHexString((uint16_t)b);
   }
 
   return result;
@@ -868,27 +903,36 @@ string GetStringBytesHex(string_view sv)
 
 string ReverseByteArrayToDecString(const vector<uint8_t>& b)
 {
-  if (b.empty())
+  if (b.empty()) {
     return string();
+  }
 
-  string result = to_string(b.back());
+  string result;
+  result.reserve(4 * b.size() - 1);
 
-  for (auto i = b.crbegin() + 1; i != b.crend(); ++i)
-    result += " " + to_string(*i);
+  result += to_string(b.back());
+  for (auto i = b.crbegin() + 1; i != b.crend(); ++i) {
+    result += ' ';
+    result += to_string(*i);
+  }
 
   return result;
 }
 
 string ReverseByteArrayToDecString(const uint8_t* start, const size_t size)
 {
-  if (size == 0)
+  if (size == 0) {
     return string();
+  }
 
   size_t i = size - 1;
-  string result = to_string(start[i]);
+  string result;
+  result.reserve(4 * size - 1);
 
+  result += to_string(start[i]);
   while (i--) {
-    result += " " + to_string(start[i]);
+    result += ' ';
+    result += to_string(start[i]);
   }
 
   return result;
@@ -897,10 +941,16 @@ string ReverseByteArrayToDecString(const uint8_t* start, const size_t size)
 template <size_t SIZE>
 string ReverseByteArrayToDecString(const array<uint8_t, SIZE>& b)
 {
-  string result = to_string(b.back());
+  constexpr size_t maxSize = 4 * SIZE - 1;
+  string result;
+  result.reserve(maxSize);
 
-  for (auto i = b.crbegin() + 1; i != b.crend(); ++i)
-    result += " " + to_string(*i);
+  result += to_string(b.back());
+
+  for (auto i = b.crbegin() + 1; i != b.crend(); ++i) {
+    result += ' ';
+    result += to_string(*i);
+  }
 
   return result;
 }
@@ -912,14 +962,22 @@ string ReverseByteArrayToHexString(const vector<uint8_t>& b)
   if (b.empty())
     return string();
 
-  string result = ToHexString(b.back());
+  string result;
+  result.reserve(3 * b.size() - 1);
 
-  for (auto i = b.crbegin() + 1; i != b.crend(); ++i)
   {
-    if (*i < 0x10)
-      result += " 0" + ToHexString(*i);
-    else
-      result += " " + ToHexString(*i);
+    if (b.back() < 0x10) result += '0';
+    result += ToHexString(b.back());
+  }
+
+  for (auto i = b.crbegin() + 1; i != b.crend(); ++i) {
+    result += ' ';
+    if (*i < 0x10) {
+      result += '0';
+      result += ToHexString(*i);
+    } else {
+      result += ToHexString(*i);
+    }
   }
 
   return result;
@@ -928,14 +986,19 @@ string ReverseByteArrayToHexString(const vector<uint8_t>& b)
 template <size_t SIZE>
 string ReverseByteArrayToHexString(const array<uint8_t, SIZE>& b)
 {
-  string result = ToHexString(b.back());
+  constexpr size_t maxSize = 3 * SIZE - 1;
+  string result;
+  result.reserve(maxSize);
 
-  for (auto i = b.crbegin() + 1; i != b.crend(); ++i)
   {
-    if (*i < 0x10)
-      result += " 0" + ToHexString(*i);
-    else
-      result += " " + ToHexString(*i);
+    if (b.back() < 0x10) result += '0';
+    result += ToHexString(b.back());
+  }
+
+  for (auto i = b.crbegin() + 1; i != b.crend(); ++i) {
+    result += ' ';
+    if (*i < 0x10) result += '0';
+    result += ToHexString(*i);
   }
 
   return result;
@@ -1734,16 +1797,18 @@ string CheckIsValidHCLSmall(const string& s)
 
 string DurationLeftToString(int64_t remainingSeconds)
 {
-  if (remainingSeconds < 0)
+  if (remainingSeconds < 0) {
     remainingSeconds = 0;
+  }
+
   int64_t remainingMinutes = remainingSeconds / 60;
   remainingSeconds = remainingSeconds % 60;
   if (remainingMinutes == 0) {
-    return to_string(remainingSeconds) + " seconds";
+    return Concat(to_string(remainingSeconds), " seconds");
   } else if (remainingSeconds == 0) {
-    return to_string(remainingMinutes) + " minutes";
+    return Concat(to_string(remainingMinutes), " minutes");
   } else {
-    return to_string(remainingMinutes) + " min " + to_string(remainingSeconds) + "s";
+    return Concat(to_string(remainingMinutes), " min ", to_string(remainingSeconds), "s");
   }
 }
 
@@ -1938,7 +2003,7 @@ INSTANTIATE_JOIN_STRINGS_ARRAY(12)
 
 string IPv4ToString(const array<uint8_t, 4> ip)
 {
-  return ToDecString(ip[0]) + "." + ToDecString(ip[1]) + "." + ToDecString(ip[2]) + "." + ToDecString(ip[3]);
+  return Concat(ToDecString(ip[0]), ".", ToDecString(ip[1]), ".", ToDecString(ip[2]), ".", ToDecString(ip[3]));
 }
 
 bool SplitIPAddressAndPortOrDefault(const string& input, const uint16_t defaultPort, string& ip, uint16_t& port)
@@ -2134,7 +2199,11 @@ string ToLowerCasePreserveUTF8(string_view input)
 
   while (it != end) {
     char32_t cp = utf8::unchecked::next(it);
-    utf8::unchecked::append(cp, back_inserter(output));
+    if (cp >= 0x80) {
+      utf8::unchecked::append(cp, back_inserter(output));
+    } else {
+      output += static_cast<char>(tolower(static_cast<unsigned char>(cp)));
+    }
   }
 
   return output;
