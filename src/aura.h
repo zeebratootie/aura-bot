@@ -72,8 +72,8 @@
 #include <windows.h>
 #endif
 
-#define AURA_VERSION "12.2.1"
-#define AURA_APP_NAME "Aura 12.2.1"
+#define AURA_VERSION "12.2.3"
+#define AURA_APP_NAME "Aura 12.2.3"
 #define AURA_REPOSITORY_URL "https://gitlab.com/ivojulca/aura-bot"
 #define AURA_ISSUES_URL "https://gitlab.com/ivojulca/aura-bot/-/issues"
 
@@ -238,6 +238,7 @@ public:
   [[nodiscard]] bool GetNewGameIsInQuotaAutoReHost() const;
   bool CreateGame(std::shared_ptr<CGameSetup> gameSetup);
   [[nodiscard]] bool GetIsAutoHostThrottled() const;
+  [[nodiscard]] AutoReHostStatus GetAutoReHostStatus() const;
 
   [[nodiscard]] inline bool GetIsAdvertisingGames() { return !m_Lobbies.empty() || !m_JoinInProgressGames.empty(); }
   [[nodiscard]] inline bool GetHasGames() { return !m_StartedGames.empty() || !m_Lobbies.empty(); }
