@@ -1820,7 +1820,21 @@ string FourCCToString(uint32_t fourCC)
   result += static_cast<char>(static_cast<uint8_t>(fourCC >> 16));
   result += static_cast<char>(static_cast<uint8_t>(fourCC >> 8));
   result += static_cast<char>(static_cast<uint8_t>(fourCC));
-  return result;
+
+  if (result[0] != 0) {
+    return result;
+  }
+
+  auto it = result.begin();
+  auto end = result.end();
+  while (it != end) {
+    if (*it != 0) {
+      return string(it, end);
+    }
+    ++it;
+  }
+
+  return string(end, end);
 }
 
 string RemoveNonAlphanumeric(const string& s)

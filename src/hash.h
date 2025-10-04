@@ -24,8 +24,21 @@ static constexpr uint64_t HashCode(const char* str)
 template <size_t N>
 static constexpr uint32_t FourCC(const char (&str)[N])
 {
-  static_assert(N == 5, "FourCC requires a string literal of exactly 4 characters.");
-  return static_cast<uint32_t>(str[3]) | (static_cast<uint32_t>(str[2]) << 8) | (static_cast<uint32_t>(str[1]) << 16) | (static_cast<uint32_t>(str[0]) << 24);
+  // Note: Some parts of WC3 accept FourCC codes with less than 4 characters
+  static_assert(N <= 5, "FourCC requires a string literal of exactly 4 characters.");
+  if constexpr (N == 5) {
+    return static_cast<uint32_t>(str[3]) | (static_cast<uint32_t>(str[2]) << 8) | (static_cast<uint32_t>(str[1]) << 16) | (static_cast<uint32_t>(str[0]) << 24);
+  }
+  if constexpr (N == 4) {
+    return static_cast<uint32_t>(str[2]) | (static_cast<uint32_t>(str[1]) << 8) | (static_cast<uint32_t>(str[0]) << 16);
+  }
+  if constexpr (N == 3) {
+    return static_cast<uint32_t>(str[1]) | (static_cast<uint32_t>(str[0]) << 8);
+  }
+  if constexpr (N == 2) {
+    return static_cast<uint32_t>(str[0]);
+  }
+  return 0;
 }
 
 template<typename K, typename V, size_t N>
