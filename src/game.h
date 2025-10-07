@@ -440,6 +440,7 @@ public:
   bool                                                   GetIsAutoStartDue() const;
   std::string                                            GetAutoStartText() const;
   std::string                                            GetReadyStatusText() const;
+  std::string                                            GetPlayingTimeoutWelcomeText() const;
   std::string                                            GetCmdToken() const;
   std::shared_ptr<CTCPServer>                            GetSocket() const { return m_Socket; };
   UserList&                                              GetUsers() { return m_Users; }

@@ -3421,6 +3421,21 @@ string CGame::GetReadyStatusText() const
   return Concat(to_string(m_ControllersReadyCount), " players are ready.", notReadyFragment);
 }
 
+string CGame::GetPlayingTimeoutWelcomeText() const
+{
+  switch (m_Config.m_PlayingTimeoutMode) {
+    case GamePlayingTimeoutMode::kNever:
+      return string();
+    case GamePlayingTimeoutMode::kDry:
+      return Concat("Game would be over after ", ToDurationString(static_cast<uint64_t>(m_Config.m_PlayingTimeout / 1000)));
+    case GamePlayingTimeoutMode::kStrict:
+      return Concat("Game will be over after ", ToDurationString(static_cast<uint64_t>(m_Config.m_PlayingTimeout / 1000)));
+    default:
+      // should not be possible
+      return string();
+  }
+}
+
 string CGame::GetCmdToken() const
 {
   return m_Config.m_BroadcastCmdToken.empty() ? m_Config.m_PrivateCmdToken : m_Config.m_BroadcastCmdToken;
@@ -3855,6 +3870,18 @@ void CGame::SendWelcomeMessage(GameUser::CGameUser* user)
       }
       Line = Line.substr(6);
     }
+    if (Line.substr(0, 14) == "{GAMETIMEOUT?}") {
+      if (m_Config.m_PlayingTimeoutMode == GamePlayingTimeoutMode::kNever) {
+        continue;
+      }
+      Line = Line.substr(6);
+    }
+    if (Line.substr(0, 14) == "{GAMETIMEOUT!}") {
+      if (m_Config.m_PlayingTimeoutMode != GamePlayingTimeoutMode::kNever) {
+        continue;
+      }
+      Line = Line.substr(6);
+    }
     // TODO: Name censored warning
     while ((matchIndex = Line.find("{CREATOR}")) != string::npos) {
       Line.replace(matchIndex, 9, m_CreatorText);
@@ -3912,6 +3939,9 @@ void CGame::SendWelcomeMessage(GameUser::CGameUser* user)
     }
     while ((matchIndex = Line.find("{READYSTATUS}")) != string::npos) {
       Line.replace(matchIndex, 13, GetReadyStatusText());
+    }
+    while ((matchIndex = Line.find("{GAMETIMEOUT}")) != string::npos) {
+      Line.replace(matchIndex, 13, GetPlayingTimeoutWelcomeText());
     }
     SendChat(user, Line, LogLevelExtra::kTrace);
   }
