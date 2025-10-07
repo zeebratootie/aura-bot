@@ -3952,6 +3952,57 @@ void CGame::EventOutgoingAtomicAction(const uint8_t UID, string_view action)
 {
   const uint8_t actionType = GetByteAt(action, 0);
 
+  if (actionType == ACTION_SAVE) {
+    GameUser::CGameUser* user = GetUserFromUID(UID);
+    if (user) {
+      LOG_APP_IF(LogLevel::kInfo, Concat("[", user->GetName(), "] is saving the game"));
+      SendAllChat(Concat("[", user->GetDisplayName(), "] is saving the game"));
+      if (user->GetIsNativeReferee() && !user->GetCanSave()) {
+        SendChat(user, "NOTE: You have now reached the maximum allowed saves for this game.");
+      }
+    } else {
+      CGameVirtualUser* virtualUserMatch = GetVirtualUserFromSID(GetSIDFromUID(UID));
+      if (virtualUserMatch) {
+        LOG_APP_IF(LogLevel::kInfo, Concat("Virtual user [", virtualUserMatch->GetName(), "] is saving the game"));
+        SendAllChat(Concat("Virtual user [", virtualUserMatch->GetDisplayName(), "] is saving the game"));
+      }
+    }
+  }
+
+  if (actionType == ACTION_SAVE_ENDED) {
+    GameUser::CGameUser* user = GetUserFromUID(UID);
+    if (user) {
+      LOG_APP_IF(LogLevel::kInfo, Concat("[", user->GetName(), "] finished saving the game"));
+    }
+  }
+
+  if (actionType == ACTION_PAUSE) {
+    GameUser::CGameUser* user = GetUserFromUID(UID);
+    if (user) {
+      LOG_APP_IF(LogLevel::kInfo, Concat("[", user->GetName(), "] paused the game"));
+      if (user->GetIsNativeReferee() && !user->GetCanPause()) {
+        SendChat(user, "NOTE: You have now reached the maximum allowed pauses for this game.");
+      }
+    } else {
+      CGameVirtualUser* virtualUserMatch = GetVirtualUserFromSID(GetSIDFromUID(UID));
+      if (virtualUserMatch) {
+        LOG_APP_IF(LogLevel::kInfo, Concat("Virtual user [", virtualUserMatch->GetName(), "] paused the game"));
+      }
+    }
+  }
+
+  if (actionType == ACTION_RESUME) {
+    GameUser::CGameUser* user = GetUserFromUID(UID);
+    if (user) {
+      LOG_APP_IF(LogLevel::kInfo, Concat("[", user->GetName(), "] resumed the game"));
+    } else {
+      CGameVirtualUser* virtualUserMatch = GetVirtualUserFromSID(GetSIDFromUID(UID));
+      if (virtualUserMatch) {
+        LOG_APP_IF(LogLevel::kInfo, Concat("Virtual user [", virtualUserMatch->GetName(), "] resumed the game"));
+      }
+    }
+  }
+
   if (actionType == ACTION_CHAT_TRIGGER && action.size() >= 10) {
     string_view chatMessage = ExtractStringView<OOBPolicy::kUnsafe, NullTerminatorPolicy::kRequired, StringEncoding::kNone>(action, 9, 0);
     if (!chatMessage.empty()) {
@@ -6186,49 +6237,72 @@ bool CGame::EventUserIncomingAction(GameUser::CGameUser* user, CIncomingAction& 
   for (size_t i = 0, j = 1, l = delimiters.size(); j < l; i++, j++) {
     const uint8_t actionType = delimiters[i][0];
     const auto actionSize = delimiters[j] - delimiters[i];
-    if (actionType == ACTION_ALLIANCE_SETTINGS && actionSize >= 6) {
-      if (delimiters[i][1] == JN_ALLIANCE_SETTINGS_SYNC_DATA) {
-        LOG_APP_IF(LogLevel::kDebug, Concat("Player [", user->GetName(), "] synchronizing JNLoader data"));
-      } else if (delimiters[i][1] == MH_DOTA_SETTINGS_SYNC_DATA) {
-        LOG_APP_IF(LogLevel::kDebug, Concat("Player [", user->GetName(), "] synchronizing DotA data"));
-      } else if (delimiters[i][1] < MAX_SLOTS_MODERN) {
-        const bool wantsShare = (ByteArrayToUInt32LE(delimiters[i] + 2) & ALLIANCE_SETTINGS_SHARED_CONTROL_FAMILY) == ALLIANCE_SETTINGS_SHARED_CONTROL_FAMILY;
-        const uint8_t targetSID = delimiters[i][1];
+    switch (actionType) {
+      case ACTION_ALLIANCE_SETTINGS: {
+        if (actionSize < 6) break;
+        if (delimiters[i][1] == JN_ALLIANCE_SETTINGS_SYNC_DATA) {
+          LOG_APP_IF(LogLevel::kDebug, Concat("Player [", user->GetName(), "] synchronizing JNLoader data"));
+        } else if (delimiters[i][1] == MH_DOTA_SETTINGS_SYNC_DATA) {
+          LOG_APP_IF(LogLevel::kDebug, Concat("Player [", user->GetName(), "] synchronizing DotA data"));
+        } else if (delimiters[i][1] < MAX_SLOTS_MODERN) {
+          const bool wantsShare = (ByteArrayToUInt32LE(delimiters[i] + 2) & ALLIANCE_SETTINGS_SHARED_CONTROL_FAMILY) == ALLIANCE_SETTINGS_SHARED_CONTROL_FAMILY;
+          const uint8_t targetSID = delimiters[i][1];
 
-        if (user->GetIsSharingUnitsWithSlot(targetSID) != wantsShare) {
-          if (wantsShare) {
-            LOG_APP_IF(LogLevel::kDebug, Concat("Player [", user->GetName(), "] intends to grant shared unit control to [", GetUserNameFromSID(targetSID), "]"));
-          } else {
-            LOG_APP_IF(LogLevel::kDebug, Concat("Player [", user->GetName(), "] intends to take away shared unit control from [", GetUserNameFromSID(targetSID), "]"));
-          }
-          GameUser::CGameUser* targetUser = GetUserFromSID(targetSID);
-          if (targetUser && wantsShare) {
-            switch (m_Config.m_ShareUnitsHandler) {
-              case OnShareUnitsHandler::kNative:
-                break;
-
-              case OnShareUnitsHandler::kRestrictSharee:
-                if (
-                  (m_Map->GetMapFlags() & GAMEFLAG_FIXEDTEAMS) &&
-                  (InspectSlot(targetSID)->GetTeam() == InspectSlot(user->GetSID())->GetTeam())
-                ) {
-                  // This is a well-behaved map (at least if it's melee).
-                  // Handle restriction on CGame::SendAllActionsCallback
+          if (user->GetIsSharingUnitsWithSlot(targetSID) != wantsShare) {
+            if (wantsShare) {
+              LOG_APP_IF(LogLevel::kDebug, Concat("Player [", user->GetName(), "] intends to grant shared unit control to [", GetUserNameFromSID(targetSID), "]"));
+            } else {
+              LOG_APP_IF(LogLevel::kDebug, Concat("Player [", user->GetName(), "] intends to take away shared unit control from [", GetUserNameFromSID(targetSID), "]"));
+            }
+            GameUser::CGameUser* targetUser = GetUserFromSID(targetSID);
+            if (targetUser && wantsShare) {
+              switch (m_Config.m_ShareUnitsHandler) {
+                case OnShareUnitsHandler::kNative:
                   break;
-                }
 
-                // either the map is not well-behaved, or the client is rogue/griefer - instakick
-                // falls through
+                case OnShareUnitsHandler::kRestrictSharee:
+                  if (
+                    (m_Map->GetMapFlags() & GAMEFLAG_FIXEDTEAMS) &&
+                    (InspectSlot(targetSID)->GetTeam() == InspectSlot(user->GetSID())->GetTeam())
+                  ) {
+                    // This is a well-behaved map (at least if it's melee).
+                    // Handle restriction on CGame::SendAllActionsCallback
+                    break;
+                  }
 
-              case OnShareUnitsHandler::kKickSharer:
-              default:
-                user->SetLeftCode(PLAYERLEAVE_LOST);
-                user->SetLeftReason("autokicked - antishare");
-                SendChat(user, "[ANTISHARE] You have been automatically kicked out of the game.");
-                // Treat as unrecoverable protocol error
-                return false;
+                  // either the map is not well-behaved, or the client is rogue/griefer - instakick
+                  // falls through
+
+                case OnShareUnitsHandler::kKickSharer:
+                default:
+                  user->SetLeftCode(PLAYERLEAVE_LOST);
+                  user->SetLeftReason("autokicked - antishare");
+                  SendChat(user, "[ANTISHARE] You have been automatically kicked out of the game.");
+                  // Treat as unrecoverable protocol error
+                  return false;
+              }
             }
           }
+        }
+        break;
+      }
+
+      case ACTION_SAVE: {
+        if (!user->GetCanSave()) {
+          // Game engine lets referees save without limit nor throttle whatsoever.
+          // This path prevents save-spamming leading to unplayable games.
+          EventUserDisconnectGameAbuse(user);
+          return false;
+        }
+        break;
+      }
+
+      case ACTION_PAUSE: {
+        if (!user->GetCanPause() && 0xFF == SimulateActionUID(ACTION_RESUME, user, false, ACTION_SOURCE_ANY & NOT_ACTION_SOURCE_OBSERVER)) {
+          // Game engine lets referees pause without limit nor throttle whatsoever.
+          // This path prevents pause-spamming leading to unplayable games.
+          EventUserDisconnectGameAbuse(user);
+          return false;
         }
       }
     }
@@ -6260,55 +6334,55 @@ bool CGame::EventUserIncomingAction(GameUser::CGameUser* user, CIncomingAction& 
     }
   }
 
-  switch (action.GetSniffedType()) {
-    case ACTION_SAVE:
-      LOG_APP_IF(LogLevel::kInfo, Concat("[", user->GetName(), "] is saving the game"));
-      SendAllChat(Concat("[", user->GetDisplayName(), "] is saving the game"));
-      SaveEnded(0xFF, actionFrame);
-      if (user->GetCanSave()) {
-        user->DropRemainingSaves();
-        if (user->GetIsNativeReferee() && !user->GetCanSave()) {
-          SendChat(user, "NOTE: You have reached the maximum allowed saves for this game.");
+  /*
+   * Action has been accepted
+   * Now update our state, and add further actions from virtual players if pertinent.
+   */
+
+  for (size_t i = 0, j = 1, l = delimiters.size(); j < l; i++, j++) {
+    const uint8_t actionType = delimiters[i][0];
+    const auto actionSize = delimiters[j] - delimiters[i];
+    switch (actionType) {
+      case ACTION_SAVE:
+        SaveEnded(0xFF, actionFrame);
+        if (user->GetCanSave()) {
+           // Done in CGame::EventUserIncomingAction matching GetCanSave() check
+          user->DropRemainingSaves();
         }
-      } else {
-        // Game engine lets referees save without limit nor throttle whatsoever.
-        // This path prevents save-spamming leading to unplayable games.
-        EventUserDisconnectGameAbuse(user);
+        break;
+      case ACTION_SAVE_ENDED:
+        LOG_APP_IF(LogLevel::kInfo, Concat("[", user->GetName(), "] finished saving the game"));
+        break;
+      case ACTION_PAUSE:
+        if (actionFrame.callback != ON_SEND_ACTIONS_PAUSE) {
+          actionFrame.callback = ON_SEND_ACTIONS_PAUSE;
+          actionFrame.pauseUID = user->GetUID();
+        }
+        if (user->GetCanPause()) {
+          // Done in CGame::EventUserIncomingAction matching GetCanPause() check
+          user->DropRemainingPauses();
+        } else {
+          // If a referee tries to pause the game after their limit is exceeded,
+          // we just have a virtual user overturn the pause.
+          Resume(user, actionFrame, false);
+        }
+        break;
+      case ACTION_RESUME:
+        actionFrame.callback = ON_SEND_ACTIONS_RESUME;
+        //actionFrame.pauseUID = 0xFF;
+        break;
+      case ACTION_CHAT_TRIGGER: {
+        // Handled in CGame::SendAllActionsCallback
+        break;
       }
-      break;
-    case ACTION_SAVE_ENDED:
-      LOG_APP_IF(LogLevel::kInfo, Concat("[", user->GetName(), "] finished saving the game"));
-      break;
-    case ACTION_PAUSE:
-      // FIXME: This sniffing for ACTION_PAUSE is too unreliable
-      LOG_APP_IF(LogLevel::kInfo, Concat("[", user->GetName(), "] paused the game"));
-      if (!user->GetIsNativeReferee()) {
-        user->DropRemainingPauses();
+      case ACTION_GAME_CACHE_INT: {
+        // This is the W3MMD action type.
+        // Handled in CGame::SendAllActionsCallback
+        break;
       }
-      if (actionFrame.callback != ON_SEND_ACTIONS_PAUSE) {
-        actionFrame.callback = ON_SEND_ACTIONS_PAUSE;
-        actionFrame.pauseUID = user->GetUID();
-      }
-      break;
-    case ACTION_RESUME:
-      if (m_PauseUser) {
-        LOG_APP_IF(LogLevel::kInfo, Concat("[", user->GetName(), "] resumed the game (was paused by [", m_PauseUser->GetName(), "])"));
-      } else {
-        LOG_APP_IF(LogLevel::kInfo, Concat("[", user->GetName(), "] resumed the game"));
-      }
-      actionFrame.callback = ON_SEND_ACTIONS_RESUME;
-      break;
-    case ACTION_CHAT_TRIGGER: {
-      // Handled in CGame::SendAllActionsCallback
-      break;
+      default:
+        break;
     }
-    case ACTION_GAME_CACHE_INT: {
-      // This is the W3MMD action type.
-      // Handled in CGame::SendAllActionsCallback
-      break;
-    }
-    default:
-      break;
   }
 
   return true;
@@ -7446,6 +7520,8 @@ void CGame::EventGameLoaded()
     if (user->GetIsNativeReferee()) {
       // Natively, referees get unlimited saves. But we limit them to 3 in multiplayer games.
       user->SetRemainingSaves(m_Users.size() >= 2 ? GAME_SAVES_PER_REFEREE_ANTIABUSE : GAME_SAVES_PER_REFEREE_DEFAULT);
+      // Similarly, limit pauses to 7 in multiplayer games.
+      user->SetRemainingPauses(m_Users.size() >= 2 ? GAME_PAUSES_PER_REFEREE_ANTIABUSE : GAME_PAUSES_PER_REFEREE_DEFAULT);
     }
   }
 
@@ -10485,6 +10561,7 @@ bool CGame::Resume(GameUser::CGameUser* user, CQueuedActionsFrame& actionFrame, 
 
   actionFrame.AddAction(std::move(CIncomingAction(UID, ACTION_RESUME)));
   actionFrame.callback = ON_SEND_ACTIONS_RESUME;
+  //actionFrame.pauseUID = 0xFF;
   return true;
 }
 

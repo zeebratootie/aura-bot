@@ -116,10 +116,10 @@ struct CGameVirtualUser
   inline void SetLeftCode(uint32_t nLeftCode) { m_LeftCode = nLeftCode; }
 
   inline void DisableAllActions() { m_AllowedActions = VIRTUAL_USER_ALLOW_ACTIONS_NONE; }
-  inline void DropRemainingSaves() { --m_RemainingSaves; }
+  inline void DropRemainingSaves() { if (m_RemainingSaves != GAME_ACTIONS_PER_REFEREE_UNLIMITED) --m_RemainingSaves; }
   inline void SetRemainingSaves(uint8_t nCount) { m_RemainingSaves = nCount; }
   inline void SetCannotSave() { m_RemainingSaves = 0; }
-  inline void DropRemainingPauses() { --m_RemainingPauses; }
+  inline void DropRemainingPauses() { if (m_RemainingPauses != GAME_ACTIONS_PER_REFEREE_UNLIMITED) --m_RemainingPauses; }
   inline void SetCannotPause() { m_RemainingPauses = 0; }
   inline void SetCannotShareUnits() { UNSET_TINY(m_AllowedActions, VIRTUAL_USER_ALLOW_ACTIONS_SHARE_UNITS); }
 

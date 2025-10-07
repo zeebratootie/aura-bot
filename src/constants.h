@@ -283,7 +283,7 @@ constexpr uint8_t APP_FOUND_DEPS_NONE = 0u;
 constexpr uint8_t APP_FOUND_DEPS_DPP = (1 << 0);
 constexpr uint8_t APP_FOUND_DEPS_MDNS = (1 << 1);
 
-constexpr int64_t APP_MIN_FRAME_PERIOD = 3; // caps frame rate to ~300 FPS (not absolute)
+constexpr int64_t APP_MIN_FRAME_PERIOD = 3; // caps frame rate to ~300 FPS (may be higher depending on timer resolution, etc.)
 
 // parser.h
 
@@ -556,10 +556,15 @@ constexpr uint8_t GAME_BANNABLE_MAX_HISTORY_SIZE = 32;
 
 constexpr size_t MAX_GAME_VERSION_ERROR_USERS_STORED = 500;
 
+constexpr uint8_t GAME_ACTIONS_PER_REFEREE_UNLIMITED = 255u;
+
 constexpr uint8_t GAME_PAUSES_PER_PLAYER = 3u;
+constexpr uint8_t GAME_PAUSES_PER_REFEREE_ANTIABUSE = 7u;
+constexpr uint8_t GAME_PAUSES_PER_REFEREE_DEFAULT = GAME_ACTIONS_PER_REFEREE_UNLIMITED;
+
 constexpr uint8_t GAME_SAVES_PER_PLAYER = 1u;
 constexpr uint8_t GAME_SAVES_PER_REFEREE_ANTIABUSE = 3u;
-constexpr uint8_t GAME_SAVES_PER_REFEREE_DEFAULT = 255u;
+constexpr uint8_t GAME_SAVES_PER_REFEREE_DEFAULT = GAME_ACTIONS_PER_REFEREE_UNLIMITED;
 
 constexpr uint8_t GAME_DISCOVERY_INTERFACE_NONE = 0u;
 constexpr uint8_t GAME_DISCOVERY_INTERFACE_LOOPBACK = 1u;

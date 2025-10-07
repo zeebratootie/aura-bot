@@ -414,11 +414,12 @@ namespace GameUser
     void SetReadyReminded();
 
     inline void SetDraftCaptain(const uint8_t nTeamNumber) { m_TeamCaptain = nTeamNumber; }
-    inline void DropRemainingSaves() { --m_RemainingSaves; }
+    inline void DropRemainingSaves() { if (m_RemainingSaves != GAME_ACTIONS_PER_REFEREE_UNLIMITED) --m_RemainingSaves; }
     inline void SetRemainingSaves(uint8_t nCount) { m_RemainingSaves = nCount; }
     inline void SetCannotSave() { m_RemainingSaves = 0; }
 
-    inline void DropRemainingPauses() { --m_RemainingPauses; }
+    inline void DropRemainingPauses() { if (m_RemainingPauses != GAME_ACTIONS_PER_REFEREE_UNLIMITED) --m_RemainingPauses; }
+    inline void SetRemainingPauses(uint8_t nCount) { m_RemainingPauses = nCount; }
     inline void SetCannotPause() { m_RemainingPauses = 0; }
     void ClearStalePings();
 
