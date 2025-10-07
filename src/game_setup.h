@@ -163,7 +163,7 @@ public:
 
   std::string                                     m_Name;
   std::string                                     m_BaseName;
-  bool                                            m_OwnerLess;
+  bool                                            m_OwnerLessLocked;
   std::pair<std::string, std::string>             m_Owner;
   std::optional<bool>                             m_ChecksReservation;
   std::vector<std::string>                        m_Reservations;
@@ -322,7 +322,7 @@ public:
   void RemoveIgnoredRealm(std::shared_ptr<const CRealm> nRealm);
   inline void SetDisplayMode(const uint8_t nDisplayMode) { m_RealmsDisplayMode = nDisplayMode; };
   void SetOwner(const std::string& nOwner, std::shared_ptr<const CRealm> nRealm);
-  void SetOwnerLess(const bool nValue) { m_OwnerLess = nValue; }
+  void SetOwnerLess(const bool nValue) { m_OwnerLessLocked = nValue; }
 
   // Game creator stuff
   void RemoveCreator();

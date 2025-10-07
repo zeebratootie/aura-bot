@@ -2639,9 +2639,10 @@ string ReplaceTemplate(const string& input, const FlatMap<uint64_t, bool>* boolC
     }
 
     string token = input.substr(start + 1, end - start - 1);
-    bool isCondition = token[0] == '?' || token[0] == '!';
+    bool isPositiveCondition = token.back() == '?';
+    bool isCondition = isPositiveCondition || token.back() == '!';
     if (isCondition) {
-      token = token.substr(1);
+      token = token.substr(0, token.size());
     }
     uint64_t cacheKey = HashCode(token);
 
@@ -2656,7 +2657,7 @@ string ReplaceTemplate(const string& input, const FlatMap<uint64_t, bool>* boolC
         if (!tolerant) return string();
         result.append("{").append(token).append("}");
       }
-      if (checkResult == (token[0] == '?')) {
+      if (checkResult == isPositiveCondition) {
         pos = end + 1;
       } else {
         pos = input.find('\n', pos);
@@ -2700,9 +2701,10 @@ string ReplaceTemplate(const string& input, unordered_map<uint64_t, bool>* boolC
     }
 
     string token = input.substr(start + 1, end - start - 1);
-    bool isCondition = token[0] == '?' || token[0] == '!';
+    bool isPositiveCondition = token.back() == '?';
+    bool isCondition = isPositiveCondition || token.back() == '!';
     if (isCondition) {
-      token = token.substr(1);
+      token = token.substr(0, token.size() - 1);
     }
     uint64_t cacheKey = HashCode(token);
 
@@ -2720,7 +2722,7 @@ string ReplaceTemplate(const string& input, unordered_map<uint64_t, bool>* boolC
         if (!tolerant) return string();
         result.append("{").append(token).append("}");
       }
-      if (checkResult == (token[0] == '?')) {
+      if (checkResult == isPositiveCondition) {
         pos = end + 1;
       } else {
         pos = input.find('\n', pos);

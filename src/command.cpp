@@ -5057,7 +5057,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
         break;
       }
 
-      if ((!targetGame->GetIsLobbyStrict() || targetGame->GetCountDownStarted() || targetGame->m_OwnerLess) && !GetIsSudo()) {
+      if ((!targetGame->GetIsLobbyStrict() || targetGame->GetCountDownStarted() || targetGame->m_OwnerLessLocked) && !GetIsSudo()) {
         ErrorReply("Cannot take ownership of this game.");
         break;
       }
@@ -5154,7 +5154,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
         break;
       }
 
-      if ((!targetGame->GetIsLobbyStrict() || targetGame->GetCountDownStarted() || targetGame->m_OwnerLess) && !GetIsSudo()) {
+      if ((!targetGame->GetIsLobbyStrict() || targetGame->GetCountDownStarted() || targetGame->m_OwnerLessLocked) && !GetIsSudo()) {
         ErrorReply("Cannot take ownership of this game.");
         break;
       }
@@ -7669,7 +7669,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
 
       if (0 == AND_SHORT(m_Permissions, OR_SHORT(USER_PERMISSIONS_CHANNEL_ROOTADMIN, USER_PERMISSIONS_BOT_SUDO_SPOOFABLE))) {
         shared_ptr<CGame> sourceGame = GetSourceGame();
-        if (sourceGame && !sourceGame->m_OwnerLess) {
+        if (sourceGame && !sourceGame->m_OwnerLessLocked) {
           ErrorReply("Only root admins may add staff. Did you mean to acquire control of this game? Use " + cmdToken + "owner");
         } else {
           ErrorReply("Only root admins may add staff.");

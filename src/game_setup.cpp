@@ -207,7 +207,7 @@ CGameSetup::CGameSetup(CAura* nAura, shared_ptr<CCommandContext> nCtx, CConfig* 
 
     m_IsMapDownloaded(false),
 
-    m_OwnerLess(false),
+    m_OwnerLessLocked(false),
     m_RealmsDisplayMode(GAME_DISPLAY_PUBLIC),
     m_LobbyReplaceable(false),
     m_LobbyAutoRehosted(false),
@@ -257,7 +257,7 @@ CGameSetup::CGameSetup(CAura* nAura, shared_ptr<CCommandContext> nCtx, const str
 
     m_IsMapDownloaded(false),
 
-    m_OwnerLess(false),
+    m_OwnerLessLocked(false),
     m_RealmsDisplayMode(GAME_DISPLAY_PUBLIC),
     m_LobbyReplaceable(false),
     m_LobbyAutoRehosted(false),

@@ -113,7 +113,7 @@ protected:
   uint64_t                                               m_PersistentId;
   std::string                                            m_LastOwner;                     // name of the player who was owner last time the owner was released
   bool                                                   m_FromAutoReHost;
-  bool                                                   m_OwnerLess;
+  bool                                                   m_OwnerLessLocked;
   std::string                                            m_OwnerName;                     // name of the player who owns this game (should be considered an admin)
   std::string                                            m_OwnerRealm;                    // self-identified realm of the player who owns the game (spoofable)
   ServiceUser                                            m_Creator;
@@ -308,7 +308,7 @@ public:
   std::string                                            GetShortNameLAN() const;
   std::string                                            GetAnnounceText(std::shared_ptr<const CRealm> realm = nullptr) const;
   inline bool                                            GetFromAutoReHost() const { return m_FromAutoReHost; }
-  inline bool                                            GetLockedOwnerLess() const { return m_OwnerLess; }
+  inline bool                                            GetLockedOwnerLess() const { return m_OwnerLessLocked; }
   inline std::string                                     GetOwnerName() const { return m_OwnerName; }
   inline std::string                                     GetOwnerRealm() const { return m_OwnerRealm; }
 
@@ -551,6 +551,7 @@ public:
   void                                                   SendFakeUsersInfo(CConnection* user) const;
   void                                                   SendJoinedPlayersInfo(CConnection* user) const;
   void                                                   SendMapAndVersionCheck(CConnection* user, const Version& gameVersion) const;
+  std::vector<std::string>                               GetWelcomeMessageLines(GameUser::CGameUser* user) const;
   void                                                   SendWelcomeMessage(GameUser::CGameUser* user);
   void                                                   SendOwnerCommandsHelp(std::string_view cmdToken, GameUser::CGameUser* user);
   void                                                   SendCommandsHelp(std::string_view cmdToken, GameUser::CGameUser* user, const bool isIntro);

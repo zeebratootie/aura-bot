@@ -144,7 +144,7 @@ CGame::CGame(CAura* nAura, shared_ptr<CGameSetup> nGameSetup)
     m_CreationCounter(nGameSetup->m_CreationCounter),
     m_PersistentId(nAura->NextHistoryGameID()),
     m_FromAutoReHost(nGameSetup->m_LobbyAutoRehosted),
-    m_OwnerLess(nGameSetup->m_OwnerLess),
+    m_OwnerLessLocked(nGameSetup->m_OwnerLessLocked),
     m_OwnerName(nGameSetup->m_Owner.first),
     m_OwnerRealm(nGameSetup->m_Owner.second),
     m_Creator(nGameSetup->m_Creator),
@@ -3755,195 +3755,108 @@ MapTransferStatus CGame::NextSendMap(CConnection* user, const uint8_t UID, MapTr
   return MapTransferStatus::kInProgress;
 }
 
+vector<string> CGame::GetWelcomeMessageLines(GameUser::CGameUser* user) const
+{
+  vector<pair<uint64_t, function<string()>>> textFuncs;
+  vector<pair<uint64_t, function<bool()>>> boolFuncs;
+  vector<pair<uint64_t, bool>> boolValues;
+  boolFuncs.reserve(9); // 9 excluding LAN, CHECKLASTOWNER
+  boolValues.reserve(2);
+  //boolFuncs.emplace_back(HashCode("LAN"),    [this, user] () { return !user->GetRealm(false); });
+  boolValues.emplace_back(HashCode("LAN"), !user->GetRealm(false));
+  boolFuncs.emplace_back(HashCode("URL"),    [this] () { return !this->GetMapSiteURL().empty(); });
+  boolFuncs.emplace_back(HashCode("OWNER"), [this]() { return !this->m_OwnerName.empty(); });
+  boolFuncs.emplace_back(HashCode("CREATOR"), [this]() { return !this->m_CreatorText.empty(); });
+  boolFuncs.emplace_back(HashCode("FILENAME"), [this]() {
+    size_t lastSlashPos = this->m_MapPath.rfind('\\');
+    return lastSlashPos != string::npos && lastSlashPos <= this->m_MapPath.length() - 6;
+  });
+  boolFuncs.emplace_back(HashCode("AUTOSTART"), [this]() { return !this->m_AutoStartRequirements.empty(); });
+  boolFuncs.emplace_back(HashCode("OWNERLESS"), [this]() { return this->m_OwnerLessLocked; });
+  boolFuncs.emplace_back(HashCode("SHORTDESC"), [this]() { return !this->m_Map->GetMapShortDesc().empty(); });
+  boolFuncs.emplace_back(HashCode("GAMETIMEOUT"), [this]() { return this->m_Config.m_PlayingTimeoutMode != GamePlayingTimeoutMode::kNever; });
+  boolFuncs.emplace_back(HashCode("REPLACEABLE"), [this]() { return this->m_Replaceable; });
+  //boolFuncs.emplace_back(HashCode("CHECKLASTOWNER"), [this, user]() { return m_OwnerName != user->GetName() && m_LastOwner == user->GetName(); });
+  boolValues.emplace_back(HashCode("CHECKLASTOWNER"), m_OwnerName != user->GetName() && m_LastOwner == user->GetName());
+
+  static_assert(HashCode("LAN") < HashCode("URL"), "Hash for LAN is not before URL");
+  static_assert(HashCode("URL") < HashCode("OWNER"), "Hash for URL is not before OWNER");
+  static_assert(HashCode("OWNER") < HashCode("CREATOR"), "Hash for OWNER is not before CREATOR");
+  static_assert(HashCode("CREATOR") < HashCode("FILENAME"), "Hash for CREATOR is not before FILENAME");
+  static_assert(HashCode("FILENAME") < HashCode("AUTOSTART"), "Hash for FILENAME is not before AUTOSTART");
+  static_assert(HashCode("AUTOSTART") < HashCode("OWNERLESS"), "Hash for AUTOSTART is not before OWNERLESS");
+  static_assert(HashCode("OWNERLESS") < HashCode("SHORTDESC"), "Hash for OWNERLESS is not before SHORTDESC");
+  static_assert(HashCode("SHORTDESC") < HashCode("GAMETIMEOUT"), "Hash for SHORTDESC is not before GAMETIMEOUT");
+  static_assert(HashCode("GAMETIMEOUT") < HashCode("REPLACEABLE"), "Hash for GAMETIMEOUT is not before REPLACEABLE");
+
+  textFuncs.emplace_back(HashCode("URL"), [this]() { return string(EnsureUTF8(this->GetMapSiteURL())); });
+  textFuncs.emplace_back(HashCode("OWNER"), [this]() { return this->m_OwnerName; });
+  textFuncs.emplace_back(HashCode("CREATOR"), [this]() { return this->m_CreatorText; });
+  textFuncs.emplace_back(HashCode("FILENAME"), [this]() { return string(EnsureUTF8(this->GetClientFileName())); });
+  textFuncs.emplace_back(HashCode("AUTOSTART"), [this]() { return this->GetAutoStartText(); });
+  textFuncs.emplace_back(HashCode("HOSTREALM"), [this]() {
+    switch (this->m_Creator.GetServiceType()) {
+      case ServiceType::kRealm: {
+        if (this->m_Creator.GetIsExpired()) {
+          return string("@unknown.battle.net");
+        } else {
+          return Concat("@", this->GetCreatedFrom<const CRealm>()->GetCanonicalDisplayName());
+        }
+        break;
+      }
+      case ServiceType::kIRC:
+        return Concat("@", this->m_Aura->m_IRC.m_Config.m_HostName);
+      case ServiceType::kDiscord:
+        // FIXME: {HOSTREALM} may need to display the Discord guild
+        return string("@users.discord.com");
+      default:
+        return Concat("@", ToFormattedRealm());
+    }
+  });
+  textFuncs.emplace_back(HashCode("SHORTDESC"), [this]() { return this->m_Map->GetMapShortDesc(); });
+  textFuncs.emplace_back(HashCode("OWNERREALM"), [this]() { return Concat("@", ToFormattedRealm(this->m_OwnerRealm)); });
+  textFuncs.emplace_back(HashCode("GAMETIMEOUT"), [this]() { return this->GetPlayingTimeoutWelcomeText(); });
+  textFuncs.emplace_back(HashCode("READYSTATUS"), [this]() { return this->GetReadyStatusText(); });
+  textFuncs.emplace_back(HashCode("TRIGGER_PREFER_BROADCAST"), [this]() { return this->m_Config.m_BroadcastCmdToken.empty() ? this->m_Config.m_PrivateCmdToken : this->m_Config.m_BroadcastCmdToken; });
+  textFuncs.emplace_back(HashCode("TRIGGER_PREFER_PRIVATE"), [this]() { return this->m_Config.m_PrivateCmdToken.empty() ? this->m_Config.m_BroadcastCmdToken : this->m_Config.m_PrivateCmdToken; });
+  textFuncs.emplace_back(HashCode("TRIGGER_BROADCAST"), [this]() { return this->m_Config.m_BroadcastCmdToken; });
+  textFuncs.emplace_back(HashCode("TRIGGER_PRIVATE"), [this]() { return this->m_Config.m_PrivateCmdToken; });
+
+  static_assert(HashCode("URL") < HashCode("OWNER"), "Hash for URL is not before OWNER");
+  static_assert(HashCode("OWNER") < HashCode("CREATOR"), "Hash for OWNER is not before CREATOR");
+  static_assert(HashCode("CREATOR") < HashCode("FILENAME"), "Hash for CREATOR is not before FILENAME");
+  static_assert(HashCode("FILENAME") < HashCode("AUTOSTART"), "Hash for FILENAME is not before AUTOSTART");
+  static_assert(HashCode("AUTOSTART") < HashCode("HOSTREALM"), "Hash for AUTOSTART is not before HOSTREALM");
+  static_assert(HashCode("HOSTREALM") < HashCode("SHORTDESC"), "Hash for HOSTREALM is not before SHORTDESC");
+  static_assert(HashCode("SHORTDESC") < HashCode("OWNERREALM"), "Hash for SHORTDESC is not before OWNERREALM");
+  static_assert(HashCode("OWNERREALM") < HashCode("GAMETIMEOUT"), "Hash for OWNERREALM is not before GAMETIMEOUT");
+  static_assert(HashCode("GAMETIMEOUT") < HashCode("READYSTATUS"), "Hash for GAMETIMEOUT is not before READYSTATUS");
+  static_assert(HashCode("READYSTATUS") < HashCode("TRIGGER_PREFER_BROADCAST"), "Hash for READYSTATUS is not before TRIGGER_PREFER_BROADCAST");
+  static_assert(HashCode("TRIGGER_PREFER_BROADCAST") < HashCode("TRIGGER_PREFER_PRIVATE"), "Hash for TRIGGER_PREFER_BROADCAST is not before TRIGGER_PREFER_PRIVATE");
+  static_assert(HashCode("TRIGGER_PREFER_PRIVATE") < HashCode("TRIGGER_BROADCAST"), "Hash for TRIGGER_PREFER_PRIVATE is not before TRIGGER_BROADCAST");
+  static_assert(HashCode("TRIGGER_BROADCAST") < HashCode("TRIGGER_PRIVATE"), "Hash for TRIGGER_BROADCAST is not before TRIGGER_PRIVATE");
+
+  const FlatMap<uint64_t, function<string()>> textFuncMap(move(textFuncs));
+  const FlatMap<uint64_t, function<bool()>> boolFuncMap(move(boolFuncs));
+  const FlatMap<uint64_t, bool> boolCache(move(boolValues));
+
+  vector<string> lines;
+  lines.reserve(m_Aura->m_Config.m_Greeting.size());
+  for (const auto& templateLine : m_Aura->m_Config.m_Greeting) {
+    string replaced = TrimString(RemoveDuplicateWhiteSpace(ReplaceTemplate(templateLine, &boolCache, nullptr, &boolFuncMap, &textFuncMap, true)));
+    if (!replaced.empty()) {
+      lines.push_back(replaced);
+    }
+  }
+  return lines;
+}
+
 void CGame::SendWelcomeMessage(GameUser::CGameUser* user)
 {
-  for (size_t i = 0; i < m_Aura->m_Config.m_Greeting.size(); i++) {
-    string::size_type matchIndex;
-    string Line = m_Aura->m_Config.m_Greeting[i];
-    if (Line.substr(0, 12) == "{SHORTDESC?}") {
-      if (m_Map->GetMapShortDesc().empty()) {
-        continue;
-      }
-      Line = Line.substr(12);
-    }
-    if (Line.substr(0, 12) == "{SHORTDESC!}") {
-      if (!m_Map->GetMapShortDesc().empty()) {
-        continue;
-      }
-      Line = Line.substr(12);
-    }
-    if (Line.substr(0, 6) == "{URL?}") {
-      if (GetMapSiteURL().empty()) {
-        continue;
-      }
-      Line = Line.substr(6);
-    }
-    if (Line.substr(0, 6) == "{URL!}") {
-      if (!GetMapSiteURL().empty()) {
-        continue;
-      }
-      Line = Line.substr(6);
-    }
-    if (Line.substr(0, 11) == "{FILENAME?}") {
-      size_t LastSlash = m_MapPath.rfind('\\');
-      if (LastSlash == string::npos || LastSlash > m_MapPath.length() - 6) {
-        continue;
-      }
-      Line = Line.substr(11);
-    }
-    if (Line.substr(0, 12) == "{AUTOSTART?}") {
-      if (m_AutoStartRequirements.empty()) {
-        continue;
-      }
-      Line = Line.substr(12);
-    }
-    if (Line.substr(0, 11) == "{FILENAME!}") {
-      size_t LastSlash = m_MapPath.rfind('\\');
-      if (!(LastSlash == string::npos || LastSlash > m_MapPath.length() - 6)) {
-        continue;
-      }
-      Line = Line.substr(11);
-    }
-    if (Line.substr(0, 10) == "{CREATOR?}") {
-      if (m_CreatorText.empty()) {
-        continue;
-      }
-      Line = Line.substr(10);
-    }
-    if (Line.substr(0, 10) == "{CREATOR!}") {
-      if (!m_CreatorText.empty()) {
-        continue;
-      }
-      Line = Line.substr(10);
-    }
-    if (Line.substr(0, 12) == "{OWNERLESS?}") {
-      if (!m_OwnerLess) {
-        continue;
-      }
-      Line = Line.substr(12);
-    }
-    if (Line.substr(0, 12) == "{OWNERLESS!}") {
-      if (m_OwnerLess) {
-        continue;
-      }
-      Line = Line.substr(12);
-    }
-    if (Line.substr(0, 8) == "{OWNER?}") {
-      if (m_OwnerName.empty()) {
-        continue;
-      }
-      Line = Line.substr(8);
-    }
-    if (Line.substr(0, 8) == "{OWNER!}") {
-      if (!m_OwnerName.empty()) {
-        continue;
-      }
-      Line = Line.substr(8);
-    }
-    if (Line.substr(0, 17) == "{CHECKLASTOWNER?}") {
-      if (m_OwnerName == user->GetName() || m_LastOwner != user->GetName()) {
-        continue;
-      }
-      Line = Line.substr(17);
-    }
-    if (Line.substr(0, 14) == "{REPLACEABLE?}") {
-      if (!m_Replaceable) {
-        continue;
-      }
-      Line = Line.substr(14);
-    }
-    if (Line.substr(0,14) == "{REPLACEABLE!}") {
-      if (m_Replaceable) {
-        continue;
-      }
-      Line = Line.substr(14);
-    }
-    if (Line.substr(0, 6) == "{LAN?}") {
-      if (user->GetRealm(false)) {
-        continue;
-      }
-      Line = Line.substr(6);
-    }
-    if (Line.substr(0, 6) == "{LAN!}") {
-      if (!user->GetRealm(false)) {
-        continue;
-      }
-      Line = Line.substr(6);
-    }
-    if (Line.substr(0, 14) == "{GAMETIMEOUT?}") {
-      if (m_Config.m_PlayingTimeoutMode == GamePlayingTimeoutMode::kNever) {
-        continue;
-      }
-      Line = Line.substr(6);
-    }
-    if (Line.substr(0, 14) == "{GAMETIMEOUT!}") {
-      if (m_Config.m_PlayingTimeoutMode != GamePlayingTimeoutMode::kNever) {
-        continue;
-      }
-      Line = Line.substr(6);
-    }
-    // TODO: Name censored warning
-    while ((matchIndex = Line.find("{CREATOR}")) != string::npos) {
-      Line.replace(matchIndex, 9, m_CreatorText);
-    }
-    while ((matchIndex = Line.find("{HOSTREALM}")) != string::npos) {
-      switch (m_Creator.GetServiceType()) {
-        case ServiceType::kRealm: {
-          if (m_Creator.GetIsExpired()) {
-            Line.replace(matchIndex, 11, "@unknown.battle.net");
-          } else {
-            Line.replace(matchIndex, 11, Concat("@", GetCreatedFrom<const CRealm>()->GetCanonicalDisplayName()));
-          }
-          break;
-        }
-        case ServiceType::kIRC:
-          Line.replace(matchIndex, 11, Concat("@", m_Aura->m_IRC.m_Config.m_HostName));
-          break;
-        case ServiceType::kDiscord:
-          // FIXME: {HOSTREALM} may need to display the Discord guild
-          Line.replace(matchIndex, 11, "@users.discord.com");
-          break;
-        default:
-          Line.replace(matchIndex, 11, Concat("@", ToFormattedRealm()));
-      }
-    }
-    while ((matchIndex = Line.find("{OWNER}")) != string::npos) {
-      Line.replace(matchIndex, 7, m_OwnerName);
-    }
-    while ((matchIndex = Line.find("{OWNERREALM}")) != string::npos) {
-      Line.replace(matchIndex, 12, Concat("@", ToFormattedRealm(m_OwnerRealm)));
-    }
-    while ((matchIndex = Line.find("{TRIGGER_PRIVATE}")) != string::npos) {
-      Line.replace(matchIndex, 17, m_Config.m_PrivateCmdToken);
-    }
-    while ((matchIndex = Line.find("{TRIGGER_BROADCAST}")) != string::npos) {
-      Line.replace(matchIndex, 19, m_Config.m_BroadcastCmdToken);
-    }
-    while ((matchIndex = Line.find("{TRIGGER_PREFER_PRIVATE}")) != string::npos) {
-      Line.replace(matchIndex, 24, m_Config.m_PrivateCmdToken.empty() ? m_Config.m_BroadcastCmdToken : m_Config.m_PrivateCmdToken);
-    }
-    while ((matchIndex = Line.find("{TRIGGER_PREFER_BROADCAST}")) != string::npos) {
-      Line.replace(matchIndex, 26, m_Config.m_BroadcastCmdToken.empty() ? m_Config.m_PrivateCmdToken : m_Config.m_BroadcastCmdToken);
-    }
-    while ((matchIndex = Line.find("{URL}")) != string::npos) {
-      Line.replace(matchIndex, 5, EnsureUTF8(GetMapSiteURL()));
-    }
-    while ((matchIndex = Line.find("{FILENAME}")) != string::npos) {
-      Line.replace(matchIndex, 10, EnsureUTF8(GetClientFileName()));
-    }
-    while ((matchIndex = Line.find("{SHORTDESC}")) != string::npos) {
-      Line.replace(matchIndex, 11, m_Map->GetMapShortDesc());
-    }
-    while ((matchIndex = Line.find("{AUTOSTART}")) != string::npos) {
-      Line.replace(matchIndex, 11, GetAutoStartText());
-    }
-    while ((matchIndex = Line.find("{READYSTATUS}")) != string::npos) {
-      Line.replace(matchIndex, 13, GetReadyStatusText());
-    }
-    while ((matchIndex = Line.find("{GAMETIMEOUT}")) != string::npos) {
-      Line.replace(matchIndex, 13, GetPlayingTimeoutWelcomeText());
-    }
-    SendChat(user, Line, LogLevelExtra::kTrace);
+  // TODO: Name censored warning
+  const vector<string> lines = GetWelcomeMessageLines(user);
+  for (const auto& line : lines) {
+    SendChat(user, line, LogLevelExtra::kTrace);
   }
 }
 
@@ -3969,7 +3882,7 @@ void CGame::SendCommandsHelp(string_view cmdToken, GameUser::CGameUser* user, co
   if (!isIntro) return;
   SendChat(user, Concat(cmdToken, "ping - view your latency"), LogLevelExtra::kTrace);
   SendChat(user, Concat(cmdToken, "go - starts the game"), LogLevelExtra::kTrace);
-  if (!m_OwnerLess && m_OwnerName.empty()) {
+  if (!m_OwnerLessLocked && m_OwnerName.empty()) {
     SendChat(user, Concat(cmdToken, "owner - acquire permissions over this game"), LogLevelExtra::kTrace);
   }
   if (MatchOwnerName(user->GetName())) {
