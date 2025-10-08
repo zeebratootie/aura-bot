@@ -6302,7 +6302,6 @@ bool CGame::EventUserIncomingAction(GameUser::CGameUser* user, CIncomingAction& 
 
   for (size_t i = 0, j = 1, l = delimiters.size(); j < l; i++, j++) {
     const uint8_t actionType = delimiters[i][0];
-    const auto actionSize = delimiters[j] - delimiters[i];
     switch (actionType) {
       case ACTION_SAVE:
         SaveEnded(0xFF, actionFrame);
