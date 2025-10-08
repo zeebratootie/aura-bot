@@ -113,7 +113,7 @@ constexpr size_t USER_METRICS_KEEPALIVE_CAPACITY = 100;
 // CGameUser
 //
 
-CGameUser::CGameUser(shared_ptr<CGame> nGame, CConnection* connection, uint8_t nUID, const bool gameVersionIsExact, const Version& gameVersion, uint32_t nJoinedRealmInternalId, string nJoinedRealm, string_view nName, std::array<uint8_t, 4> nInternalIP, bool nReserved)
+CGameUser::CGameUser(shared_ptr<CGame> nGame, CConnection* connection, uint8_t nUID, const bool gameVersionIsExact, const Version& gameVersion, uint32_t nJoinedRealmInternalId, string nJoinedRealm, string_view nName, std::array<uint8_t, 4> nInternalIP, bool nIsCensoredName, bool nReserved)
   : CConnection(*connection),
     m_Game(ref(*nGame)),
     m_IPv4Internal(std::move(nInternalIP)),
@@ -142,6 +142,7 @@ CGameUser::CGameUser(shared_ptr<CGame> nGame, CConnection* connection, uint8_t n
     m_GameVersion(gameVersion),
     m_Verified(false),
     m_Owner(false),
+    m_IsCensoredName(nIsCensoredName),
     m_Reserved(nReserved),
     m_Observer(false),
     m_PowerObserver(false),
@@ -850,14 +851,14 @@ bool CGameUser::Update(fd_set* fd, int64_t timeout)
     if (m_WhoisShouldBeSent && !m_Verified && !m_WhoisSent && !m_RealmHostName.empty() && m_Aura->GetTicksIsAfterDelay(m_JoinTicks, AUTO_REALM_VERIFY_LATENCY)) {
       shared_ptr<CRealm> Realm = GetRealm(false);
       if (Realm) {
-        if (m_Game.get().GetDisplayMode() == GAME_DISPLAY_PUBLIC || Realm->GetIsPvPGN()) {
+        if (m_Game.get().GetRealmsDisplayMode() == GAME_DISPLAY_PUBLIC || Realm->GetIsPvPGN()) {
           if (m_Game.get().GetSentPriorityWhois()) {
             Realm->QueuePriorityWhois(Concat("/whois ", m_Name));
             m_Game.get().SetSentPriorityWhois(true);
           } else {
             Realm->QueueCommand(Concat("/whois ", m_Name));
           }
-        } else if (m_Game.get().GetDisplayMode() == GAME_DISPLAY_PRIVATE) {
+        } else if (m_Game.get().GetRealmsDisplayMode() == GAME_DISPLAY_PRIVATE) {
           Realm->QueueWhisper(R"(Spoof check by replying to this message with "sc" [ /r sc ])", m_Name);
         }
       }

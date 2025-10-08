@@ -201,7 +201,7 @@ CGame::CGame(CAura* nAura, shared_ptr<CGameSetup> nGameSetup)
     m_CustomLayoutData(make_pair(nGameSetup->m_Map->GetVersionMaxSlots(), nGameSetup->m_Map->GetVersionMaxSlots())),
     m_HostPort(0),
     m_PublicHostOverride(nGameSetup->GetIsMirror()),
-    m_DisplayMode(nGameSetup->m_RealmsDisplayMode),
+    m_RealmsDisplayMode(nGameSetup->m_RealmsDisplayMode),
     m_IsAutoVirtualPlayers(false),
     m_VirtualHostUID(0xFF),
     m_GProxyEmptyActions(0),
@@ -305,6 +305,14 @@ CGame::CGame(CAura* nAura, shared_ptr<CGameSetup> nGameSetup)
       m_PublicHostAddress = AddressToIPv4Array(address);
       m_PublicHostPort = GetAddressPort(address);
       m_IsMirrorProxy = nGameSetup->GetMirror().GetIsProxyEnabled();
+      if (nGameSetup->GetMirror().GetHasEntryKey() && m_IsMirrorProxy) {
+        // FIXME: This is a --mirror-proxy limitation.
+        // TODO: --mirror-source SOURCE_IP:SOURCE_PORT#SOURCE_ID:SOURCE_KEY --mirror-proxy should broadcast AURA_IP:AURA_PORT#REALM_ID:0.
+        // TODO: --mirror-source SOURCE_IP:SOURCE_PORT#SOURCE_ID:SOURCE_KEY should rewrite INCOMING_KEY=0 to SOURCE_KEY if INCOMING_ID does not match LAN.
+        m_RealmsDisplayMode = GAME_DISPLAY_NONE;
+      } else if (nGameSetup->GetMirror().GetHasEntryKey()) {
+        m_RealmsDisplayMode = GAME_DISPLAY_NONE;
+      }
     }
     if (!address || (m_IsMirrorProxy && !InitNet())) {
       m_Exiting = true;
@@ -846,7 +854,7 @@ void CGame::StartGameOverTimer(bool isMMD)
       SendGameDiscoveryDecreate();
       m_GameDiscoveryActive = false;
     }
-    if (m_DisplayMode != GAME_DISPLAY_NONE) {
+    if (m_RealmsDisplayMode != GAME_DISPLAY_NONE) {
       AnnounceDecreateToRealms(); // STOPADV @ ResetGameBroadcastData(), SEND_ENTERCHAT
     }
     m_ChatOnly = true;
@@ -3427,9 +3435,9 @@ string CGame::GetPlayingTimeoutWelcomeText() const
     case GamePlayingTimeoutMode::kNever:
       return string();
     case GamePlayingTimeoutMode::kDry:
-      return Concat("Game would be over after ", ToDurationString(static_cast<uint64_t>(m_Config.m_PlayingTimeout / 1000)));
+      return Concat("Game would be over after ", ToDurationString(static_cast<uint64_t>(m_Config.m_PlayingTimeout / 1000)), ".");
     case GamePlayingTimeoutMode::kStrict:
-      return Concat("Game will be over after ", ToDurationString(static_cast<uint64_t>(m_Config.m_PlayingTimeout / 1000)));
+      return Concat("Game will be over after ", ToDurationString(static_cast<uint64_t>(m_Config.m_PlayingTimeout / 1000)), ".");
     default:
       // should not be possible
       return string();
@@ -3449,7 +3457,7 @@ void CGame::SendAllAutoStart()
 uint32_t CGame::GetGameType() const
 {
   uint32_t mapGameType = 0;
-  if (m_DisplayMode == GAME_DISPLAY_PRIVATE) mapGameType |= MAPGAMETYPE_PRIVATEGAME;
+  if (m_RealmsDisplayMode == GAME_DISPLAY_PRIVATE) mapGameType |= MAPGAMETYPE_PRIVATEGAME;
   if (m_RestoredGame) {
     mapGameType |= MAPGAMETYPE_SAVEDGAME;
   } else {
@@ -3760,10 +3768,11 @@ vector<string> CGame::GetWelcomeMessageLines(GameUser::CGameUser* user) const
   vector<pair<uint64_t, function<string()>>> textFuncs;
   vector<pair<uint64_t, function<bool()>>> boolFuncs;
   vector<pair<uint64_t, bool>> boolValues;
-  boolFuncs.reserve(9); // 9 excluding LAN, CHECKLASTOWNER
-  boolValues.reserve(2);
+  boolFuncs.reserve(9); // 9 excluding LAN, NAMERISK, CHECKLASTOWNER
+  boolValues.reserve(3);
   //boolFuncs.emplace_back(HashCode("LAN"),    [this, user] () { return !user->GetRealm(false); });
   boolValues.emplace_back(HashCode("LAN"), !user->GetRealm(false));
+  boolValues.emplace_back(HashCode("NAMERISK"), user->GetIsNameCensored());
   boolFuncs.emplace_back(HashCode("URL"),    [this] () { return !this->GetMapSiteURL().empty(); });
   boolFuncs.emplace_back(HashCode("OWNER"), [this]() { return !this->m_OwnerName.empty(); });
   boolFuncs.emplace_back(HashCode("CREATOR"), [this]() { return !this->m_CreatorText.empty(); });
@@ -3771,23 +3780,31 @@ vector<string> CGame::GetWelcomeMessageLines(GameUser::CGameUser* user) const
     size_t lastSlashPos = this->m_MapPath.rfind('\\');
     return lastSlashPos != string::npos && lastSlashPos <= this->m_MapPath.length() - 6;
   });
+  //boolFuncs.emplace_back(HashCode("NAMERISK"), [this, user]() { return user->GetIsNameCensored(); });
   boolFuncs.emplace_back(HashCode("AUTOSTART"), [this]() { return !this->m_AutoStartRequirements.empty(); });
   boolFuncs.emplace_back(HashCode("OWNERLESS"), [this]() { return this->m_OwnerLessLocked; });
   boolFuncs.emplace_back(HashCode("SHORTDESC"), [this]() { return !this->m_Map->GetMapShortDesc().empty(); });
-  boolFuncs.emplace_back(HashCode("GAMETIMEOUT"), [this]() { return this->m_Config.m_PlayingTimeoutMode != GamePlayingTimeoutMode::kNever; });
   boolFuncs.emplace_back(HashCode("REPLACEABLE"), [this]() { return this->m_Replaceable; });
   //boolFuncs.emplace_back(HashCode("CHECKLASTOWNER"), [this, user]() { return m_OwnerName != user->GetName() && m_LastOwner == user->GetName(); });
+  boolFuncs.emplace_back(HashCode("GAMETIMEOUTANY"), [this]() { return this->m_Config.m_PlayingTimeoutMode != GamePlayingTimeoutMode::kNever; });
+  boolFuncs.emplace_back(HashCode("GAMETIMEOUTSHORT"), [this]() { return this->m_Config.m_PlayingTimeoutMode != GamePlayingTimeoutMode::kNever && this->m_Config.m_PlayingTimeout <= 3600000u; });
   boolValues.emplace_back(HashCode("CHECKLASTOWNER"), m_OwnerName != user->GetName() && m_LastOwner == user->GetName());
 
-  static_assert(HashCode("LAN") < HashCode("URL"), "Hash for LAN is not before URL");
+  //static_assert(HashCode("LAN") < HashCode("URL"), "Hash for LAN is not before URL");
   static_assert(HashCode("URL") < HashCode("OWNER"), "Hash for URL is not before OWNER");
   static_assert(HashCode("OWNER") < HashCode("CREATOR"), "Hash for OWNER is not before CREATOR");
   static_assert(HashCode("CREATOR") < HashCode("FILENAME"), "Hash for CREATOR is not before FILENAME");
+  //static_assert(HashCode("FILENAME") < HashCode("NAMERISK"), "Hash for FILENAME is not before NAMERISK");
+  //static_assert(HashCode("NAMERISK") < HashCode("AUTOSTART"), "Hash for NAMERISK is not before AUTOSTART");
   static_assert(HashCode("FILENAME") < HashCode("AUTOSTART"), "Hash for FILENAME is not before AUTOSTART");
   static_assert(HashCode("AUTOSTART") < HashCode("OWNERLESS"), "Hash for AUTOSTART is not before OWNERLESS");
   static_assert(HashCode("OWNERLESS") < HashCode("SHORTDESC"), "Hash for OWNERLESS is not before SHORTDESC");
-  static_assert(HashCode("SHORTDESC") < HashCode("GAMETIMEOUT"), "Hash for SHORTDESC is not before GAMETIMEOUT");
-  static_assert(HashCode("GAMETIMEOUT") < HashCode("REPLACEABLE"), "Hash for GAMETIMEOUT is not before REPLACEABLE");
+  static_assert(HashCode("SHORTDESC") < HashCode("REPLACEABLE"), "Hash for SHORTDESC is not before REPLACEABLE");
+  static_assert(HashCode("REPLACEABLE") < HashCode("GAMETIMEOUTANY"), "Hash for REPLACEABLE is not before GAMETIMEOUTANY");
+  static_assert(HashCode("GAMETIMEOUTANY") < HashCode("GAMETIMEOUTSHORT"), "Hash for GAMETIMEOUTANY is not before GAMETIMEOUTSHORT");
+
+  static_assert(HashCode("LAN") < HashCode("NAMERISK"), "Hash for LAN is not before NAMERISK");
+  static_assert(HashCode("NAMERISK") < HashCode("CHECKLASTOWNER"), "Hash for NAMERISK is not before CHECKLASTOWNER");
 
   textFuncs.emplace_back(HashCode("URL"), [this]() { return string(EnsureUTF8(this->GetMapSiteURL())); });
   textFuncs.emplace_back(HashCode("OWNER"), [this]() { return this->m_OwnerName; });
@@ -4241,7 +4258,7 @@ string CGame::GetAnnounceText(shared_ptr<const CRealm> realm) const
   string typeWord;
   if (m_RestoredGame) {
     typeWord = "Loaded game";
-  } else if (m_DisplayMode == GAME_DISPLAY_PRIVATE) {
+  } else if (m_RealmsDisplayMode == GAME_DISPLAY_PRIVATE) {
     typeWord = "Private game";
   } else {
     typeWord = "Game";
@@ -5533,6 +5550,7 @@ GameUser::CGameUser* CGame::JoinPlayer(CConnection* connection, const CIncomingJ
     JoinedRealm,
     joinRequest.GetName(),
     joinRequest.GetIPv4Internal(),
+    joinRequest.GetIsCensored(),
     IsReserved
   );
 
@@ -6920,7 +6938,11 @@ void CGame::EventUserPongToHost(GameUser::CGameUser* user)
   }
 
   if (!user->GetLatencySent() && user->GetIsRTTMeasuredConsistent()) {
-    SendChat(user, Concat(user->GetName(), ", your latency is ", user->GetDelayText(false)), LogLevelExtra::kDebug);
+    if (user->GetIsNameCensored()) {
+      SendChat(user, Concat(user->GetName(), "(*), your latency is ", user->GetDelayText(false)), LogLevelExtra::kDebug);
+    } else {
+      SendChat(user, Concat(user->GetName(), ", your latency is ", user->GetDelayText(false)), LogLevelExtra::kDebug);
+    }
     user->SetLatencySent(true);
   }
 

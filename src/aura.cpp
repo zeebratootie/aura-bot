@@ -2469,13 +2469,13 @@ bool CAura::CreateGame(shared_ptr<CGameSetup> gameSetup)
     realm->TrySetGameBroadcastPending(createdLobby);
   }
 
-  if (createdLobby->GetDisplayMode() != GAME_DISPLAY_PUBLIC ||
+  if (createdLobby->GetRealmsDisplayMode() != GAME_DISPLAY_PUBLIC ||
     gameSetup->GetCreatedFromType() != ServiceType::kRealm ||
     gameSetup->m_Ctx->GetIsWhisper()) {
     gameSetup->m_Ctx->SendPrivateReply(createdLobby->GetAnnounceText());
   }
 
-  if (createdLobby->GetDisplayMode() == GAME_DISPLAY_PUBLIC) {
+  if (createdLobby->GetRealmsDisplayMode() == GAME_DISPLAY_PUBLIC) {
     if (m_IRC.GetIsEnabled() && m_IRC.GetIsAnnounceGames()) {
      m_IRC.SendAllChannels(createdLobby->GetAnnounceText());
     }

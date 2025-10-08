@@ -136,6 +136,7 @@ namespace GameUser
     std::string                      m_GameName;                     // game name for spoof-checking - this will be unique depending on the CRealm instance and when the user joined (in case of rename)
     bool                             m_Verified;                     // if the player has spoof checked or not
     bool                             m_Owner;                        // if the player has spoof checked or not
+    bool                             m_IsCensoredName;                 // if the player had their name censored or not
     bool                             m_Reserved;                     // if the player is reserved (VIP) or not
     bool                             m_Observer;                     // if the player is an observer
     bool                             m_PowerObserver;                // if the player is a referee - referees can be demoted to full observers
@@ -189,7 +190,7 @@ namespace GameUser
     GameUser::UserMetrics                       m_PerfMetrics;
 #endif
 
-    CGameUser(std::shared_ptr<CGame> game, CConnection* connection, uint8_t nUID, const bool gameVersionIsExact, const Version& gameVersion, uint32_t nJoinedRealmInternalId, std::string nJoinedRealm, std::string_view nName, std::array<uint8_t, 4> nInternalIP, bool nReserved);
+    CGameUser(std::shared_ptr<CGame> game, CConnection* connection, uint8_t nUID, const bool gameVersionIsExact, const Version& gameVersion, uint32_t nJoinedRealmInternalId, std::string nJoinedRealm, std::string_view nName, std::array<uint8_t, 4> nInternalIP, bool nIsCensoredName, bool nReserved);
     ~CGameUser() final;
 
     [[nodiscard]] std::optional<uint32_t>         GetOperationalRTT() const;
@@ -275,6 +276,7 @@ namespace GameUser
     [[nodiscard]] std::string                  GetDelayText(bool displaySync) const;
     [[nodiscard]] std::string                  GetSyncText() const;
     
+    [[nodiscard]] inline bool                  GetIsNameCensored() const { return m_IsCensoredName; }
     [[nodiscard]] inline bool                  GetIsReserved() const { return m_Reserved; }
     [[nodiscard]] inline bool                  GetIsObserver() const { return m_Observer; }
     [[nodiscard]] inline bool                  GetIsPowerObserver() const { return m_PowerObserver; }

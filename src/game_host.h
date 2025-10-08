@@ -51,6 +51,7 @@ struct GameHost
   [[nodiscard]] inline const sockaddr_storage*           GetAddress() const { return &m_Address; }
   [[nodiscard]] inline uint32_t                          GetIdentifier() const { return m_Identifier; }
   [[nodiscard]] inline uint32_t                          GetEntryKey() const { return m_EntryKey; }
+  [[nodiscard]] inline bool                              GetHasEntryKey() const { return m_EntryKey != 0; }
 
   static std::optional<GameHost> Parse(const std::string& hexInput);
 };

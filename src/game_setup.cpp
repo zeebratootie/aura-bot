@@ -178,6 +178,13 @@ const GameHost* GameMirrorSetup::GetRawSource() const
   return get_if<GameHost>(&m_Source);
 }
 
+bool GameMirrorSetup::GetHasEntryKey() const
+{
+  const GameHost* gameHost = GetRawSource();
+  if (!gameHost) return false;
+  return gameHost->GetHasEntryKey();
+}
+
 //
 // CGameSetup
 //
@@ -1759,7 +1766,7 @@ void CGameSetup::AcquireCLISimple(const CCLI* nCLI)
   m_Verbose = nCLI->m_Verbose;
   m_LobbyReplaceable = nCLI->m_GameLobbyReplaceable.value_or(false);
   m_LobbyAutoRehosted = nCLI->m_GameLobbyAutoRehosted.value_or(false);
-  m_RealmsDisplayMode = nCLI->m_GameDisplayMode.value_or(GAME_DISPLAY_PUBLIC);
+  m_RealmsDisplayMode = nCLI->m_GameRealmsDisplayMode.value_or(GAME_DISPLAY_PUBLIC);
 }
 
 bool CGameSetup::AcquireCLIMirror(const CCLI* nCLI)

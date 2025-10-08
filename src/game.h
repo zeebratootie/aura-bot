@@ -184,7 +184,7 @@ protected:
   bool                                                   m_PublicHostOverride;            // whether to use own m_PublicHostAddress, m_PublicHostPort instead of CRealm's (disables hosting on CRealm mirror instances)
   std::array<uint8_t, 4>                                 m_PublicHostAddress;
   uint16_t                                               m_PublicHostPort;
-  uint8_t                                                m_DisplayMode;                   // game state, public or private
+  uint8_t                                                m_RealmsDisplayMode;                   // game state, public or private
   bool                                                   m_IsAutoVirtualPlayers;          // if we should try to add the virtual host as a second (fake) player in single-player games
   uint8_t                                                m_VirtualHostUID;                // virtual host's UID - note that they don't get a SID
   uint8_t                                                m_GProxyEmptyActions;            // empty actions used for gproxy protocol
@@ -290,7 +290,7 @@ public:
   inline bool                                            GetPublicHostOverride() const { return m_PublicHostOverride; }
   inline std::array<uint8_t, 4>                          GetPublicHostAddress() const { return m_PublicHostAddress; }
   inline uint16_t                                        GetPublicHostPort() const { return m_PublicHostPort; }
-  inline uint8_t                                         GetDisplayMode() const { return m_DisplayMode; }
+  inline uint8_t                                         GetRealmsDisplayMode() const { return m_RealmsDisplayMode; }
   inline uint8_t                                         GetGProxyEmptyActions() const { return m_GProxyEmptyActions; }
   inline std::string                                     GetGameName() const { return m_GameName; }
   inline uint16_t                                        GetCreationCounter() const { return m_CreationCounter; }

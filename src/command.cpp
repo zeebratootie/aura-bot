@@ -1924,7 +1924,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
       if (!targetGame || targetGame->GetIsMirror())
         break;
 
-      if (targetGame->m_DisplayMode == GAME_DISPLAY_PRIVATE && GetSourceGame() != GetTargetGame()) {
+      if (targetGame->m_RealmsDisplayMode == GAME_DISPLAY_PRIVATE && GetSourceGame() != GetTargetGame()) {
         if (!CheckPermissions(m_Config->m_HostingBasePermissions, COMMAND_PERMISSIONS_OWNER)) {
           ErrorReply("This game is private.");
           break;
@@ -3389,7 +3389,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
 
       bool IsPrivate = cmdHash == HashCode("priv");
       if (targetGame) {
-        targetGame->m_DisplayMode = IsPrivate ? GAME_DISPLAY_PRIVATE : GAME_DISPLAY_PUBLIC;
+        targetGame->m_RealmsDisplayMode = IsPrivate ? GAME_DISPLAY_PRIVATE : GAME_DISPLAY_PUBLIC;
         targetGame->ChangeGameName(gameName);
         targetGame->m_HostCounter = m_Aura->NextHostCounter();
         targetGame->UpdateGameDiscovery();
@@ -5260,7 +5260,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
       if (!targetGame || !targetGame->GetIsLobbyStrict())
         break;
 
-      if (targetGame->m_DisplayMode == GAME_DISPLAY_PRIVATE) {
+      if (targetGame->m_RealmsDisplayMode == GAME_DISPLAY_PRIVATE) {
         ErrorReply("This game is private.");
         break;
       }
@@ -5317,7 +5317,7 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
         }
       }
 
-      targetGame->m_DisplayMode = GAME_DISPLAY_PUBLIC;
+      targetGame->m_RealmsDisplayMode = GAME_DISPLAY_PUBLIC;
       if (Args.size() >= 2) {
         targetGame->ChangeGameName(renameTarget);
       }

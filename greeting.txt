@@ -9,6 +9,7 @@
 {REPLACEABLE?}YOU can switch maps with {TRIGGER_PREFER_BROADCAST}host <MAP NAME> , <GAME NAME>.
 Start the game with {TRIGGER_PREFER_BROADCAST}go
 {AUTOSTART?}{AUTOSTART}
-{GAMETIMEOUT?}{GAMETIMEOUT}
+{GAMETIMEOUTSHORT?}{GAMETIMEOUT}
 {SHORTDESC?}{SHORTDESC}
+{NAMERISK?}!! Because you are using an unconventional username, you may desync in some maps that rely on it !!
 {URL?}{FILENAME?}Visit <{URL}> to download [{FILENAME}]

@@ -184,7 +184,7 @@ public:
   std::optional<std::filesystem::path>        m_GameSavedPath;
   std::optional<uint8_t>                      m_GameReconnectionMode;
   std::optional<std::string>                  m_GameMapAlias;
-  std::optional<uint8_t>                      m_GameDisplayMode;
+  std::optional<uint8_t>                      m_GameRealmsDisplayMode;
   std::optional<OnIPFloodHandler>             m_GameIPFloodHandler;
   std::optional<OnPlayerLeaveHandler>         m_GameLeaverHandler;
   std::optional<OnShareUnitsHandler>          m_GameShareUnitsHandler;

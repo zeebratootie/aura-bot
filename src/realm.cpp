@@ -1429,7 +1429,7 @@ void CRealm::ResetGameBroadcastData()
 
 bool CRealm::GetCanSetGameBroadcastPending(shared_ptr<CGame> game) const
 {
-  if (game->GetDisplayMode() == GAME_DISPLAY_NONE) {
+  if (game->GetRealmsDisplayMode() == GAME_DISPLAY_NONE) {
     DPRINT_IF(LogLevel::kTrace2, GetLogPrefix() + "Not setting pending because display mode is none");
     return false;
   }
@@ -1512,7 +1512,7 @@ void CRealm::CheckPendingGameBroadcast()
 
   ResetGameBroadcastData();
 
-  if (pendingGame->GetDisplayMode() == GAME_DISPLAY_PUBLIC && pendingChat.value_or(GetAnnounceHostToChat())) {
+  if (pendingGame->GetRealmsDisplayMode() == GAME_DISPLAY_PUBLIC && pendingChat.value_or(GetAnnounceHostToChat())) {
     TrySendEnterChat();
     QueueGameChatAnnouncement(pendingGame);
   } else {
@@ -1555,7 +1555,7 @@ bool CRealm::TrySendGameRefresh(shared_ptr<CGame> game)
   }
 
   /*
-  if (game->GetDisplayMode == GAME_DISPLAY_NONE) {
+  if (game->GetRealmsDisplayMode == GAME_DISPLAY_NONE) {
     return false;
   }
   if (game->GetIsMirror() && GetIsMirror()) {
@@ -1642,7 +1642,7 @@ bool CRealm::SendGameRefresh(shared_ptr<CGame> game)
   }
   string hostName = m_Config.m_UserName;
   Send(BNETProtocol::SEND_SID_STARTADVEX3(
-    game->GetDisplayMode(),
+    game->GetRealmsDisplayMode(),
     game->GetGameType(),
     game->GetGameFlags(),
     game->GetAnnounceWidth(),

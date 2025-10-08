@@ -2618,33 +2618,35 @@ multiset<string> GetTemplateTokens(const string& input)
   return tokens;
 }
 
-string ReplaceTemplate(const string& input, const FlatMap<uint64_t, bool>* boolCache, const FlatMap<uint64_t, string>* textCache, const FlatMap<uint64_t, function<bool()>>* boolFuncsMap, const FlatMap<uint64_t, function<string()>>* textFuncsMap, bool tolerant)
+string ReplaceTemplate(string_view input, const FlatMap<uint64_t, bool>* boolCache, const FlatMap<uint64_t, string>* textCache, const FlatMap<uint64_t, function<bool()>>* boolFuncsMap, const FlatMap<uint64_t, function<string()>>* textFuncsMap, bool tolerant)
 {
   string result;
-  string::size_type pos = 0;
-  string::size_type start = 0;
+  string::size_type tokenStart = 0;
   const bool* boolCacheMatch = nullptr;
   const string* textCacheMatch = nullptr;
   const function<bool()>* boolFuncMatch = nullptr;
   const function<string()>* textFuncMatch = nullptr;
 
-  while ((start = input.find('{', pos)) != string::npos) {
-    result.append(input, pos, start - pos);
+  while ((tokenStart = input.find('{')) != string_view::npos) {
+    result.append(input, 0, tokenStart);
 
-    size_t end = input.find('}', start);
-    if (end == string::npos || end == start + 1) {
+    size_t tokenEnd = input.find('}', tokenStart);
+    if (tokenEnd == string::npos || tokenEnd == tokenStart + 1) {
       if (!tolerant) return string();
-      result.append(input, start, input.size() - start);
+      result.append(input, tokenStart);
       return result;
     }
 
-    string token = input.substr(start + 1, end - start - 1);
+    string_view token = input.substr(tokenStart + 1, tokenEnd - tokenStart - 1);
+    string innerToken; // Only std::string may be passed to HashCode because null terminator is required
     bool isPositiveCondition = token.back() == '?';
     bool isCondition = isPositiveCondition || token.back() == '!';
     if (isCondition) {
-      token = token.substr(0, token.size());
+      innerToken = string(token.data(), token.size() - 1);
+    } else {
+      innerToken = string(token);
     }
-    uint64_t cacheKey = HashCode(token);
+    uint64_t cacheKey = HashCode(innerToken);
 
     if (isCondition) {
       bool checkResult = false;
@@ -2658,9 +2660,10 @@ string ReplaceTemplate(const string& input, const FlatMap<uint64_t, bool>* boolC
         result.append("{").append(token).append("}");
       }
       if (checkResult == isPositiveCondition) {
-        pos = end + 1;
+        input.remove_prefix(tokenEnd + 1);
       } else {
-        pos = input.find('\n', pos);
+        string_view::size_type pos = input.find('\n', tokenEnd + 1);
+        input.remove_prefix(pos == string_view::npos ? input.size() : pos);
       }
     } else {
       if (textCache != nullptr && ((textCacheMatch = textCache->find(cacheKey)) != nullptr)) {
@@ -2672,41 +2675,43 @@ string ReplaceTemplate(const string& input, const FlatMap<uint64_t, bool>* boolC
         if (!tolerant) return string();
         result.append("{").append(token).append("}");
       }
-      pos = end + 1;
+      input.remove_prefix(tokenEnd + 1);
     }
   }
 
-  result.append(input, pos, string::npos);
+  result.append(input);
   return result;
 }
 
-string ReplaceTemplate(const string& input, unordered_map<uint64_t, bool>* boolCache, unordered_map<uint64_t, string>* textCache, const FlatMap<uint64_t, function<bool()>>* boolFuncsMap, const FlatMap<uint64_t, function<string()>>* textFuncsMap, bool tolerant)
+string ReplaceTemplate(string_view input, unordered_map<uint64_t, bool>* boolCache, unordered_map<uint64_t, string>* textCache, const FlatMap<uint64_t, function<bool()>>* boolFuncsMap, const FlatMap<uint64_t, function<string()>>* textFuncsMap, bool tolerant)
 {
   string result;
-  string::size_type pos = 0;
-  string::size_type start = 0;
+  string::size_type tokenStart = 0;
   unordered_map<uint64_t, bool>::iterator boolCacheMatch;
   unordered_map<uint64_t, string>::iterator textCacheMatch;
   const function<bool()>* boolFuncMatch = nullptr;
   const function<string()>* textFuncMatch = nullptr;
 
-  while ((start = input.find('{', pos)) != string::npos) {
-    result.append(input, pos, start - pos);
+  while ((tokenStart = input.find('{')) != string_view::npos) {
+    result.append(input, 0, tokenStart);
 
-    size_t end = input.find('}', start);
-    if (end == string::npos || end == start + 1) {
+    size_t tokenEnd = input.find('}', tokenStart);
+    if (tokenEnd == string::npos || tokenEnd == tokenStart + 1) {
       if (!tolerant) return string();
-      result.append(input, start, input.size() - start);
+      result.append(input, tokenStart);
       return result;
     }
 
-    string token = input.substr(start + 1, end - start - 1);
+    string_view token = input.substr(tokenStart + 1, tokenEnd - tokenStart - 1);
+    string innerToken; // Only std::string may be passed to HashCode because null terminator is required
     bool isPositiveCondition = token.back() == '?';
     bool isCondition = isPositiveCondition || token.back() == '!';
     if (isCondition) {
-      token = token.substr(0, token.size() - 1);
+      innerToken = string(token.data(), token.size() - 1);
+    } else {
+      innerToken = string(token);
     }
-    uint64_t cacheKey = HashCode(token);
+    uint64_t cacheKey = HashCode(innerToken);
 
     if (isCondition) {
       bool checkResult = false;
@@ -2723,9 +2728,10 @@ string ReplaceTemplate(const string& input, unordered_map<uint64_t, bool>* boolC
         result.append("{").append(token).append("}");
       }
       if (checkResult == isPositiveCondition) {
-        pos = end + 1;
+        input.remove_prefix(tokenEnd + 1);
       } else {
-        pos = input.find('\n', pos);
+        string_view::size_type pos = input.find('\n', tokenEnd + 1);
+        input.remove_prefix(pos == string_view::npos ? input.size() : pos);
       }
     } else {
       if (textCache != nullptr && ((textCacheMatch = textCache->find(cacheKey)) != textCache->end())) {
@@ -2740,11 +2746,11 @@ string ReplaceTemplate(const string& input, unordered_map<uint64_t, bool>* boolC
         if (!tolerant) return string();
         result.append("{").append(token).append("}");
       }
-      pos = end + 1;
+      input.remove_prefix(tokenEnd + 1);
     }
   }
 
-  result.append(input, pos, string::npos);
+  result.append(input);
   return result;
 }
 
