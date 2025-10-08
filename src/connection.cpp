@@ -160,10 +160,11 @@ IncomingConnectionStatus CConnection::Update(fd_set* fd, fd_set* send_fd, int64_
             }
             if (targetLobby->GetIsMirror()) {
               if (targetLobby->GetIsMirrorProxy()) {
+                DPRINT_IF(LogLevel::kTrace, "[AURA] Join request for #" + ToHexString(joinRequest.GetHostCounter()) + " passed to proxied game host");
                 m_Aura->m_Net.RegisterGameProxy(this, targetLobby);
                 result = IncomingConnectionStatus::kPromotedPassThrough;
               } else {
-                DPRINT_IF(LogLevel::kTrace, "[AURA] Join request for #" + ToHexString(joinRequest.GetHostCounter()) + "ignored (non-proxy mirror)");
+                DPRINT_IF(LogLevel::kTrace, "[AURA] Join request for #" + ToHexString(joinRequest.GetHostCounter()) + " ignored (non-proxy mirror)");
               }
               Abort = true;
               break;
@@ -263,10 +264,11 @@ IncomingConnectionStatus CConnection::Update(fd_set* fd, fd_set* send_fd, int64_
       if (result != IncomingConnectionStatus::kPromotedPassThrough) {
         data.remove_prefix(packetSize);
       }
-
       if (Abort) {
         // Process no more packets
-        data.remove_prefix(data.size());
+        if (result != IncomingConnectionStatus::kPromotedPassThrough) {
+          data.remove_prefix(data.size());
+        }
         break;
       }
     }
