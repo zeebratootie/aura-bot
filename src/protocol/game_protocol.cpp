@@ -1284,12 +1284,6 @@ string CIncomingJoinRequest::CensorName(std::string_view originalName, const boo
   unordered_set<char> charsToRemoveAnyWhere = {
     // Characters used in commands
     ',', '@',
-
-    // TAB, LF, CR, FF
-    '\t', '\n', '\r', '\f',
-
-    // NULL, beep, BS, ESC, DEL, 
-    '\x00', '\x07', '\x08', '\x1B', '\x7F'
   };
   if (pipeConsideredHarmful) {
     charsToRemoveAnyWhere.insert('|');
