@@ -350,6 +350,38 @@ void WriteUint32(vector<uint8_t>& buffer, const uint32_t value, const size_t off
 
 template void WriteUint32<Endianness::kLittle>(vector<uint8_t>& buffer, const uint32_t value, const size_t offset);
 
+template <Endianness endianness>
+void WriteUint16(uint8_t* buffer, const uint16_t value, const size_t offset)
+{
+  if constexpr (endianness == Endianness::kLittle) {
+    buffer[offset] = static_cast<uint8_t>(value);
+    buffer[offset + 1] = static_cast<uint8_t>(value >> 8);
+  } else {
+    buffer[offset] = static_cast<uint8_t>(value >> 8);
+    buffer[offset + 1] = static_cast<uint8_t>(value);
+  }
+}
+
+template void WriteUint16<Endianness::kLittle>(uint8_t* buffer, const uint16_t value, const size_t offset);
+
+template <Endianness endianness>
+void WriteUint32(uint8_t* buffer, const uint32_t value, const size_t offset)
+{
+  if constexpr (endianness == Endianness::kLittle) {
+    buffer[offset] = static_cast<uint8_t>(value);
+    buffer[offset + 1] = static_cast<uint8_t>(value >> 8);
+    buffer[offset + 2] = static_cast<uint8_t>(value >> 16);
+    buffer[offset + 3] = static_cast<uint8_t>(value >> 24);
+  } else {
+    buffer[offset] = static_cast<uint8_t>(value >> 24);
+    buffer[offset + 1] = static_cast<uint8_t>(value >> 16);
+    buffer[offset + 2] = static_cast<uint8_t>(value >> 8);
+    buffer[offset + 3] = static_cast<uint8_t>(value);
+  }
+}
+
+template void WriteUint32<Endianness::kLittle>(uint8_t* buffer, const uint32_t value, const size_t offset);
+
 vector<uint8_t> CopyBytes(const uint8_t* a, const size_t size)
 {
   return vector<uint8_t>(a, a + size);

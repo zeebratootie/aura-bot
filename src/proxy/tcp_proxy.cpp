@@ -51,12 +51,39 @@ CTCPProxy::CTCPProxy(CConnection* nConnection, shared_ptr<CGame> nGame)
 {
   m_IncomingSocket = nConnection->GetSocket();
   m_OutgoingSocket = new CTCPClient(AF_INET, nGame->GetGameName());
+
+  if (nGame->GetEntryKey() != 0) {
+    // Proxy targets a game in our LAN.
+    // It's fine if they connect from our LAN, since we broadcast the correct key through UDP.
+    // However, PvPGN servers cannot publish LAN keys.
+    // So, if our client found us through PvPGN, we must provide them with the key.
+    TryRewriteGame();
+  }
 }
 
 CTCPProxy::~CTCPProxy()
 {
   delete m_IncomingSocket;
   delete m_OutgoingSocket;
+}
+
+void CTCPProxy::TryRewriteGame()
+{
+  if (m_IncomingSocket->m_RecvBuffer.size() < 20) return;
+  const uint8_t packetFamily = GetByteAt(m_IncomingSocket->m_RecvBuffer, 0);
+  const uint8_t packetType = GetByteAt(m_IncomingSocket->m_RecvBuffer, 1);
+  if (packetFamily == GameProtocol::Magic::W3GS_HEADER && packetType == GameProtocol::Magic::REQJOIN) {
+    if (auto game = m_Game.lock()) {
+      uint8_t* incomingData = reinterpret_cast<uint8_t*>(m_IncomingSocket->m_RecvBuffer.data());
+      const uint32_t incomingGameId = ByteArrayToUInt32<Endianness::kLittle>(incomingData + 4);
+      const uint32_t incomingGameKey = ByteArrayToUInt32<Endianness::kLittle>(incomingData + 8);
+      const uint8_t sourceRealmId = integer_cast_lossy<uint8_t>(incomingGameId >> HOST_COUNTER_REALM_OFFSET);
+      if (sourceRealmId >= 0x10 && incomingGameKey == 0) {
+        WriteUint32LE(incomingData, game->GetHostCounter(), 4);
+        WriteUint32LE(incomingData, game->GetEntryKey(), 8);
+      }
+    }
+  }
 }
 
 void CTCPProxy::SetTimeout(const int64_t delta)

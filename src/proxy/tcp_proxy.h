@@ -79,6 +79,7 @@ public:
 
   // processing functions
 
+  void TryRewriteGame();
   void SetTimeout(const int64_t nTicks);
   bool CloseConnection();
   TCPProxyStatus TransferBuffer(fd_set* fd, CStreamIOSocket* fromSocket, CStreamIOSocket* toSocket, bool* pausedRecvFlag, int64_t timeout);

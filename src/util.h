@@ -173,6 +173,10 @@ template <Endianness endianness>
 void WriteUint16(std::vector<uint8_t>& buffer, const uint16_t value, const size_t offset);
 template <Endianness endianness>
 void WriteUint32(std::vector<uint8_t>& buffer, const uint32_t value, const size_t offset);
+template <Endianness endianness>
+void WriteUint16(uint8_t* buffer, const uint16_t value, const size_t offset);
+template <Endianness endianness>
+void WriteUint32(uint8_t*, const uint32_t value, const size_t offset);
 [[nodiscard]] std::vector<uint8_t> CopyBytes(const uint8_t* a, const size_t size);
 [[nodiscard]] std::vector<uint8_t> CreateByteArray(const uint8_t c);
 template <Endianness endianness>

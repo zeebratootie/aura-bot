@@ -970,10 +970,7 @@ CLIResult CCLI::Parse(const int argc, char** argv)
   ConditionalRequire("--mirror-proxy", m_GameMirrorProxy, "--mirror", m_GameMirror, false);
 
   if (!m_GameMirrorProxy && m_GameMirrorSource.index() == 2 && get<GameHost>(m_GameMirrorSource).GetHasEntryKey()) {
-    // FIXME: The --mirror-proxy requirement is mandatory. However, the game not being listed is due to a --mirror-proxy limitation.
-    // TODO: --mirror-source SOURCE_IP:SOURCE_PORT#SOURCE_ID:SOURCE_KEY --mirror-proxy should broadcast AURA_IP:AURA_PORT#REALM_ID:0.
-    // TODO: --mirror-source SOURCE_IP:SOURCE_PORT#SOURCE_ID:SOURCE_KEY should rewrite INCOMING_KEY=0 to SOURCE_KEY if INCOMING_ID does not match LAN.
-    Print("[AURA] Lobbies with a custom KEY require the --mirror-proxy flag. NOTE: Even then, it will NOT be listed in PvPGN servers.");
+    Print("[AURA] Lobbies with a custom KEY require the --mirror-proxy flag.");
     m_ParseResult = CLIResult::kError;
   }
 

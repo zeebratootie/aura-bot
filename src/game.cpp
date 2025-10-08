@@ -305,12 +305,7 @@ CGame::CGame(CAura* nAura, shared_ptr<CGameSetup> nGameSetup)
       m_PublicHostAddress = AddressToIPv4Array(address);
       m_PublicHostPort = GetAddressPort(address);
       m_IsMirrorProxy = nGameSetup->GetMirror().GetIsProxyEnabled();
-      if (nGameSetup->GetMirror().GetHasEntryKey() && m_IsMirrorProxy) {
-        // FIXME: This is a --mirror-proxy limitation.
-        // TODO: --mirror-source SOURCE_IP:SOURCE_PORT#SOURCE_ID:SOURCE_KEY --mirror-proxy should broadcast AURA_IP:AURA_PORT#REALM_ID:0.
-        // TODO: --mirror-source SOURCE_IP:SOURCE_PORT#SOURCE_ID:SOURCE_KEY should rewrite INCOMING_KEY=0 to SOURCE_KEY if INCOMING_ID does not match LAN.
-        m_RealmsDisplayMode = GAME_DISPLAY_NONE;
-      } else if (nGameSetup->GetMirror().GetHasEntryKey()) {
+      if (nGameSetup->GetMirror().GetHasEntryKey() && !m_IsMirrorProxy) {
         m_RealmsDisplayMode = GAME_DISPLAY_NONE;
       }
     }
