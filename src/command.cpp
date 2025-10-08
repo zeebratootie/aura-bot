@@ -3585,12 +3585,25 @@ void CCommandContext::Run(const string& cmdToken, const string& baseCommand, con
         break;
       }
 
-      if (targetGame->GetFromAutoReHost()) {
-        ErrorReply("This map is already automatically rehosted.");
-        break;
-      }
-      if (!targetGame->GetIsRemakeable()) {
-        ErrorReply("This game cannot be remade.");
+      RemakeCheckResult remakeCheck = targetGame->CheckRemakeable();
+      if (remakeCheck != RemakeCheckResult::kOk) {
+        switch (remakeCheck) {
+          case RemakeCheckResult::kOk:
+            UNREACHABLE();
+            break;
+          case RemakeCheckResult::kMapUnknown:
+            ErrorReply("This game cannot be remade (map unknown).");
+            break;
+          case RemakeCheckResult::kLoadedGame:
+            ErrorReply("This command cannot be used on a loaded game.");
+            break;
+          case RemakeCheckResult::kAutoReHosted:
+            ErrorReply("This map is already automatically rehosted.");
+            break;
+          case RemakeCheckResult::kSpectators:
+            ErrorReply("This game cannot be remade because of spectators.");
+            break;
+        }
         break;
       }
 

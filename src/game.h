@@ -652,7 +652,8 @@ public:
   void                      StartGameOverTimer(bool isMMD = false);
   void                      ClearActions();
   void                      Reset();
-  bool                      GetIsRemakeable();
+  RemakeCheckResult         CheckRemakeable() const;
+  bool                      GetIsRemakeable() const;
   void                      RemakeStart();
   void                      Remake();
 

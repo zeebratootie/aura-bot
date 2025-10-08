@@ -556,6 +556,7 @@ void CGame::Reset()
   m_InertVirtualUser.reset();
   m_JoinInProgressVirtualUser.reset();
   m_FakeUsers.clear();
+  m_PendingChatMessages.clear();
   if (!m_GameHistory->GetIsFinished()) {
     m_GameHistory->SetFinishedTicks(m_Aura->GetClockTicks());
     m_GameHistory->UpdateSpectatorActions((int64_t)m_Config.m_SpectatorDelay);
@@ -3329,6 +3330,11 @@ Version CGame::GuessIncomingPlayerVersion(const CConnection* user, const CIncomi
   auto versionErrors = m_VersionErrors.find(lowerName);
   if (versionErrors == m_VersionErrors.end() || versionErrors->second.size() == m_SupportedGameVersions.count()) {
     optional<Version> lastKnownVersion = m_Aura->m_Net.GetMaybeCachedGameVersion(user->GetRemoteAddress());
+    if (lastKnownVersion.has_value()) {
+      DLOG_APP_IF(LogLevel::kTrace, Concat("guessed game version for ", SanitizeWrapUTF8(joinRequest.GetName()), " as ", ToVersionString(lastKnownVersion.value()), " (fetched from game discovery cache)"));
+    } else {
+      DLOG_APP_IF(LogLevel::kTrace, Concat("guessed game version for ", SanitizeWrapUTF8(joinRequest.GetName()), " as ", ToVersionString(GetVersion()), " (default)"));
+    }
     return lastKnownVersion.value_or(GetVersion());
   }
 
@@ -3347,14 +3353,20 @@ Version CGame::GuessIncomingPlayerVersion(const CConnection* user, const CIncomi
         version = GetNextVersion(version);
         continue;
       }
+      DLOG_APP_IF(LogLevel::kTrace, Concat("guessed user game version for ", SanitizeWrapUTF8(joinRequest.GetName()), " as ", ToVersionString(version), " (next)"));
       return version;
     }
-    onlyRangeHeads = false;
+    onlyRangeHeads = false; 
   }
 
   // Fallback
   {
     optional<Version> lastKnownVersion = m_Aura->m_Net.GetMaybeCachedGameVersion(user->GetRemoteAddress());
+    if (lastKnownVersion.has_value()) {
+      DLOG_APP_IF(LogLevel::kTrace, Concat("guessed user game version for ", SanitizeWrapUTF8(joinRequest.GetName()), " as ", ToVersionString(lastKnownVersion.value()), " (fallback to game discovery cache)"));
+    } else {
+      DLOG_APP_IF(LogLevel::kTrace, Concat("guessed user game version for ", SanitizeWrapUTF8(joinRequest.GetName()), " as ", ToVersionString(GetVersion()), " (fallback)"));
+    }
     return lastKnownVersion.value_or(GetVersion());
   }
 }
@@ -7631,12 +7643,20 @@ void CGame::HandleGameLoadedStats()
   }
 }
 
-bool CGame::GetIsRemakeable()
+
+RemakeCheckResult CGame::CheckRemakeable() const
 {
-  if (!m_Map || m_RestoredGame || m_FromAutoReHost || m_JoinInProgressVirtualUser.has_value()) {
-    return false;
-  }
-  return true;
+  if (!m_Map) return RemakeCheckResult::kMapUnknown;
+  if (m_RestoredGame) return RemakeCheckResult::kLoadedGame;
+  if (m_FromAutoReHost) return RemakeCheckResult::kAutoReHosted;
+  if (m_JoinInProgressVirtualUser.has_value()) return RemakeCheckResult::kSpectators;
+  return RemakeCheckResult::kOk;
+}
+
+bool CGame::GetIsRemakeable() const
+{
+  RemakeCheckResult checkResult = CheckRemakeable();
+  return checkResult == RemakeCheckResult::kOk;
 }
 
 void CGame::RemakeStart()
@@ -7737,6 +7757,7 @@ void CGame::Remake()
   m_BeforePlayingEmptyActions = 0;
   m_APMTrainerPaused = false;
   m_APMTrainerTicks = 0;
+  m_GameHistory = make_shared<GameHistory>();
   m_GameResultsSource = GameResultSource::kNone;
   m_GameDiscoveryInfoChanged = GAME_DISCOVERY_CHANGED_NEW;
 

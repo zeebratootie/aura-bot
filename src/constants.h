@@ -272,6 +272,14 @@ enum class AutoReHostStatus : uint8_t {
   kReady = 5,
 };
 
+enum class RemakeCheckResult : uint8_t {
+  kOk = 0,
+  kMapUnknown = 1,
+  kLoadedGame = 2,
+  kAutoReHosted = 3,
+  kSpectators = 4,
+};
+
 constexpr uint8_t LOG_C = 1u;
 constexpr uint8_t LOG_P = 2u;
 constexpr uint8_t LOG_R = 4u;
