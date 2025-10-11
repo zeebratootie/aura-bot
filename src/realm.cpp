@@ -625,8 +625,8 @@ void CRealm::ProcessChatEvent(const uint32_t eventType, string_view fromUser, st
     if (gameBroadcast && !gameBroadcast->GetIsMirror()) {
       GameUser::CGameUser* matchUser = gameBroadcast->GetUserFromName<CaseSensitive::kStrict>(fromUser);
       if (matchUser) gameBroadcast->AddToRealmVerified(m_Config.m_HostName, matchUser, true);
-      return;
     }
+    return;
   }
 
   if (eventType == BNETProtocol::IncomingChatEvent::WHISPER || eventType == BNETProtocol::IncomingChatEvent::TALK) {
