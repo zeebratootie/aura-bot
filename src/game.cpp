@@ -3571,20 +3571,22 @@ array<uint8_t, 20> CGame::GetMapSHA1(const Version& version) const
   }
 }
 
-array<uint8_t, 2> CGame::GetAnnounceWidth() const
+array<uint8_t, 2> CGame::GetAnnounceWidth(shared_ptr<const CRealm> realm) const
 {
-  if (GetIsProxyReconnectable()) {
+  if (GetIsProxyReconnectable() && !(m_IsMirrorProxy && !realm)) {
     // use an invalid map width/height to indicate reconnectable games
+    // TODO: Support reconnection (GProxy) when using --mirror-proxy
     return GPSProtocol::SEND_GPSS_DIMENSIONS();
   }
   if (m_RestoredGame) return {0, 0};
   return m_Map->GetMapWidth();
 }
 
-array<uint8_t, 2> CGame::GetAnnounceHeight() const
+array<uint8_t, 2> CGame::GetAnnounceHeight(shared_ptr<const CRealm> realm) const
 {
-  if (GetIsProxyReconnectable()) {
+  if (GetIsProxyReconnectable() && !(m_IsMirrorProxy && !realm)) {
     // use an invalid map width/height to indicate reconnectable games
+    // TODO: Support reconnection (GProxy) when using --mirror-proxy
     return GPSProtocol::SEND_GPSS_DIMENSIONS();
   }
   if (m_RestoredGame) return {0, 0};
@@ -4531,8 +4533,8 @@ vector<uint8_t> CGame::GetGameDiscoveryInfo(const Version& gameVersion, const ui
       gameVersion,
       GetGameType(),
       GetGameFlags(),
-      GetAnnounceWidth(),
-      GetAnnounceHeight(),
+      GetAnnounceWidth(nullptr),
+      GetAnnounceHeight(nullptr),
       GetDiscoveryNameLAN(),
       GetIndexHostName(),
       uptime,
@@ -4577,8 +4579,8 @@ vector<uint8_t> CGame::GetGameDiscoveryInfoTemplateInner(uint16_t* gameVersionOf
     GetIsExpansion(),
     GetGameType(),
     GetGameFlags(),
-    GetAnnounceWidth(),
-    GetAnnounceHeight(),
+    GetAnnounceWidth(nullptr),
+    GetAnnounceHeight(nullptr),
     GetDiscoveryNameLAN(),
     GetIndexHostName(),
     GetSourceFilePath(),
@@ -4738,8 +4740,8 @@ void CGame::SendGameDiscoveryInfoVLAN(CGameSeeker* gameSeeker) const
       gameSeeker->GetGameVersion(),
       GetGameType(),
       GetGameFlags(),
-      GetAnnounceWidth(),
-      GetAnnounceHeight(),
+      GetAnnounceWidth(nullptr),
+      GetAnnounceHeight(nullptr),
       GetDiscoveryNameLAN(),
       GetIndexHostName(),
       GetUptime(), // dynamic

@@ -90,8 +90,8 @@ vector<uint8_t> CMDNS::GetGameBroadcastData(shared_ptr<const CGame> game, const 
   vector<uint8_t> statInfo;
   AppendNumberLE(statInfo, game->GetGameFlags());
   statInfo.push_back(0);
-  AppendContainer(statInfo, game->GetAnnounceWidth());
-  AppendContainer(statInfo, game->GetAnnounceHeight());
+  AppendContainer(statInfo, game->GetAnnounceWidth(nullptr));
+  AppendContainer(statInfo, game->GetAnnounceHeight(nullptr));
   AppendContainer(statInfo, game->GetSourceFileHashBlizz(m_GameVersion));
   AppendByteArrayString(statInfo, game->GetSourceFilePath(), true);
   AppendByteArrayString(statInfo, game->GetIndexHostName(), true);

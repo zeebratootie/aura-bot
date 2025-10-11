@@ -424,8 +424,8 @@ public:
   std::string_view                                       GetSourceFilePath() const;
   std::array<uint8_t, 4>                                 GetSourceFileHashBlizz(const Version& version) const;
   std::array<uint8_t, 20>                                GetMapSHA1(const Version& version) const;
-  std::array<uint8_t, 2>                                 GetAnnounceWidth() const;
-  std::array<uint8_t, 2>                                 GetAnnounceHeight() const;
+  std::array<uint8_t, 2>                                 GetAnnounceWidth(std::shared_ptr<const CRealm> realm) const;
+  std::array<uint8_t, 2>                                 GetAnnounceHeight(std::shared_ptr<const CRealm> realm) const;
   std::string                                            CheckIsValidHCL(const std::string& hcl) const;
 
   std::string                                            GetLogPrefix() const;
