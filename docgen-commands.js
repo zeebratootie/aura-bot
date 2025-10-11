@@ -7,6 +7,7 @@ const path = require('path');
 
 const OUTPUT_PATH = `COMMANDS.md`;
 const COMMAND_FILES = ['src/command.cpp'];
+const INDENT_SIZE = 2;
 const aliasRegExp = /case HashCode\("([a-zA-Z0-9]+)"\):/;
 const mainCmdRegExp = /case HashCode\("([a-zA-Z0-9]+)"\): \{/;
 const usageRegExp = /"Usage: " \+ cmdToken \+ "([^"]+)"\);/;
@@ -21,24 +22,28 @@ async function main() {
     const fileContent = await fs.readFile(filePath, 'utf8');
     let currentCommandName = '';
     let currentCommandAliases = [];
-    for (const line of fileContent.split(/\r?\n/g)) {
-      const trimmed = line.trim();
-      let cmdMatch = mainCmdRegExp.exec(trimmed);
-      if (cmdMatch) {
-        if (seenCommands.has(cmdMatch[1])) {
-          console.error(`Duplicate command ${cmdMatch[1]}`);
+    for (const rawLine of fileContent.split(/\r?\n/g)) {
+      let trimmedEnd = rawLine.trimEnd();
+      const trimmed = trimmedEnd.trimStart();
+      const indentLevel = (trimmedEnd.length - trimmed.length) / INDENT_SIZE;
+      if (indentLevel === 2) {
+        let cmdMatch = mainCmdRegExp.exec(trimmed);
+        if (cmdMatch) {
+          if (seenCommands.has(cmdMatch[1])) {
+            console.error(`Duplicate command ${cmdMatch[1]}`);
+          }
+          currentCommandName = cmdMatch[1];
+          seenCommands.add(currentCommandName);
+          aliases.set(currentCommandName, currentCommandAliases.slice());
+          currentCommandAliases.length = 0;
+          continue;
         }
-        currentCommandName = cmdMatch[1];
-        seenCommands.add(currentCommandName);
-        aliases.set(currentCommandName, currentCommandAliases.slice());
-        currentCommandAliases.length = 0;
-        continue;
-      }
-      let aliasMatch = aliasRegExp.exec(trimmed);
-      if (aliasMatch) {
-        currentCommandName = '';
-        currentCommandAliases.push(aliasMatch[1]);
-        continue;
+        let aliasMatch = aliasRegExp.exec(trimmed);
+        if (aliasMatch) {
+          currentCommandName = '';
+          currentCommandAliases.push(aliasMatch[1]);
+          continue;
+        }
       }
       if (controlFlowBreakRegExp.exec(trimmed)) {
         currentCommandAliases.length = 0;

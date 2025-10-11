@@ -26,6 +26,9 @@ Commands
 ## \`apmtrainer\`
 - Syntax: apmtrainer \<APM\>
 
+## \`autorehost\`
+- Aliases: rehost
+
 ## \`autostart\`
 - Aliases: addas, as
 - Syntax: autostart \<slots\> , \<minutes\>
