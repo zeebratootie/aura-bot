@@ -898,7 +898,7 @@ Games originally hosted over LAN require the KEY to be specified.
 When mirroring games, the following parameters are likely to also be useful:
 - `--exclude`: In order to avoid duplicate broadcasts in the source PvPGN realm, if any.
 - `--reconnection`: In order to properly communicate reconnection support to clients using GProxy.
-- `--proxy`: Allows mirroring the game over LAN by proxying connections over Aura.
+- `--mirror-proxy`: Allows mirroring the game over LAN by proxying connections over Aura.
 
 Aura will remain in game mirroring mode until the process finishes.
 
