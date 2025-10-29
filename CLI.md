@@ -862,6 +862,23 @@ This option is equivalent to ``<map.hosting.expiry.owner.lan>`` in map configura
 
 This flag is disabled by default.
 
+## \`--mirror\`
+
+This option sets Aura to use game mirroring mode. In this mode, the bot won't host games by itself, but 
+instead repost a game hosted elsewhere to connected Battle.net/PvPGN realms.
+
+When mirroring games, the following parameters are likely to also be useful:
+- `--exclude`: In order to avoid duplicate broadcasts in the source PvPGN realm, if any.
+- `--reconnection`: In order to properly communicate reconnection support to clients using GProxy.
+- `--mirror-source`: Allows mirroring the game over LAN by proxying connections over Aura.
+- `--mirror-source-type`: Specifies how `--mirror-source` should be parsed (`raw` or `registry`).
+- `--mirror-source-registry`: If the source type is `registry`, this should be the host name of a PvPGN server.
+- `--mirror-proxy`: Allows mirroring the game over LAN by proxying connections over Aura.
+
+Aura will remain in game mirroring mode until the process finishes.
+
+## \`--mirror-proxy\`
+
 # Parameters for CLI games
 
 ## \`-s \<TYPE>, --search-type \<TYPE\>\`
@@ -887,20 +904,28 @@ missing, and thus defaults to ``realm_N.unique_name`` (which itself defaults to 
 This option lets Aura automatically register an alias for the map hosted. Aliases are case-insensitive, and 
 normalized according to the rules listed in \`aliases.ini\`.
 
-## \`--mirror \<IP:PORT\#ID\>\`, \`--mirror \<IP:PORT\#ID:KEY\>\`
+## \`--mirror-source-type \<TYPE\>\`
 
-This option sets Aura to use game mirroring mode. In this mode, the bot won't host games by itself, but 
-instead repost a game hosted elsewhere to connected Battle.net/PvPGN realms. The actual host is identified 
-by their IPv4 address and PORT. The game ID, also known as "host counter", should be provided in hexadecimal.
+This option defines how Aura will parse the parameter provided for `--mirror-source`.
 
-Games originally hosted over LAN require the KEY to be specified.
+**Options:**
 
-When mirroring games, the following parameters are likely to also be useful:
-- `--exclude`: In order to avoid duplicate broadcasts in the source PvPGN realm, if any.
-- `--reconnection`: In order to properly communicate reconnection support to clients using GProxy.
-- `--mirror-proxy`: Allows mirroring the game over LAN by proxying connections over Aura.
+- raw: Accepts either `<IP:PORT#ID>` or `<IP:PORT#ID:KEY>`.
+- registry: Accepts a game name as listed in a PvPGN server. The option `--mirror-source-registry` must also be provided.
 
-Aura will remain in game mirroring mode until the process finishes.
+## \`--mirror-source-registry \<HOSTNAME\>\`
+
+This option lets Aura search a game to be mirrored in the PvPGN server at the provided host name. It must match one of the 
+configured \`realm_N.host_name\` config entries.
+
+## \`--mirror-source \<IP:PORT\#ID\>\`, \`--mirror-source \<IP:PORT\#ID:KEY\>\`, \`--mirror-source \<GAME NAME\>\`
+
+The original host of the game is identified by their IPv4 address and PORT. The game ID, also known as "host counter", should be provided in hexadecimal.
+Please note that games originally hosted over LAN require the KEY to be specified.
+
+If you are providing a game name instead, please remember to properly wrap it in double quote marks for safe CLI usage.
+
+See also: `--mirror-source-type`.
 
 ## \`--observers \<OBSERVER\>\`
 
