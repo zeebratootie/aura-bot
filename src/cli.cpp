@@ -91,6 +91,7 @@ CLIResult CCLI::Parse(const int argc, char** argv)
   optional<string> rawGameVersion;
   optional<string> rawWar3DataVersion;
   optional<string> rawBindAddress;
+  optional<string> rawBindAddress6;
   optional<string> rawMirrorSource;
   optional<string> rawMirrorSourceService;
 
@@ -217,9 +218,13 @@ CLIResult CCLI::Parse(const int argc, char** argv)
   );
 
   app.add_option("--bind-address", rawBindAddress,
-    "Bind address used by any created TCP servers, as well as by the UDP listen/broadcast services."
-    "This option can be used to restricts connections to the game server, only allowing certain IPv4 address."
+    "Bind address used by any created IPv4 TCP servers, as well as by the UDP listen/broadcast services."
+    "This option can be used to restrict connections to the game server, only allowing certain IPv4 address."
   )->check(CLI::ValidIPV4);
+  app.add_option("--bind-address6", rawBindAddress6,
+    "Bind address used by any created IPv6 TCP servers, as well as by the UDP listen service."
+    "This option can be used to restrict connections to the game server, only allowing certain IPv6 address."
+  );
   app.add_option("--host-port", m_HostPort,
     "Customizes the game server to only listen in the specified port."
   );
@@ -873,6 +878,9 @@ CLIResult CCLI::Parse(const int argc, char** argv)
   MapOpt("--bind-address", rawBindAddress, [](const string& input) {
     return CNet::ParseAddress(input, ACCEPT_IPV4);
   }, m_BindAddress);
+  MapOpt("--bind-address6", rawBindAddress6, [](const string& input) {
+    return CNet::ParseAddress(input, ACCEPT_IPV6);
+  }, m_BindAddress6);
 
   if (m_ExecCommands.empty() == m_ExecAs.has_value()) {
     ConditionalRequireError("--exec", "--exec-as", m_ExecCommands.empty());
@@ -918,6 +926,8 @@ CLIResult CCLI::Parse(const int argc, char** argv)
       m_ParseResult = CLIResult::kError;
     }
   }
+
+  // ConditionalRequire("--bind-address", m_BindAddress, "--bind-address6", m_BindAddress6, true);
 
   // Loaded games
   ConditionalRequire("--load", m_GameSavedPath, "--check-reservation", m_GameCheckReservation, false);
@@ -1130,9 +1140,8 @@ void CCLI::OverrideConfig(CAura* nAura) const
     }
   }
 
-  if (m_BindAddress.has_value()) {
-    nAura->m_Net.m_Config.m_BindAddress4 = *m_BindAddress;
-  }
+  ReadOpt(m_BindAddress) >> nAura->m_Net.m_Config.m_BindAddress4;
+  ReadOpt(m_BindAddress6) >> nAura->m_Net.m_Config.m_BindAddress6;
 
   auto hostPortReader = ReadOpt(m_HostPort);
   hostPortReader >> nAura->m_Net.m_Config.m_MinHostPort;

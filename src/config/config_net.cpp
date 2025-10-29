@@ -72,10 +72,18 @@ CNetConfig::CNetConfig(CConfig& CFG)
   }
   m_ProxyReconnectLANBroadcastLaxEnabled = CFG.GetBool("net.udp_extensions.gproxy.enabled", true);
 
+  bool hasBindAddress4 = CFG.Exists("net.bind_address");
+  bool hasBindAddress6 = CFG.Exists("net.bind_address6");
   m_BindAddress4                 = CFG.GetAddressIPv4("net.bind_address", "0.0.0.0");
   CFG.FailIfErrorLast();
   m_BindAddress6                 = CFG.GetAddressIPv6("net.bind_address6", "::");
   CFG.FailIfErrorLast();
+
+  if (m_SupportTCPOverIPv6 && hasBindAddress4 && !hasBindAddress6) {
+    Print("[CONFIG] <net.bind_address6 = [IPv6]> is required if <net.bind_address = [IPv4]> is provided.");
+    Print("[CONFIG] hint: alternatively, you may disable incoming IPv6 connections with <net.ipv6.tcp.enabled = no>");
+    CFG.SetFailed();
+  }
 
   optional<uint16_t> onlyHostPort = CFG.GetMaybeUint16("net.host_port.only");
   if (onlyHostPort.has_value()) {

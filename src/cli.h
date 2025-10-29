@@ -77,6 +77,7 @@ public:
   std::optional<bool>                         m_UseMapCFGCache;
   std::optional<CacheRevalidationMethod>      m_MapCFGCacheRevalidation;
   std::optional<sockaddr_storage>             m_BindAddress;
+  std::optional<sockaddr_storage>             m_BindAddress6;
   std::optional<uint16_t>                     m_HostPort;
   std::optional<UDPDiscoveryMode>             m_UDPDiscoveryMode;
   std::optional<LogLevel>                     m_LogLevel;

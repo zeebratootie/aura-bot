@@ -267,6 +267,17 @@ struct UDPPkt
   return false;
 }
 
+[[nodiscard]] inline bool isUnspecifiedAddress(const sockaddr_storage* address) {
+  switch (address->ss_family) {
+    case AF_INET:
+      return reinterpret_cast<const sockaddr_in*>(address)->sin_addr.s_addr == INADDR_ANY;
+    case AF_INET6:
+      return IN6_IS_ADDR_UNSPECIFIED(&(reinterpret_cast<const sockaddr_in6*>(address)->sin6_addr));
+    default:
+      return false;
+  }
+}
+
 [[nodiscard]] inline sockaddr_storage IPv4ToIPv6(const sockaddr_storage* inputAddress) {
   sockaddr_storage outputAddress;
   std::memset(&outputAddress, 0, sizeof(outputAddress));

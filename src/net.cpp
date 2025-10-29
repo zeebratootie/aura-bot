@@ -425,6 +425,11 @@ CNet::CNet(CConfig& nCFG)
 void CNet::InitPersistentConfig()
 {
   // Implements non-reloadable config entries.
+  if (m_Config.m_SupportTCPOverIPv6 && !isUnspecifiedAddress(&m_Config.m_BindAddress4) && isUnspecifiedAddress(&m_Config.m_BindAddress6)) {
+    Print("[NET] warning - IPv4 bind address is specified, but IPv6 bind address is missing.");
+    Print("[NET] warning - Games will be hosted at IPv6 :: instead of the specified IPv4 bind address");
+    Print("[NET] hint: you may wish to disable TCP IPv6 support with <net.ipv6.tcp.enabled = no>");
+  }
   m_UDPMainServerEnabled = m_Config.m_UDPMainServerEnabled;
   m_SupportTCPOverIPv6 = m_Config.m_SupportTCPOverIPv6;
   m_SupportUDPOverIPv6 = m_Config.m_SupportUDPOverIPv6;
