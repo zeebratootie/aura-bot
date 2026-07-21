@@ -1,0 +1,153 @@
+name: Build & Release
+
+on:
+  push:
+    branches: [master]
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Cache ccache
+        uses: actions/cache@v4
+        with:
+          path: ~/.ccache
+          key: ccache-${{ runner.os }}-${{ github.sha }}
+          restore-keys: ccache-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential cmake ccache \
+            libssl-dev libgmp3-dev libbz2-dev zlib1g-dev libcurl4-openssl-dev
+
+      - name: Apply trust_admins patch
+        run: |
+          if ! grep -q "m_TrustAdmins" src/config/config_realm.h; then
+            sed -i '/bool m_AlwaysSpoofCheckPlayers;/a\  bool m_TrustAdmins;' src/config/config_realm.h
+            sed -i '/unverified_users.always_verify", false);/a\  m_TrustAdmins                   = CFG.GetBool(m_CFGKeyPrefix + "unverified_users.trust_admins", false);' src/config/config_realm.cpp
+            sed -i '/unverified_users.always_verify", m_AlwaysSpoofCheckPlayers);/a\  m_TrustAdmins                   = CFG.GetBool(m_CFGKeyPrefix + "unverified_users.trust_admins", m_TrustAdmins);' src/config/config_realm.cpp
+            sed -i '/m_AlwaysSpoofCheckPlayers(nRootConfig->m_AlwaysSpoofCheckPlayers),/a\    m_TrustAdmins(nRootConfig->m_TrustAdmins),' src/config/config_realm.cpp
+            sed -i '/GetUnverifiedAutoKickedFromLobby() const;/a\  bool                 GetTrustsAdmins() const;' src/realm.h
+            cat >> src/realm.cpp << 'PATCH'
+
+          bool CRealm::GetTrustsAdmins() const
+          {
+            return m_Config.m_TrustAdmins;
+          }
+          PATCH
+            sed -i '/Player->SetWhoisShouldBeSent($/i\    if (IsUnverifiedAdmin \&\& matchingRealm->GetTrustsAdmins()) {\n      Player->SetRealmVerified(true);\n    }' src/game.cpp
+            echo "trust_admins patch applied"
+          else
+            echo "trust_admins patch already present (local fork), skipping"
+          fi
+
+      - name: Fix constexpr syntax
+        run: |
+          if [ -f src/hash.h ]; then
+            sed -i 's/if (constexpr N/if constexpr (N/g' src/hash.h
+            sed -i 's/} else if (constexpr N/} else if constexpr (N/g' src/hash.h
+          fi
+
+      - name: Build BNCSUtil
+        run: |
+          export CC="ccache gcc"
+          export CXX="ccache g++"
+          cd deps/bncsutil/src/bncsutil
+          make -j$(nproc)
+          sudo make install
+          sudo ldconfig
+
+      - name: Build StormLib
+        run: |
+          export CC="ccache gcc"
+          export CXX="ccache g++"
+          cd deps/StormLib
+          rm -rf build && mkdir build && cd build
+          cmake -DCMAKE_BUILD_TYPE=MinSizeRel -DBUILD_SHARED_LIBS=1 ..
+          make -j$(nproc)
+          sudo make install
+          sudo ldconfig
+
+      - name: Build Aura (lite — no CPR/DPP/MiniUPnP)
+        run: |
+          export CC="ccache gcc"
+          export CXX="ccache g++"
+          sed -i 's/CXXFLAGS *= *-Wall -Wextra -Werror -pedantic.*/CXXFLAGS = -Wall -Wextra -Werror -pedantic -std=c++17/' Makefile
+          make -j$(nproc) \
+            AURABUILD_CPR=0 AURABUILD_DPP=0 AURABUILD_MINIUPNP=0 \
+            CXXFLAGS="-Os -std=c++17 -Wno-psabi --param ggc-min-expand=1 --param ggc-min-heapsize=32768" \
+            CFLAGS="-Os"
+          ccache -s
+
+      - name: Package tarball
+        run: |
+          mkdir -p /tmp/aura-pkg
+          cp aura                        /tmp/aura-pkg/
+          cp /usr/local/lib/libstorm.so  /tmp/aura-pkg/
+          cp /usr/lib/libbncsutil.so     /tmp/aura-pkg/
+          tar -czf aura-linux-x64.tar.gz -C /tmp/aura-pkg .
+          echo "Tarball contents:"
+          tar -tzf aura-linux-x64.tar.gz
+          ls -lh aura-linux-x64.tar.gz
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: aura-linux-x64
+          path: aura-linux-x64.tar.gz
+          retention-days: 30
+
+      # --- Versioned release on tag push (v*) ---
+      - name: Create versioned release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: aura-linux-x64.tar.gz
+          body: |
+            ## TWRPG Aura bot — ${{ github.ref_name }}
+
+            Pre-built Linux x64 binary for the TWRPG EuroBattle.net host bot.
+
+            ### Fast VPS install (~2 min)
+            ```bash
+            curl -fsSL https://gist.githubusercontent.com/zeebratootie/3e6e557456620d2407b4872d63fa2bfe/raw/download-gist.sh | bash
+            AURA_RELEASE_URL='https://github.com/zeebratootie/aura-bot/releases/download/${{ github.ref_name }}/aura-linux-x64.tar.gz' \
+              ./setup-vps-hostbot.sh 'admins' botuser 'password' BotName
+            ```
+
+            ### What's included
+            - `aura` — the host bot binary (lite build: no CPR/DPP/MiniUPnP)
+            - `libstorm.so` — StormLib (MPQ archive support)
+            - `libbncsutil.so` — BNCSUtil (Battle.net auth)
+            - Includes the `trust_admins` patch: admins skip spoofcheck automatically
+
+      # --- Rolling "latest" release on every master push ---
+      - name: Update rolling latest release
+        if: github.ref == 'refs/heads/master'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: Latest build (master)
+          prerelease: true
+          files: aura-linux-x64.tar.gz
+          body: |
+            Automated build from the latest `master` commit.
+
+            ### Fast VPS install (~2 min)
+            ```bash
+            curl -fsSL https://gist.githubusercontent.com/zeebratootie/3e6e557456620d2407b4872d63fa2bfe/raw/download-gist.sh | bash
+            AURA_RELEASE_URL='https://github.com/zeebratootie/aura-bot/releases/download/latest/aura-linux-x64.tar.gz' \
+              ./setup-vps-hostbot.sh 'admins' botuser 'password' BotName
+            ```

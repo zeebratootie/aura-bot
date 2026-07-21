@@ -64,6 +64,12 @@ build/
 
 config*.ini
 !config-example.ini
+
+# Runtime / local data — never commit these
+maps/
+wc3/
+logs/
+*.log
 lib/nodist/
 jass/
 mapcache/
