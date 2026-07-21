@@ -242,6 +242,7 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CNetConfig* NetConfig)
   m_UnverifiedCannotStartGame     = CFG.GetBool(m_CFGKeyPrefix + "unverified_users.reject_start", false);
   m_UnverifiedAutoKickedFromLobby = CFG.GetBool(m_CFGKeyPrefix + "unverified_users.auto_kick", false);
   m_AlwaysSpoofCheckPlayers       = CFG.GetBool(m_CFGKeyPrefix + "unverified_users.always_verify", false);
+  m_TrustAdmins                   = CFG.GetBool(m_CFGKeyPrefix + "unverified_users.trust_admins", false);
 }
 
 CRealmConfig::CRealmConfig(CConfig& CFG, CRealmConfig* nRootConfig, uint8_t nServerIndex)
@@ -258,6 +259,7 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CRealmConfig* nRootConfig, uint8_t nSer
     m_UnverifiedCannotStartGame(nRootConfig->m_UnverifiedCannotStartGame),
     m_UnverifiedAutoKickedFromLobby(nRootConfig->m_UnverifiedAutoKickedFromLobby),
     m_AlwaysSpoofCheckPlayers(nRootConfig->m_AlwaysSpoofCheckPlayers),
+    m_TrustAdmins(nRootConfig->m_TrustAdmins),
 
     m_CommandCFG(nullptr),
 
@@ -583,6 +585,7 @@ CRealmConfig::CRealmConfig(CConfig& CFG, CRealmConfig* nRootConfig, uint8_t nSer
   m_UnverifiedCannotStartGame     = CFG.GetBool(m_CFGKeyPrefix + "unverified_users.reject_start", m_UnverifiedCannotStartGame);
   m_UnverifiedAutoKickedFromLobby = CFG.GetBool(m_CFGKeyPrefix + "unverified_users.auto_kick", m_UnverifiedAutoKickedFromLobby);
   m_AlwaysSpoofCheckPlayers       = CFG.GetBool(m_CFGKeyPrefix + "unverified_users.always_verify", m_AlwaysSpoofCheckPlayers);
+  m_TrustAdmins                   = CFG.GetBool(m_CFGKeyPrefix + "unverified_users.trust_admins", m_TrustAdmins);
 
   vector<string> commandPermissions = {"disabled", "sudo", "sudo_unsafe", "rootadmin", "admin", "verified_owner", "owner", "verified", "auto", "potential_owner", "unverified"};
 

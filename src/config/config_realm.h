@@ -54,6 +54,7 @@ struct CRealmConfig
   bool m_UnverifiedCannotStartGame;
   bool m_UnverifiedAutoKickedFromLobby;
   bool m_AlwaysSpoofCheckPlayers;
+  bool m_TrustAdmins;
 
   CCommandConfig* m_CommandCFG;
 

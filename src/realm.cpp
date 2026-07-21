@@ -1050,6 +1050,11 @@ bool CRealm::GetUnverifiedAutoKickedFromLobby() const
   return m_Config.m_UnverifiedAutoKickedFromLobby;
 }
 
+bool CRealm::GetTrustsAdmins() const
+{
+  return m_Config.m_TrustAdmins;
+}
+
 RealmBroadcastDisplayPriority CRealm::GetLobbyDisplayPriority() const
 {
   return m_Config.m_LobbyDisplayPriority;

@@ -5570,6 +5570,12 @@ GameUser::CGameUser* CGame::JoinPlayer(CConnection* connection, const CIncomingJ
   connection->SetDeleteMe(true);
 
   if (matchingRealm) {
+    // Realm admins/moderators skip spoofcheck when the realm opts in via
+    // <realm>.unverified_users.trust_admins. Anyone joining under an admin's
+    // name from that realm is granted admin powers without verification.
+    if (IsUnverifiedAdmin && matchingRealm->GetTrustsAdmins()) {
+      Player->SetRealmVerified(true);
+    }
     Player->SetWhoisShouldBeSent(
       IsUnverifiedAdmin || MatchOwnerName(Player->GetName()) || !HasOwnerSet() ||
       matchingRealm->GetIsFloodImmune() || matchingRealm->GetHasEnhancedAntiSpoof()
