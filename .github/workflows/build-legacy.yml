@@ -54,6 +54,8 @@ jobs:
         run: |
           export CXX="ccache g++"
           export CC="ccache gcc"
+          # GCC 13+ no longer leaks <cstdint> types through system headers; force-include it
+          sed -i '/^CXXFLAGS = /s/$/ -include cstdint/' Makefile
           make -j$(nproc)
           ccache -s
 
