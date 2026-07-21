@@ -1,0 +1,125 @@
+name: Build & Release (Legacy)
+
+on:
+  push:
+    branches: [legacy]
+    tags: ["v*-legacy"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache ccache
+        uses: actions/cache@v4
+        with:
+          path: ~/.ccache
+          key: ccache-legacy-${{ runner.os }}-${{ github.sha }}
+          restore-keys: ccache-legacy-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential cmake ccache \
+            libgmp3-dev libbz2-dev zlib1g-dev
+
+      - name: Build bncsutil
+        run: |
+          export CXX="ccache g++"
+          export CC="ccache gcc"
+          cd bncsutil/src/bncsutil
+          make -j$(nproc)
+          sudo make install
+          sudo ldconfig
+
+      - name: Build StormLib
+        run: |
+          export CC="ccache gcc"
+          export CXX="ccache g++"
+          cd StormLib
+          mkdir -p build && cd build
+          cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=1 ..
+          make -j$(nproc)
+          sudo make install
+          sudo ldconfig
+
+      - name: Build aura++ (legacy)
+        run: |
+          export CXX="ccache g++"
+          export CC="ccache gcc"
+          make -j$(nproc)
+          ccache -s
+
+      - name: Package tarball
+        run: |
+          mkdir -p /tmp/aura-legacy-pkg
+          cp aura++                          /tmp/aura-legacy-pkg/
+          cp /usr/local/lib/libstorm.so      /tmp/aura-legacy-pkg/
+          cp /usr/lib/libbncsutil.so         /tmp/aura-legacy-pkg/
+          tar -czf aura-legacy-linux-x64.tar.gz -C /tmp/aura-legacy-pkg .
+          echo "Tarball contents:"
+          tar -tzf aura-legacy-linux-x64.tar.gz
+          ls -lh aura-legacy-linux-x64.tar.gz
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: aura-legacy-linux-x64
+          path: aura-legacy-linux-x64.tar.gz
+          retention-days: 30
+
+      # --- Rolling "latest-legacy" release on every legacy branch push ---
+      - name: Update rolling latest-legacy release
+        if: github.ref == 'refs/heads/legacy'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest-legacy
+          name: Latest build — legacy (sfarmani fork)
+          prerelease: true
+          files: aura-legacy-linux-x64.tar.gz
+          body: |
+            Automated build from the latest `legacy` branch commit (sfarmani/aura-bot fork).
+
+            C++14, binary name `aura++`. Compatible with Ubuntu 22.04 and 24.04.
+
+            ### Fast VPS install
+            ```bash
+            curl -fsSL https://gist.githubusercontent.com/zeebratootie/3e6e557456620d2407b4872d63fa2bfe/raw/download-gist.sh | bash
+            AURA_RELEASE_URL='https://github.com/zeebratootie/aura-bot/releases/download/latest-legacy/aura-legacy-linux-x64.tar.gz' \
+              ./setup-vps-hostbot.sh 'admins' botuser 'password' BotName
+            ```
+
+            ### What's included
+            - `aura++` — the host bot binary (C++14, sfarmani fork)
+            - `libstorm.so` — StormLib (MPQ archive support)
+            - `libbncsutil.so` — BNCSUtil (Battle.net auth)
+
+      # --- Versioned release on v*-legacy tag push ---
+      - name: Create versioned legacy release
+        if: startsWith(github.ref, 'refs/tags/v') && endsWith(github.ref, '-legacy')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: aura-legacy-linux-x64.tar.gz
+          body: |
+            ## TWRPG Aura bot (legacy) — ${{ github.ref_name }}
+
+            Pre-built Linux x64 binary from the sfarmani/aura-bot fork (C++14).
+
+            ### Fast VPS install
+            ```bash
+            curl -fsSL https://gist.githubusercontent.com/zeebratootie/3e6e557456620d2407b4872d63fa2bfe/raw/download-gist.sh | bash
+            AURA_RELEASE_URL='https://github.com/zeebratootie/aura-bot/releases/download/${{ github.ref_name }}/aura-legacy-linux-x64.tar.gz' \
+              ./setup-vps-hostbot.sh 'admins' botuser 'password' BotName
+            ```
+
+            ### What's included
+            - `aura++` — the host bot binary
+            - `libstorm.so` — StormLib
+            - `libbncsutil.so` — BNCSUtil
