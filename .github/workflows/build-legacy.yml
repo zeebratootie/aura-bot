@@ -136,7 +136,7 @@ jobs:
             bsha1.cpp cdkeydecoder.cpp checkrevision.cpp decodekey.cpp \
             file.cpp libinfo.cpp oldauth.cpp
           clang -std=c99  -O3 -I ../ -Wno-multichar -fPIC -c \
-            nls.c pe.c sha1.c stack.c debug.c
+            nls.c pe.c sha1.c stack.c
           ar rcs libbncsutil.a *.o
           sudo mkdir -p /usr/local/include/bncsutil
           sudo cp *.h /usr/local/include/bncsutil/
