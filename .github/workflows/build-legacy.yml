@@ -160,7 +160,7 @@ jobs:
           # All deps are static — binary has no external lib dependencies
           make -j$NCPU \
             "CXXFLAGS = -std=c++17 -O3 -pipe -fno-rtti -include cstdint -stdlib=libc++ -D__APPLE__ -I. -Ibncsutil/src/ -IStormLib/src/ -I$BREW/include" \
-            "LFLAGS = /usr/local/lib/libbncsutil.a /usr/local/lib/libStormLib.a $BREW/lib/libgmp.a -lbz2 -lz -lc++"
+            "LFLAGS = /usr/local/lib/libbncsutil.a /usr/local/lib/libstorm.a $BREW/lib/libgmp.a -lbz2 -lz -lc++"
 
       - name: Package tarball (macOS)
         run: |
