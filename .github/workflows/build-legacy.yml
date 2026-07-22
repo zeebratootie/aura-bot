@@ -138,7 +138,7 @@ jobs:
           clang -std=c99  -O3 -I ../ -Wno-multichar -fPIC -c \
             nls.c pe.c sha1.c stack.c
           ar rcs libbncsutil.a *.o
-          sudo mkdir -p /usr/local/include/bncsutil
+          sudo mkdir -p /usr/local/include/bncsutil /usr/local/lib
           sudo cp *.h /usr/local/include/bncsutil/
           sudo cp libbncsutil.a /usr/local/lib/
 
