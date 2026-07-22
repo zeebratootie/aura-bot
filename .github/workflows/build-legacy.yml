@@ -125,11 +125,22 @@ jobs:
         run: |
           brew install gmp cmake
 
-      - name: Build bncsutil (static on macOS)
+      - name: Build bncsutil (real static archive on macOS)
         run: |
+          BREW=$(brew --prefix)
+          NCPU=$(sysctl -n hw.logicalcpu)
           cd bncsutil/src/bncsutil
-          make -j$(sysctl -n hw.logicalcpu)
-          sudo make install
+          # Compile objects — skip the bncsutil Makefile's link step (it creates a dylib-as-.a
+          # which needs gmp at link time; we bake gmp into aura++ directly instead)
+          clang++ -std=c++11 -O3 -I ../ -Wno-multichar -fPIC -c \
+            bsha1.cpp cdkeydecoder.cpp checkrevision.cpp decodekey.cpp \
+            file.cpp libinfo.cpp oldauth.cpp
+          clang -std=c99  -O3 -I ../ -Wno-multichar -fPIC -c \
+            nls.c pe.c sha1.c stack.c debug.c
+          ar rcs libbncsutil.a *.o
+          sudo mkdir -p /usr/local/include/bncsutil
+          sudo cp *.h /usr/local/include/bncsutil/
+          sudo cp libbncsutil.a /usr/local/lib/
 
       - name: Build StormLib (static on macOS)
         run: |
@@ -143,9 +154,10 @@ jobs:
         run: |
           BREW=$(brew --prefix)
           NCPU=$(sysctl -n hw.logicalcpu)
+          # All deps are static — binary has no external lib dependencies
           make -j$NCPU \
-            "CXXFLAGS = -std=c++17 -O3 -flto -pipe -fno-rtti -include cstdint -stdlib=libc++ -D__APPLE__ -I. -Ibncsutil/src/ -IStormLib/src/ -I$BREW/include" \
-            "LFLAGS = -L. -L/usr/local/lib/ -Lbncsutil/src/bncsutil/ -lbncsutil $BREW/lib/libgmp.a /usr/local/lib/libStormLib.a -lbz2 -lz -lc++"
+            "CXXFLAGS = -std=c++17 -O3 -pipe -fno-rtti -include cstdint -stdlib=libc++ -D__APPLE__ -I. -Ibncsutil/src/ -IStormLib/src/ -I$BREW/include" \
+            "LFLAGS = /usr/local/lib/libbncsutil.a /usr/local/lib/libStormLib.a $BREW/lib/libgmp.a -lbz2 -lz -lc++"
 
       - name: Package tarball (macOS)
         run: |
