@@ -519,18 +519,6 @@ void CBNET::ProcessChatEvent(const CIncomingChatEvent* chatEvent)
   string                           User    = chatEvent->GetUser();
   string                           Message = chatEvent->GetMessage();
 
-  // handle spoof checking for current game
-  // this case covers whispers - we assume that anyone who sends a whisper to the bot with message "spoofcheck" should be considered spoof checked
-  // note that this means you can whisper "spoofcheck" even in a public game to manually spoofcheck if the /whois fails
-
-  if (Event == CBNETProtocol::EID_WHISPER && m_Aura->m_CurrentGame)
-  {
-    if (Message == "s" || Message == "sc" || Message == "spoofcheck")
-    {
-      m_Aura->m_CurrentGame->AddToSpoofed(m_Server, User, true);
-      return;
-    }
-  }
 
   if (Event == CBNETProtocol::EID_IRC)
   {
@@ -1930,26 +1918,6 @@ void CBNET::ProcessChatEvent(const CIncomingChatEvent* chatEvent)
       else
         UserName = Message;
 
-      if (m_Aura->m_CurrentGame->GetPlayerFromName(UserName, true))
-      {
-        // handle spoof checking for current game
-        // this case covers whois results which are used when hosting a public game (we send out a "/whois [player]" for each player)
-        // at all times you can still /w the bot with "spoofcheck" to manually spoof check
-
-        if (Message.find("Throne in game") != string::npos || Message.find("currently in  game") != string::npos || Message.find("currently in private game") != string::npos)
-        {
-          // check both the current game name and the last game name against the /whois response
-          // this is because when the game is rehosted, players who joined recently will be in the previous game according to battle.net
-          // note: if the game is rehosted more than once it is possible (but unlikely) for a false positive because only two game names are checked
-
-          if (Message.find(m_Aura->m_CurrentGame->GetGameName()) != string::npos || Message.find(m_Aura->m_CurrentGame->GetLastGameName()) != string::npos)
-            m_Aura->m_CurrentGame->AddToSpoofed(m_Server, UserName, false);
-          else
-            m_Aura->m_CurrentGame->SendAllChat("Name spoof detected. The real [" + UserName + "] is in another game");
-
-          return;
-        }
-      }
     }
   }
   else if (Event == CBNETProtocol::EID_ERROR)

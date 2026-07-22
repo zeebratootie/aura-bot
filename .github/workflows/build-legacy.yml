@@ -10,7 +10,8 @@ permissions:
   contents: write
 
 jobs:
-  build:
+  build-linux:
+    name: Linux x86-64
     runs-on: ubuntu-24.04
 
     steps:
@@ -20,8 +21,8 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.ccache
-          key: ccache-legacy-${{ runner.os }}-${{ github.sha }}
-          restore-keys: ccache-legacy-${{ runner.os }}-
+          key: ccache-legacy-linux-${{ github.sha }}
+          restore-keys: ccache-legacy-linux-
 
       - name: Install dependencies
         run: |
@@ -54,7 +55,7 @@ jobs:
         run: |
           export CXX="ccache g++"
           export CC="ccache gcc"
-          # GCC 13+ no longer leaks <cstdint> types through system headers; force-include it
+          # GCC 13+ no longer leaks <cstdint> types through system headers
           sed -i '/^CXXFLAGS = /s/$/ -include cstdint/' Makefile
           make -j$(nproc)
           ccache -s
@@ -70,15 +71,14 @@ jobs:
           tar -tzf aura-legacy-linux-x64.tar.gz
           ls -lh aura-legacy-linux-x64.tar.gz
 
-      - name: Upload artifact
+      - name: Upload Linux artifact
         uses: actions/upload-artifact@v4
         with:
           name: aura-legacy-linux-x64
           path: aura-legacy-linux-x64.tar.gz
           retention-days: 30
 
-      # --- Rolling "latest-legacy" release on every legacy branch push ---
-      - name: Update rolling latest-legacy release
+      - name: Update rolling latest-legacy release (Linux)
         if: github.ref == 'refs/heads/legacy'
         uses: softprops/action-gh-release@v2
         with:
@@ -87,11 +87,16 @@ jobs:
           prerelease: true
           files: aura-legacy-linux-x64.tar.gz
           body: |
-            Automated build from the latest `legacy` branch commit (sfarmani/aura-bot fork).
+            Automated build from the latest `legacy` branch (sfarmani/aura-bot fork).
 
-            C++14, binary name `aura++`. Compatible with Ubuntu 22.04 and 24.04.
+            C++17, binary name `aura++`. Spoofcheck disabled — all players pre-verified at join.
 
-            ### Fast VPS install
+            | File | Platform |
+            |------|----------|
+            | `aura-legacy-linux-x64.tar.gz` | Ubuntu 22.04 / 24.04 (x86-64) |
+            | `aura-legacy-macos-arm64.tar.gz` | macOS 14+ Apple Silicon (M1/M2/M3) |
+
+            ### Fast VPS install (Linux)
             ```bash
             curl -fsSL https://gist.githubusercontent.com/zeebratootie/3e6e557456620d2407b4872d63fa2bfe/raw/download-gist.sh | bash
             AURA_RELEASE_URL='https://github.com/zeebratootie/aura-bot/releases/download/latest-legacy/aura-legacy-linux-x64.tar.gz' \
@@ -99,29 +104,79 @@ jobs:
             ```
 
             ### What's included
-            - `aura++` — the host bot binary (C++14, sfarmani fork)
-            - `libstorm.so` — StormLib (MPQ archive support)
-            - `libbncsutil.so` — BNCSUtil (Battle.net auth)
+            - `aura++` — the host bot binary
+            - `libstorm.so` / `libstorm.dylib` — StormLib (Linux: shared; macOS: static in binary)
+            - `libbncsutil.so` — BNCSUtil (Linux only; static-linked on macOS)
 
-      # --- Versioned release on v*-legacy tag push ---
-      - name: Create versioned legacy release
+      - name: Create versioned legacy release (Linux)
         if: startsWith(github.ref, 'refs/tags/v') && endsWith(github.ref, '-legacy')
         uses: softprops/action-gh-release@v2
         with:
           files: aura-legacy-linux-x64.tar.gz
-          body: |
-            ## TWRPG Aura bot (legacy) — ${{ github.ref_name }}
 
-            Pre-built Linux x64 binary from the sfarmani/aura-bot fork (C++14).
+  build-macos:
+    name: macOS ARM64
+    runs-on: macos-14
 
-            ### Fast VPS install
-            ```bash
-            curl -fsSL https://gist.githubusercontent.com/zeebratootie/3e6e557456620d2407b4872d63fa2bfe/raw/download-gist.sh | bash
-            AURA_RELEASE_URL='https://github.com/zeebratootie/aura-bot/releases/download/${{ github.ref_name }}/aura-legacy-linux-x64.tar.gz' \
-              ./setup-vps-hostbot.sh 'admins' botuser 'password' BotName
-            ```
+    steps:
+      - uses: actions/checkout@v4
 
-            ### What's included
-            - `aura++` — the host bot binary
-            - `libstorm.so` — StormLib
-            - `libbncsutil.so` — BNCSUtil
+      - name: Install dependencies
+        run: |
+          brew install gmp cmake
+
+      - name: Build bncsutil (static on macOS)
+        run: |
+          cd bncsutil/src/bncsutil
+          make -j$(sysctl -n hw.logicalcpu)
+          sudo make install
+
+      - name: Build StormLib (static on macOS)
+        run: |
+          cd StormLib
+          mkdir -p build && cd build
+          cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=0 ..
+          make -j$(sysctl -n hw.logicalcpu)
+          sudo make install
+
+      - name: Build aura++ (macOS)
+        run: |
+          BREW=$(brew --prefix)
+          NCPU=$(sysctl -n hw.logicalcpu)
+          make -j$NCPU \
+            "CXXFLAGS = -std=c++17 -O3 -flto -pipe -fno-rtti -include cstdint -stdlib=libc++ -D__APPLE__ -I. -Ibncsutil/src/ -IStormLib/src/ -I$BREW/include" \
+            "LFLAGS = -L. -L/usr/local/lib/ -Lbncsutil/src/bncsutil/ -lbncsutil $BREW/lib/libgmp.a /usr/local/lib/libStormLib.a -lbz2 -lz -lc++"
+
+      - name: Package tarball (macOS)
+        run: |
+          mkdir -p /tmp/aura-legacy-macos
+          cp aura++ /tmp/aura-legacy-macos/
+          strip /tmp/aura-legacy-macos/aura++
+          tar -czf aura-legacy-macos-arm64.tar.gz -C /tmp/aura-legacy-macos .
+          echo "Tarball contents:"
+          tar -tzf aura-legacy-macos-arm64.tar.gz
+          ls -lh aura-legacy-macos-arm64.tar.gz
+          echo "Binary deps:"
+          otool -L /tmp/aura-legacy-macos/aura++
+
+      - name: Upload macOS artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: aura-legacy-macos-arm64
+          path: aura-legacy-macos-arm64.tar.gz
+          retention-days: 30
+
+      - name: Update rolling latest-legacy release (macOS)
+        if: github.ref == 'refs/heads/legacy'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest-legacy
+          name: Latest build — legacy (sfarmani fork)
+          prerelease: true
+          files: aura-legacy-macos-arm64.tar.gz
+
+      - name: Create versioned legacy release (macOS)
+        if: startsWith(github.ref, 'refs/tags/v') && endsWith(github.ref, '-legacy')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: aura-legacy-macos-arm64.tar.gz

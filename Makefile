@@ -11,8 +11,8 @@ ifndef CXX
   CXX = g++
 endif
 
-CCFLAGS = -fno-builtin
-CXXFLAGS = -std=c++14 -pipe -Wall -Wextra -fno-builtin -fno-rtti
+CCFLAGS =
+CXXFLAGS = -std=c++17 -pipe -Wall -Wextra -fno-rtti
 DFLAGS =
 OFLAGS = -O3 -flto
 LFLAGS = -L. -L/usr/local/lib/ -Lbncsutil/src/bncsutil/ -lstorm -lbncsutil -lgmp -lbz2 -lz

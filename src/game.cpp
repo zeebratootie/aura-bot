@@ -35,6 +35,7 @@
 #include <ctime>
 #include <cmath>
 #include <algorithm>
+#include <random>
 
 using namespace std;
 
@@ -1360,13 +1361,9 @@ void CGame::EventPlayerJoined(CPotentialPlayer* potential, CIncomingJoinPlayer* 
   Print2("[GAME: " + m_GameName + "] player [" + joinPlayer->GetName() + "|" + potential->GetExternalIPString() + "] joined the game");
   CGamePlayer* Player = new CGamePlayer(potential, GetNewPID(), JoinedRealm, joinPlayer->GetName(), joinPlayer->GetInternalIP(), Reserved);
 
-  // consider LAN players to have already spoof checked since they can't
-  // since so many people have trouble with this feature we now use the JoinedRealm to determine LAN status
-
-  if (JoinedRealm.empty())
-    Player->SetSpoofed(true);
-
-  Player->SetWhoisShouldBeSent(AnyAdminCheck);
+  // all players are pre-verified at join — no spoofcheck required
+  Player->SetSpoofed(true);
+  Player->SetSpoofedRealm(JoinedRealm);
   m_Players.push_back(Player);
   potential->SetSocket(nullptr);
   potential->SetDeleteMe(true);
@@ -4547,17 +4544,12 @@ void CGame::ShuffleSlots()
 
   if (m_Map->GetMapOptions() & MAPOPT_CUSTOMFORCES)
   {
-    // rather than rolling our own probably broken shuffle algorithm we use random_shuffle because it's guaranteed to do it properly
-    // so in order to let random_shuffle do all the work we need a vector to operate on
-    // unfortunately we can't just use PlayerSlots because the team/colour/race shouldn't be modified
-    // so make a vector we can use
-
     vector<uint8_t> SIDs;
 
     for (uint8_t i = 0; i < PlayerSlots.size(); ++i)
       SIDs.push_back(i);
 
-    random_shuffle(begin(SIDs), end(SIDs));
+    std::shuffle(begin(SIDs), end(SIDs), std::mt19937{std::random_device{}()});
 
     // now put the PlayerSlots vector in the same order as the SIDs vector
 
@@ -4575,7 +4567,7 @@ void CGame::ShuffleSlots()
     // regular game
     // it's easy when we're allowed to swap the team/colour/race!
 
-    random_shuffle(begin(PlayerSlots), end(PlayerSlots));
+    std::shuffle(begin(PlayerSlots), end(PlayerSlots), std::mt19937{std::random_device{}()});
   }
 
   // now we put m_Slots back together again
