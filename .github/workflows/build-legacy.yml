@@ -146,8 +146,9 @@ jobs:
         run: |
           cd StormLib
           mkdir -p build && cd build
-          cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=0 ..
+          cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=0 -DCMAKE_POLICY_VERSION_MINIMUM=3.5 ..
           make -j$(sysctl -n hw.logicalcpu)
+          sudo mkdir -p /usr/local/lib
           sudo make install
 
       - name: Build aura++ (macOS)
